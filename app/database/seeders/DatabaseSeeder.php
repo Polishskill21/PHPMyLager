@@ -19,10 +19,12 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        if (!\App\Models\User::where('email', 'test@example.com')->exists()) {
+            \App\Models\User::factory()->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+            ]);
+        }
 
         // DB::table('users')->insert([
         //     ['id' => 1, 'username' => 'root', 'password' => Hash::make('superLager123'), 'role' => 'admin'],
