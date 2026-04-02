@@ -8,18 +8,21 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     */
+     * To force run migration: docker exec -it phpmylager_app php artisan migrate:fresh --seed 
+    */
     public function up(): void
     {
         Schema::create('warengruppe', function (Blueprint $table) {
-            $table->integer('pWgNr')->primary();
+            $table->increments('pWgNr');
             $table->string('warengruppe', 50)->nullable();
         });
 
         Schema::create('artikel', function (Blueprint $table) {
-            $table->integer('pArtikelNr')->primary();
+            $table->increments('pArtikelNr');
             $table->string('bezeichnung', 35)->nullable();
-            $table->integer('fWgNr');
+            
+            $table->unsignedInteger('fWgNr'); 
+            
             $table->decimal('ekPreis', 8, 2)->nullable();
             $table->decimal('vkPreis', 8, 2)->nullable();
             $table->integer('bestand')->nullable();
@@ -29,7 +32,7 @@ return new class extends Migration
         });
 
         Schema::create('kunden', function (Blueprint $table) {
-            $table->integer('pKdNr')->primary();
+            $table->increments('pKdNr');
             $table->string('name', 50)->nullable();
             $table->string('strasse', 50)->nullable();
             $table->integer('plz')->nullable();
@@ -38,9 +41,11 @@ return new class extends Migration
         });
 
         Schema::create('auftragskoepfe', function (Blueprint $table) {
-            $table->integer('pAufNr')->primary();
+            $table->increments('pAufNr');
             $table->dateTime('aufDat')->nullable();
-            $table->integer('fKdNr');
+            
+            $table->unsignedInteger('fKdNr'); 
+            
             $table->dateTime('aufTermin')->nullable();
 
             $table->foreign('fKdNr')->references('pKdNr')->on('kunden');
@@ -48,8 +53,10 @@ return new class extends Migration
 
         Schema::create('auftragspositionen', function (Blueprint $table) {
             $table->id('pAufPosNr');
-            $table->integer('fAufNr');
-            $table->integer('fArtikelNr');
+            
+            $table->unsignedInteger('fAufNr');
+            $table->unsignedInteger('fArtikelNr');
+            
             $table->integer('aufMenge');
 
             $table->foreign('fAufNr')->references('pAufNr')->on('auftragskoepfe');
