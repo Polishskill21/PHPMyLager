@@ -25,7 +25,7 @@ Kurze Beschreibung des Projekts in 1–3 Sätzen.
 ## Eingesetzte Technologien
 - Frontend: ...
 - Backend: PHP
-- Datenbank / Speicherung: Mysql
+- Datenbank / Speicherung: MariaDB
 - Framework(s): Laravel
 - Weitere Bibliotheken / Tools: ...
 
@@ -67,15 +67,24 @@ Kurze Erklärung der wichtigsten Ordner und Dateien.
 2. ...
 3. ...
 
+## Users
+<!--
+| Name | Passwort |
+| --- | --- |
+| admin | Admin-1234! |
+| user1 | User1-1234! |
+| user2 | User2-1234! |
+-->
+
 ## Bekannte Einschränkungen
 - Welche Punkte sind noch offen?
 - Welche Einschränkungen hat das Projekt?
 - Was würde man in einer nächsten Version verbessern?
 
-<---! ## Contributors
+## Contributors
+<!--
 | Name | Matrikel number |
-| --- | --- | --- |
-| name | .... |
-| name | ... |
-| name | .... |
---->
+| --- | --- |
+| name | matrikel no |
+| name | matrikel no |
+-->
