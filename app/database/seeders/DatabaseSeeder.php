@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
         // ]);
 
         // 2. Seed Warengruppe
-        DB::table('warengruppe')->insert([
+        DB::table('warengruppe')->insertOrIgnore([
             ['pWgNr' => 1, 'warengruppe' => 'Zangen'],
             ['pWgNr' => 2, 'warengruppe' => 'Schraubendreher'],
             ['pWgNr' => 3, 'warengruppe' => 'Saegen'],
@@ -39,26 +39,26 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 3. Seed Artikel (Just a few examples so you get the idea, you can copy the rest!)
-        DB::table('artikel')->insert([
+        DB::table('artikel')->insertOrIgnore([
             ['pArtikelNr' => 10004, 'bezeichnung' => 'Handlupe 90mm', 'fWgNr' => 4, 'ekPreis' => 10.00, 'vkPreis' => 18.00, 'bestand' => 300, 'meldeBest' => 100],
             ['pArtikelNr' => 10005, 'bezeichnung' => 'Lupe 90mm', 'fWgNr' => 4, 'ekPreis' => 5.00, 'vkPreis' => 9.00, 'bestand' => 1010, 'meldeBest' => 400],
             ['pArtikelNr' => 10028, 'bezeichnung' => 'Pruefschraubendreher-Set', 'fWgNr' => 2, 'ekPreis' => 13.00, 'vkPreis' => 25.00, 'bestand' => 680, 'meldeBest' => 210],
         ]);
 
         // 4. Seed Kunden
-        DB::table('kunden')->insert([
+        DB::table('kunden')->insertOrIgnore([
             ['pKdNr' => 24001, 'name' => 'Baumarkt Mueller', 'strasse' => 'Postfach 134', 'plz' => 85579, 'ort' => 'Neubiberg', 'email' => 'mueller@baumarkt.de'],
             ['pKdNr' => 24002, 'name' => 'Friedrich Kunst', 'strasse' => 'Mausweg 24', 'plz' => 72510, 'ort' => 'Stetten a.k.M.', 'email' => 'friedrich.kunst@mail.de'],
         ]);
 
         // 5. Seed Auftragskoepfe
-        DB::table('auftragskoepfe')->insert([
+        DB::table('auftragskoepfe')->insertOrIgnore([
             ['pAufNr' => 22334, 'aufDat' => '2009-01-26 00:00:00', 'fKdNr' => 24001, 'aufTermin' => '2009-02-18 00:00:00'],
             ['pAufNr' => 22335, 'aufDat' => '2009-01-27 00:00:00', 'fKdNr' => 24001, 'aufTermin' => '2009-02-27 00:00:00'], // Note: KdNr 24004 isn't in our shortened list above, so I mapped it to 24001 for the demo to prevent a foreign key crash!
         ]);
 
         // 6. Seed Auftragspositionen
-        DB::table('auftragspositionen')->insert([
+        DB::table('auftragspositionen')->insertOrIgnore([
             ['fAufNr' => 22334, 'fArtikelNr' => 10004, 'aufMenge' => 20],
             ['fAufNr' => 22335, 'fArtikelNr' => 10005, 'aufMenge' => 15],
         ]);
