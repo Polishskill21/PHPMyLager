@@ -37,12 +37,14 @@ mkdir -p \
 chown -R www-data:www-data storage bootstrap/cache || true
 chmod -R ug+rwx storage bootstrap/cache || true
 
-if [ "${RUN_MIGRATIONS}" = "true" ]; then
-    php artisan migrate --force
-fi
+# if [ "${RUN_MIGRATIONS}" = "true" ]; then
+#     php artisan migrate --force
+# fi
 
-if [ "${RUN_SEEDERS}" = "true" ]; then
-    php artisan db:seed --force
-fi
+# if [ "${RUN_SEEDERS}" = "true" ]; then
+#     php artisan db:seed --force
+# fi
 
+
+### run this instead one time: docker exec -it phpmylager_app php artisan migrate:fresh --seed
 exec "$@"
