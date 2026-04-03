@@ -12,8 +12,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+        \App\Http\Middleware\NoCacheHeaders::class,
+        ]);
+
         $middleware->api(prepend: [
+            // \Illuminate\Session\Middleware\StartSession::class,
+            \App\Http\Middleware\BypassAuth::class,
             \App\Http\Middleware\ForceJsonResponse::class,
+        ]);
+
+        $middleware->alias([
+        'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
