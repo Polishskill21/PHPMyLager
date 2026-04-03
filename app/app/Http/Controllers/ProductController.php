@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
@@ -13,9 +14,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        return response()->json([
-            'products' => Product::all()
-        ]);
+        return response()->json(['products' => Product::all()]);
     }
 
     /**
@@ -23,6 +22,12 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->canWrite()) { 
+            return response()->json(['error' => 'Forbidden.'], 403);
+        }
+
         $validated = $request->validate([
             'bezeichnung' => 'required|string|max:35',
             'fWgNr'       => 'required|integer|exists:warengruppe,pWgNr',
@@ -33,11 +38,7 @@ class ProductController extends Controller
         ]);
 
         $product = Product::create($validated);
-
-        return response()->json([
-            'data' => $product,
-            'message' => 'Product created successfully'
-        ], 201);
+        return response()->json(['data' => $product, 'message' => 'Product created successfully'], 201);
     }
 
     /**
@@ -45,9 +46,7 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        return response()->json([
-            'productsById' => $product
-        ]);
+        return response()->json(['productsById' => $product]);
     }
 
     /**
@@ -55,6 +54,12 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->canWrite()) {
+            return response()->json(['error' => 'Forbidden.'], 403);
+        }
+
         // 'sometimes' means it only checks these rules if the field is included in the request
         $validated = $request->validate([
             'bezeichnung' => 'sometimes|required|string|max:35',
@@ -66,11 +71,7 @@ class ProductController extends Controller
         ]);
 
         $product->update($validated);
-
-        return response()->json([
-            'data' => $product,
-            'message' => 'Product updated successfully'
-        ]);
+        return response()->json(['data' => $product, 'message' => 'Product updated successfully']);
     }
 
     /**
@@ -78,24 +79,21 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->canDelete()) {
+            return response()->json(['error' => 'Forbidden.'], 403);
+        }
+
         try {
             $id = $product->pArtikelNr;
             $product->delete();
-            
-            return response()->json([
-                'message' => "Product ID: {$id} deleted successfully"
-            ]);
-            
+            return response()->json(['message' => "Product ID: {$id} deleted successfully"]);
         } catch (QueryException $e) {
             if ($e->getCode() == '23000') {
-                return response()->json([
-                    'error' => 'This product cannot be deleted because it is used in one or more orders.'
-                ], 409);
+                return response()->json(['error' => 'This product cannot be deleted because it is used in one or more orders.'], 409);
             }
-            
-            return response()->json([
-                'error' => 'An error occurred while deleting the product.'
-            ], 500);
+            return response()->json(['error' => 'An error occurred while deleting the product.'], 500);
         }
     }
 }
