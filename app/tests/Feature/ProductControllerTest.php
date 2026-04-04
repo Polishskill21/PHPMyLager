@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Tests\TestCase;
 
 // to create a test run: docker exec -it phpmylager_app php artisan make:test ProductControllerTest
@@ -22,7 +23,13 @@ class ProductControllerTest extends TestCase
 
     protected function setUp(): void
     {
+        $this->guardAgainstUnsafeCachedConfig();
+        $this->forceInMemorySqliteEnvironment();
+
         parent::setUp();
+
+        $this->assertSame('sqlite', config('database.default'));
+        $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
         // Seed the warengruppe needed for FK constraints
         DB::table('warengruppe')->insert([
@@ -34,6 +41,46 @@ class ProductControllerTest extends TestCase
         $this->admin  = User::factory()->create(['role' => 'admin']);
         $this->writer = User::factory()->create(['role' => 'writer']);
         $this->viewer = User::factory()->create(['role' => 'viewer']);
+    }
+
+    private function forceInMemorySqliteEnvironment(): void
+    {
+        $forced = [
+            'APP_ENV' => 'testing',
+            'DB_CONNECTION' => 'sqlite',
+            'DB_DATABASE' => ':memory:',
+            'DB_URL' => '',
+        ];
+
+        foreach ($forced as $key => $value) {
+            putenv("{$key}={$value}");
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+
+        foreach (['DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD'] as $key) {
+            putenv($key);
+            unset($_ENV[$key], $_SERVER[$key]);
+        }
+    }
+
+    private function guardAgainstUnsafeCachedConfig(): void
+    {
+        $cachedConfigPath = dirname(__DIR__, 2).'/bootstrap/cache/config.php';
+
+        if (!is_file($cachedConfigPath)) {
+            return;
+        }
+
+        $cachedConfig = require $cachedConfigPath;
+        $defaultConnection = $cachedConfig['database']['default'] ?? null;
+        $sqliteDatabase = $cachedConfig['database']['connections']['sqlite']['database'] ?? null;
+
+        if ($defaultConnection !== 'sqlite' || $sqliteDatabase !== ':memory:') {
+            throw new RuntimeException(
+                'Unsafe cached DB config detected for tests. Clear config cache before running tests.'
+            );
+        }
     }
 
     // ---------------------------------------------------------------
