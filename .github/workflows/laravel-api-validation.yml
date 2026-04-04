@@ -10,6 +10,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: ./app
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -27,8 +31,8 @@ jobs:
     - name: Install Dependencies
       run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-    # - name: Generate App Key
-    #   run: php artisan key:generate
+    - name: Generate App Key
+      run: php artisan key:generate
 
     - name: Execute Tests
       env:
