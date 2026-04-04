@@ -1,0 +1,41 @@
+name: Laravel CI Pipeline
+
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  api-val:
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./app
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, sqlite3
+        coverage: none
+
+    - name: Prepare .env file
+      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+    - name: Install Dependencies
+      run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Generate App Key
+      run: php artisan key:generate
+
+    - name: Execute Tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: ":memory:"
+      run: php artisan test
