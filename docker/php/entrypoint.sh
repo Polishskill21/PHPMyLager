@@ -34,8 +34,15 @@ mkdir -p \
   storage/framework/views \
   storage/logs \
   bootstrap/cache
-chown -R www-data:www-data storage bootstrap/cache || true
-chmod -R ug+rwx storage bootstrap/cache || true
+
+# Keep local bind-mounted files owned by the host user.
+if [ "${APP_ENV}" != "local" ]; then
+  chown -R www-data:www-data storage bootstrap/cache || true
+fi
+
+# Directories need execute bits for traversal; regular files do not.
+find storage bootstrap/cache -type d -exec chmod 775 {} + || true
+find storage bootstrap/cache -type f -exec chmod 664 {} + || true
 
 if [ "${RUN_MIGRATIONS}" = "true" ]; then
     php artisan migrate --force
