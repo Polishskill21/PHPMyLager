@@ -19,8 +19,9 @@ services:
       DB_USERNAME: ${DB_USERNAME:-laravel}
       DB_PASSWORD: ${DB_PASSWORD:-laravel}
       WAIT_FOR_DB: "true"
-      RUN_MIGRATIONS: "true"
-      RUN_SEEDERS: "true"
+      # RUN_MIGRATIONS: "true"
+      # RUN_SEEDERS: "true"
+      SEEDER_PASSWORD: ${SEEDER_PASSWORD}
     depends_on:
       db:
         condition: service_healthy

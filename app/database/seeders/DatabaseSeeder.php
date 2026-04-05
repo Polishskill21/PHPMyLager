@@ -2,11 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,11 +17,16 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        if (!\App\Models\User::where('email', 'test@example.com')->exists()) {
-            \App\Models\User::factory()->create([
-                'name' => 'Test User',
-                'email' => 'test@example.com',
-            ]);
+        $users = [
+            ['name' => 'Admin User',   'email' => 'admin@example.com',  'role' => 'admin'],
+            ['name' => 'Writer User',  'email' => 'writer@example.com', 'role' => 'writer'],
+            ['name' => 'Viewer User',  'email' => 'viewer@example.com', 'role' => 'viewer'],
+        ];
+
+        foreach ($users as $userData) {
+            if (!\App\Models\User::where('email', $userData['email'])->exists()) {
+                \App\Models\User::factory()->create($userData);
+            }
         }
 
         // DB::table('users')->insert([
