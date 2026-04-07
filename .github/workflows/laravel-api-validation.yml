@@ -4,6 +4,7 @@ name: Laravel CI Pipeline
 on:
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   api-val:
