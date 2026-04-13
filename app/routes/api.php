@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\WarehouseGroupController;
+use App\Http\Controllers\CustomerController;
 
 Route::get('/status', [SystemController::class, 'status']);
 
@@ -32,4 +33,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
         Route::delete('warehouse-groups/{id}', [WarehouseGroupController::class, 'destroy'])->name('warehouse-groups.destroy');
     });
+
+    // CUSTOMERS ROUTE
+    Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');                   // get all customers
+    Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');          // get customer by id
+    Route::post('customers',  [CustomerController::class, 'store'])->name('customers.store');                 // create customer
+    Route::put('customers/{customer}',  [CustomerController::class, 'update'])->name('customers.update');     // update customer
+    Route::delete('customers/{customer}',  [CustomerController::class, 'destroy'])->name('customers.destroy');// delete customer by id
 });
