@@ -255,7 +255,7 @@ class ProductControllerTest extends TestCase
         $response->assertStatus(200)
                  ->assertJsonPath('message', "Product ID: {$id} deleted successfully");
 
-        $this->assertDatabaseMissing('artikel', ['pArtikelNr' => $id]);
+        $this->assertSoftDeleted('artikel', ['pArtikelNr' => $id]);
     }
 
     public function test_writer_cannot_delete_a_product(): void
