@@ -7,6 +7,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Represents a row in the artikel (product) table.
+ *
+ * @property int                             $pArtikelNr  PK
+ * @property string|null                     $bezeichnung Product name/description
+ * @property int                             $fWgNr       FK → warengruppe.pWgNr
+ * @property float|null                      $ekPreis     Purchase price (Einkaufspreis)
+ * @property float|null                      $vkPreis     Selling price (Verkaufspreis)
+ * @property int|null                        $bestand     Current stock quantity
+ * @property int|null                        $meldeBest   Reorder level (Meldebestand)
+ */
 
 class Product extends Model
 {
