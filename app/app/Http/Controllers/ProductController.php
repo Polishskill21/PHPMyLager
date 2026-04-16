@@ -31,8 +31,8 @@ class ProductController extends Controller
         $validated = $request->validate([
             'bezeichnung' => 'required|string|max:35',
             'fWgNr'       => 'required|integer|exists:warengruppe,pWgNr',
-            'ekPreis'     => 'required|numeric|min:0',
-            'vkPreis'     => 'required|numeric|min:0',
+            'ekPreis'     => 'required|numeric|min:0|max:999999.99',
+            'vkPreis'     => 'required|numeric|min:0|max:999999.99',
             'bestand'     => 'required|integer|min:0',
             'meldeBest'   => 'required|integer|min:0',
         ]);
@@ -64,8 +64,8 @@ class ProductController extends Controller
         $validated = $request->validate([
             'bezeichnung' => 'sometimes|required|string|max:35',
             'fWgNr'       => 'sometimes|integer|exists:warengruppe,pWgNr',
-            'ekPreis'     => 'sometimes|required|numeric|min:0',
-            'vkPreis'     => 'sometimes|required|numeric|min:0',
+            'ekPreis'     => 'sometimes|required|numeric|min:0|max:999999.99',
+            'vkPreis'     => 'sometimes|required|numeric|min:0|max:999999.99',
             'bestand'     => 'sometimes|required|integer|min:0',
             'meldeBest'   => 'sometimes|required|integer|min:0',
         ]);
