@@ -38,8 +38,7 @@ class OrderController extends Controller
 
     /**
      * Creates the order header, attaches all line-items, snapshots each
-     * product's current selling price into kaufPreis, and
-     * decrements stock – all inside a single transaction.
+     * product's current selling price and decrements stock.
      */
     public function store(Request $request): JsonResponse
     {
@@ -130,7 +129,7 @@ class OrderController extends Controller
                     }
 
                     // Guard: changing the product on an existing position
-                    // is not allowed – delete it and re-add as a new item
+                    // is not allowed
                     if ((int) $existingItem->fArtikelNr !== $artikelNr) {
                         throw new \Exception(
                             "Cannot change fArtikelNr on pAufPosNr={$posNr}. " .
@@ -195,9 +194,6 @@ class OrderController extends Controller
      *  1. Restores stock for every line-item.
      *  2. Removes all auftragspositionen rows.
      *  3. Removes the auftragskoepfe row.
-     *
-     * Products and customers are NOT affected (they use soft deletes
-     * managed via their own endpoints).
      */
     public function destroy(Order $order): JsonResponse
     {
@@ -209,7 +205,6 @@ class OrderController extends Controller
                        ->increment('bestand', $item->aufMenge);
             }
 
-            // Delete positions first to satisfy the FK constraint, then the header
             $order->items()->delete();
             $order->delete();
         });
