@@ -9,12 +9,8 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
 
-// to create a test run: docker exec -it phpmylager_app php artisan make:test ProductControllerTest
-// and to validate a test run: docker exec -it phpmylager_app php artisan test --filter ProductControllerTest
-
 class ProductControllerTest extends TestCase
 {
-    // This trait ensures your database resets completely after every single test
     use RefreshDatabase;
 
     protected User $admin;
