@@ -243,7 +243,7 @@ class OrderController extends Controller
                 'fArtikelNr'        => $item->fArtikelNr,
                 'bezeichnung'       => $item->product?->bezeichnung,
                 'aufMenge'          => $item->aufMenge,
-                'kaufPreis' => $item->kaufPreis,
+                'kaufPreis'         => $item->kaufPreis,
                 'line_total'        => round((float) $item->kaufPreis * $item->aufMenge, 2),
             ])->values(),
             'order_total' => $orderTotal,
