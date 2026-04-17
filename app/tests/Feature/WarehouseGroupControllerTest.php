@@ -177,27 +177,27 @@ class WarehouseGroupControllerTest extends TestCase
     // DELETE — admin only
     // ---------------------------------------------------------------
 
-    public function test_admin_can_delete_a_warehouse_group(): void
-    {
-        $group = WarehouseGroup::create(['warengruppe' => 'To Be Deleted']);
-        $id = $group->pWgNr;
+    // public function test_admin_can_delete_a_warehouse_group(): void
+    // {
+    //     $group = WarehouseGroup::create(['warengruppe' => 'To Be Deleted']);
+    //     $id = $group->pWgNr;
 
-        $response = $this->actingAs($this->admin)
-                         ->deleteJson("/api/warehouse-groups/{$id}");
+    //     $response = $this->actingAs($this->admin)
+    //                      ->deleteJson("/api/warehouse-groups/{$id}");
 
-        $response->assertStatus(200)
-                 ->assertJsonPath('message', "Warehouse Group ID: {$id} deleted successfully");
+    //     $response->assertStatus(200)
+    //              ->assertJsonPath('message', "Warehouse Group ID: {$id} deleted successfully");
 
-        $this->assertDatabaseMissing('warengruppe', ['pWgNr' => $id]);
-    }
+    //     $this->assertDatabaseMissing('warengruppe', ['pWgNr' => $id]);
+    // }
 
-    public function test_writer_cannot_delete_a_warehouse_group(): void
-    {
-        $group = WarehouseGroup::create(['warengruppe' => 'Protected Group']);
+    // public function test_writer_cannot_delete_a_warehouse_group(): void
+    // {
+    //     $group = WarehouseGroup::create(['warengruppe' => 'Protected Group']);
 
-        $response = $this->actingAs($this->writer)
-                         ->deleteJson("/api/warehouse-groups/{$group->pWgNr}");
+    //     $response = $this->actingAs($this->writer)
+    //                      ->deleteJson("/api/warehouse-groups/{$group->pWgNr}");
 
-        $response->assertStatus(403);
-    }
+    //     $response->assertStatus(403);
+    // }
 }

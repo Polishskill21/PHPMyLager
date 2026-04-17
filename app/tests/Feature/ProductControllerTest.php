@@ -9,12 +9,8 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
 
-// to create a test run: docker exec -it phpmylager_app php artisan make:test ProductControllerTest
-// and to validate a test run: docker exec -it phpmylager_app php artisan test --filter ProductControllerTest
-
 class ProductControllerTest extends TestCase
 {
-    // This trait ensures your database resets completely after every single test
     use RefreshDatabase;
 
     protected User $admin;
@@ -259,7 +255,7 @@ class ProductControllerTest extends TestCase
         $response->assertStatus(200)
                  ->assertJsonPath('message', "Product ID: {$id} deleted successfully");
 
-        $this->assertDatabaseMissing('artikel', ['pArtikelNr' => $id]);
+        $this->assertSoftDeleted('artikel', ['pArtikelNr' => $id]);
     }
 
     public function test_writer_cannot_delete_a_product(): void

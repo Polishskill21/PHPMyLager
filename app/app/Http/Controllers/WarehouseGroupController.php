@@ -72,15 +72,15 @@ class WarehouseGroupController extends Controller
     /**
      * Delete a warehouse group safely inside a transaction.
      */
-    public function destroy($id)
-    {
-        DB::transaction(function () use ($id) {
-            $group = WarehouseGroup::findOrFail($id);
-            $group->delete();
-        });
+    // public function destroy($id)
+    // {
+    //     DB::transaction(function () use ($id) {
+    //         $group = WarehouseGroup::findOrFail($id);
+    //         $group->delete();
+    //     });
 
-        return response()->json([
-            'message' => "Warehouse Group ID: {$id} deleted successfully"
-        ], 200);
-    }
+    //     return response()->json([
+    //         'message' => "Warehouse Group ID: {$id} deleted successfully"
+    //     ], 200);
+    // }
 }
