@@ -187,6 +187,7 @@ class OrderControllerTest extends TestCase
                              'aufMenge',
                              'kaufPreis',
                              'line_total',
+                             'is_discontinued'
                          ],
                      ],
                      'order_total',
@@ -812,5 +813,96 @@ class OrderControllerTest extends TestCase
         $this->actingAs($this->admin)
              ->deleteJson('/api/orders/99999')
              ->assertStatus(404);
+    }
+
+    /**
+     * A product that has been soft-deleted must still appear on every order
+     * with is_discontinued=true and its original bezeichnung intact.
+     */
+    public function test_soft_deleted_product_still_appears_in_order_with_discontinued_flag(): void
+    {
+        $kdNr    = $this->createCustomer();
+        $product = $this->createProduct([
+            'bezeichnung' => 'Legacy Widget',
+            'vkPreis'     => 25.00,
+            'bestand'     => 10,
+        ]);
+ 
+        // Place the order while the product is still active
+        $createResp = $this->actingAs($this->admin)
+                           ->postJson('/api/orders', [
+                               'aufDat'    => '2024-06-01 10:00:00',
+                               'fKdNr'     => $kdNr,
+                               'aufTermin' => '2024-06-15 00:00:00',
+                               'items'     => [
+                                   ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 3],
+                               ],
+                           ]);
+ 
+        $createResp->assertStatus(201);
+        $aufNr = $createResp->json('order_info.pAufNr');
+ 
+        // Soft-delete the product
+        $product->delete();
+        $this->assertSoftDeleted('artikel', ['pArtikelNr' => $product->pArtikelNr]);
+ 
+        // Fetch the order
+        $response = $this->actingAs($this->viewer)
+                         ->getJson("/api/orders/{$aufNr}");
+ 
+        $response->assertStatus(200)
+                 ->assertJsonCount(1, 'items');
+ 
+        $item = $response->json('items.0');
+ 
+        $this->assertEquals($product->pArtikelNr, $item['fArtikelNr']);
+        $this->assertEquals('Legacy Widget', $item['bezeichnung'],
+            'bezeichnung must be preserved even after soft-delete');
+        $this->assertTrue($item['is_discontinued'],
+            'is_discontinued must be true for a soft-deleted product');
+    }
+ 
+    /**
+     * Active products carry is_discontinued=false in the order response.
+     */
+    public function test_active_product_in_order_has_is_discontinued_false(): void
+    {
+        $data = $this->createOrderViaApi();
+        $aufNr = $data['order_info']['pAufNr'];
+ 
+        $response = $this->actingAs($this->viewer)
+                         ->getJson("/api/orders/{$aufNr}");
+ 
+        $response->assertStatus(200);
+ 
+        foreach ($response->json('items') as $item) {
+            $this->assertFalse($item['is_discontinued'],
+                'is_discontinued must be false for an active product');
+        }
+    }
+ 
+    /**
+     * Soft-deleted products must NOT appear in the general product listing
+     * (GET /api/products).
+     */
+    public function test_soft_deleted_product_does_not_appear_in_product_listing(): void
+    {
+        $active      = $this->createProduct(['bezeichnung' => 'Active Product']);
+        $discontinued = $this->createProduct(['bezeichnung' => 'Discontinued Product']);
+ 
+        $discontinued->delete();
+        $this->assertSoftDeleted('artikel', ['pArtikelNr' => $discontinued->pArtikelNr]);
+ 
+        $response = $this->actingAs($this->viewer)
+                         ->getJson('/api/products');
+ 
+        $response->assertStatus(200);
+ 
+        $ids = collect($response->json('products'))->pluck('pArtikelNr');
+ 
+        $this->assertContains($active->pArtikelNr, $ids->all(),
+            'Active product must appear in the listing');
+        $this->assertNotContains($discontinued->pArtikelNr, $ids->all(),
+            'Soft-deleted product must NOT appear in the listing');
     }
 }
