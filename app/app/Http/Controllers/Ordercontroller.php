@@ -245,6 +245,7 @@ class OrderController extends Controller
                 'aufMenge'          => $item->aufMenge,
                 'kaufPreis'         => $item->kaufPreis,
                 'line_total'        => round((float) $item->kaufPreis * $item->aufMenge, 2),
+                'is_discontinued'   => $item->product?->trashed() ?? false,
             ])->values(),
             'order_total' => $orderTotal,
             'preis_total' => round($preisTotal, 2),
