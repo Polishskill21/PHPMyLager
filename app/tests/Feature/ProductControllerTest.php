@@ -8,6 +8,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 
 // to create a test run: docker exec -it phpmylager_app php artisan make:test ProductControllerTest
 // and to validate a test run: docker exec -it phpmylager_app php artisan test --filter ProductControllerTest
@@ -294,5 +296,134 @@ class ProductControllerTest extends TestCase
                          ->deleteJson("/api/products/{$product->pArtikelNr}");
 
         $response->assertStatus(403);
+    }
+
+    // ---------------------------------------------------------------
+    // TRANSACTION — rollback tests
+    // ---------------------------------------------------------------
+
+    public function test_transaction_is_atomic_on_update(): void
+    {
+        $product = Product::create([
+            'bezeichnung' => 'Before Update',
+            'fWgNr'       => 4,
+            'ekPreis'     => 10,
+            'vkPreis'     => 20,
+            'bestand'     => 10,
+            'meldeBest'   => 5,
+        ]);
+
+        DB::spy();
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/products/{$product->pArtikelNr}", [
+                'bezeichnung' => 'After Update',
+            ]);
+
+        DB::shouldHaveReceived('transaction')->once();
+    }
+
+    public function test_transaction_is_atomic_on_delete(): void
+    {
+        $product = Product::create([
+            'bezeichnung' => 'To Delete',
+            'fWgNr'       => 4,
+            'ekPreis'     => 10,
+            'vkPreis'     => 20,
+            'bestand'     => 10,
+            'meldeBest'   => 5,
+        ]);
+
+        DB::spy();
+
+        $this->actingAs($this->admin)
+            ->deleteJson("/api/products/{$product->pArtikelNr}");
+
+        DB::shouldHaveReceived('transaction')->once();
+    }
+
+    public function test_update_rolls_back_if_transaction_fails(): void
+    {
+        $product = Product::create([
+            'bezeichnung' => 'Original Name',
+            'fWgNr'       => 4,
+            'ekPreis'     => 10,
+            'vkPreis'     => 20,
+            'bestand'     => 10,
+            'meldeBest'   => 5,
+        ]);
+
+        $this->mock(\App\Models\Product::class, function ($mock) {
+            $mock->shouldReceive('update')
+                ->andThrow(new \RuntimeException('Simulated failure inside transaction'));
+        });
+
+        $response = $this->actingAs($this->admin)
+                        ->putJson("/api/products/{$product->pArtikelNr}", [
+                            'bezeichnung' => 'Should Not Apply',
+                        ]);
+
+        $response->assertStatus(500);
+
+        $this->assertDatabaseHas('artikel', [
+            'pArtikelNr'  => $product->pArtikelNr,
+            'bezeichnung' => 'Original Name',
+        ]);
+    }
+
+    public function test_store_commits_and_data_persists(): void
+    {
+        $response = $this->actingAs($this->admin)
+                        ->postJson('/api/products', [
+                            'bezeichnung' => 'Atomic Product',
+                            'fWgNr'       => 4,
+                            'ekPreis'     => 5.00,
+                            'vkPreis'     => 15.00,
+                            'bestand'     => 50,
+                            'meldeBest'   => 10,
+                        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('artikel', ['bezeichnung' => 'Atomic Product']);
+    }
+
+    public function test_update_commits_and_change_persists(): void
+    {
+        $product = Product::create([
+            'bezeichnung' => 'Before Update',
+            'fWgNr'       => 4,
+            'ekPreis'     => 10,
+            'vkPreis'     => 20,
+            'bestand'     => 10,
+            'meldeBest'   => 5,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/products/{$product->pArtikelNr}", [
+                'bezeichnung' => 'After Update',
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('artikel', ['bezeichnung' => 'After Update']);
+        $this->assertDatabaseMissing('artikel', ['bezeichnung' => 'Before Update']);
+    }
+
+    public function test_delete_commits_and_record_is_gone(): void
+    {
+        $product = Product::create([
+            'bezeichnung' => 'To Delete',
+            'fWgNr'       => 4,
+            'ekPreis'     => 10,
+            'vkPreis'     => 20,
+            'bestand'     => 10,
+            'meldeBest'   => 5,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->deleteJson("/api/products/{$product->pArtikelNr}")
+            ->assertStatus(200);
+
+        $this->assertDatabaseMissing('artikel', ['pArtikelNr' => $product->pArtikelNr]);
     }
 }

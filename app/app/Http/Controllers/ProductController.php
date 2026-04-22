@@ -6,6 +6,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -37,8 +38,15 @@ class ProductController extends Controller
             'meldeBest'   => 'required|integer|min:0',
         ]);
 
-        $product = Product::create($validated);
-        return response()->json(['data' => $product, 'message' => 'Product created successfully'], 201);
+       try {
+            $product = DB::transaction(function () use ($validated) {
+                return Product::create($validated);
+            });
+
+            return response()->json(['data' => $product, 'message' => 'Product created successfully'], 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred.'], 500);
+        }
     }
 
     /**
@@ -70,8 +78,15 @@ class ProductController extends Controller
             'meldeBest'   => 'sometimes|required|integer|min:0',
         ]);
 
-        $product->update($validated);
-        return response()->json(['data' => $product, 'message' => 'Product updated successfully']);
+        try {
+            $product = DB::transaction(function () use ($product, $validated) {
+                $product->update($validated);
+                return $product;
+            });
+            return response()->json(['data' => $product, 'message' => 'Product updated successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred.'], 500);
+        }
     }
 
     /**
@@ -87,7 +102,11 @@ class ProductController extends Controller
 
         try {
             $id = $product->pArtikelNr;
-            $product->delete();
+
+            DB::transaction(function () use ($product) {
+                $product->delete();
+            });
+            
             return response()->json(['message' => "Product ID: {$id} deleted successfully"]);
         } catch (QueryException $e) {
             if ($e->getCode() == '23000') {
