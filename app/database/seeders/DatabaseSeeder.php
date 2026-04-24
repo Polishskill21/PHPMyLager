@@ -107,14 +107,14 @@ class DatabaseSeeder extends Seeder
 
         // 6. Seed Auftragspositionen
         DB::table('auftragspositionen')->insertOrIgnore([
-            ['pAufPosNr' => 1, 'fAufNr' => 22334, 'fArtikelNr' => 10004, 'aufMenge' => 20],
-            ['pAufPosNr' => 2, 'fAufNr' => 22334, 'fArtikelNr' => 10030, 'aufMenge' => 3],
-            ['pAufPosNr' => 3, 'fAufNr' => 22335, 'fArtikelNr' => 10005, 'aufMenge' => 15],
-            ['pAufPosNr' => 4, 'fAufNr' => 22335, 'fArtikelNr' => 10056, 'aufMenge' => 10],
-            ['pAufPosNr' => 5, 'fAufNr' => 22335, 'fArtikelNr' => 10059, 'aufMenge' => 35],
-            ['pAufPosNr' => 6, 'fAufNr' => 22336, 'fArtikelNr' => 10004, 'aufMenge' => 40],
-            ['pAufPosNr' => 7, 'fAufNr' => 22337, 'fArtikelNr' => 10069, 'aufMenge' => 5],
-            ['pAufPosNr' => 8, 'fAufNr' => 22337, 'fArtikelNr' => 10070, 'aufMenge' => 5],
+            ['pAufPosNr' => 1, 'fAufNr' => 22334, 'fArtikelNr' => 10004, 'aufMenge' => 20, 'kaufPreis' => 18.00],
+            ['pAufPosNr' => 2, 'fAufNr' => 22334, 'fArtikelNr' => 10030, 'aufMenge' => 3,  'kaufPreis' =>  2.00],
+            ['pAufPosNr' => 3, 'fAufNr' => 22335, 'fArtikelNr' => 10005, 'aufMenge' => 15, 'kaufPreis' =>  9.00],
+            ['pAufPosNr' => 4, 'fAufNr' => 22335, 'fArtikelNr' => 10056, 'aufMenge' => 10, 'kaufPreis' => 20.00],
+            ['pAufPosNr' => 5, 'fAufNr' => 22335, 'fArtikelNr' => 10059, 'aufMenge' => 35, 'kaufPreis' => 21.00],
+            ['pAufPosNr' => 6, 'fAufNr' => 22336, 'fArtikelNr' => 10004, 'aufMenge' => 40, 'kaufPreis' => 18.00],
+            ['pAufPosNr' => 7, 'fAufNr' => 22337, 'fArtikelNr' => 10069, 'aufMenge' => 5,  'kaufPreis' =>  7.00],
+            ['pAufPosNr' => 8, 'fAufNr' => 22337, 'fArtikelNr' => 10070, 'aufMenge' => 5,  'kaufPreis' =>  7.00],
         ]);
     }
 }

@@ -27,6 +27,8 @@ return new class extends Migration
             $table->decimal('vkPreis', 8, 2)->nullable();
             $table->integer('bestand')->nullable();
             $table->integer('meldeBest')->nullable();
+
+            $table->softDeletes();
             
             $table->foreign('fWgNr')->references('pWgNr')->on('warengruppe');
         });
@@ -38,6 +40,8 @@ return new class extends Migration
             $table->integer('plz')->nullable();
             $table->string('ort', 50)->nullable();
             $table->string('email', 50)->nullable();
+
+            $table->softDeletes();
         });
 
         Schema::create('auftragskoepfe', function (Blueprint $table) {
@@ -58,6 +62,7 @@ return new class extends Migration
             $table->unsignedInteger('fArtikelNr');
             
             $table->integer('aufMenge');
+            $table->decimal('kaufPreis', 8, 2)->nullable();
 
             $table->foreign('fAufNr')->references('pAufNr')->on('auftragskoepfe');
             $table->foreign('fArtikelNr')->references('pArtikelNr')->on('artikel');

@@ -2,12 +2,24 @@
 
 namespace App\Models;
 
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * Represents a user in the system.
+ *
+ * @property int                             $id                PK
+ * @property string                          $name              User's name
+ * @property string                          $email             User's email address
+ * @property timestamp                       $email_verified_at Email verification timestamp
+ * @property string                          $password          Hashed password
+ * @property string                          $role              User's role (e.g., admin, writer, viewer)
+ * @property string|null                     $remember_token    Token for "remember me" sessions
+ * @property timestamp                       $created_at        Creation timestamp
+ * @property timestamp                       $updated_at        Last update timestamp
+ */
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
