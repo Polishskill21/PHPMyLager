@@ -15,5 +15,6 @@ Route::middleware('guest')->group(function () {
 // Protected routes (must be logged in)
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard',  fn() => view('dashboard'))->name('dashboard');
+    Route::get('/products',  fn() => view('products'))->name('products');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
