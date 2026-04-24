@@ -420,6 +420,6 @@ class ProductControllerTest extends TestCase
             ->deleteJson("/api/products/{$product->pArtikelNr}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('artikel', ['pArtikelNr' => $product->pArtikelNr]);
+        $this->assertSoftDeleted('artikel', ['pArtikelNr' => $product->pArtikelNr]);
     }
 }
