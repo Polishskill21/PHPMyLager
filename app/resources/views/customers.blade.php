@@ -35,11 +35,9 @@
     .search-input { width: 100%; padding: .55rem .75rem .55rem 2.2rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: .8rem; transition: border-color .2s; }
     .search-input:focus { outline: none; border-color: var(--accent); }
     .spacer { flex: 1; }
-    .stat-pill { font-family: var(--mono); font-size: .7rem; padding: .3rem .75rem; border-radius: 4px; border: 1px solid var(--border); color: var(--muted); }
-    .stat-pill span { color: var(--text); font-weight: 600; }
 
     /* ── TABLE HEADER ── */
-    .tbl-head { display: grid; grid-template-columns: 70px 1.2fr 1.35fr 1fr 95px 90px 170px 120px; gap: 0; padding: 0 .75rem; border: 1px solid var(--border); border-radius: 7px 7px 0 0; background: var(--surface); flex-shrink: 0; }
+    .tbl-head { display: grid; grid-template-columns: 70px 1.15fr 1.25fr 1.25fr 1fr 95px 120px; gap: 0; padding: 0 .75rem; border: 1px solid var(--border); border-radius: 7px 7px 0 0; background: var(--surface); flex-shrink: 0; }
     .th { padding: .65rem .5rem; font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); border-right: 1px solid var(--border); display: flex; align-items: center; gap: .3rem; cursor: pointer; user-select: none; transition: color .15s; }
     .th:hover { color: var(--text); }
     .th:last-child { border-right: none; cursor: default; }
@@ -54,7 +52,7 @@
     .vscroll-inner { position: relative; }
 
     /* ── ROW ── */
-    .row { position: absolute; left: 0; right: 0; height: var(--row-h); display: grid; grid-template-columns: 70px 1.2fr 1.35fr 1fr 95px 90px 170px 120px; border-bottom: 1px solid var(--border); align-items: center; padding: 0 .75rem; transition: background .1s; }
+    .row { position: absolute; left: 0; right: 0; height: var(--row-h); display: grid; grid-template-columns: 70px 1.15fr 1.25fr 1.25fr 1fr 95px 120px; border-bottom: 1px solid var(--border); align-items: center; padding: 0 .75rem; transition: background .1s; }
     .row:hover { background: rgba(59, 130, 246, 0.04); }
     .cell { padding: 0 .5rem; font-size: .82rem; font-family: var(--mono); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-right: 1px solid var(--border); }
     .cell:last-child { border-right: none; }
@@ -103,13 +101,10 @@
         <div class="toolbar">
             <div class="search-wrap">
                 <span class="search-icon">🔍</span>
-                <input id="search" class="search-input" type="text" placeholder="Search by ID, name, email, city or order ID…">
+                <input id="search" class="search-input" type="text" placeholder="Search by ID, name, email, street, city or PLZ…">
             </div>
 
             <div class="spacer"></div>
-
-            <div class="stat-pill">Total: <span id="stat-total">—</span></div>
-            <div class="stat-pill">With orders: <span id="stat-with-orders">—</span></div>
 
             @if(Auth::user()->canWrite())
             <button class="btn-primary" id="btn-add">
@@ -122,10 +117,9 @@
             <div class="th" data-sort="pKdNr">ID <span class="sort-arrow">↕</span></div>
             <div class="th" data-sort="name">Name <span class="sort-arrow">↕</span></div>
             <div class="th" data-sort="email">Email <span class="sort-arrow">↕</span></div>
+            <div class="th" data-sort="strasse">Street <span class="sort-arrow">↕</span></div>
             <div class="th" data-sort="ort">City <span class="sort-arrow">↕</span></div>
             <div class="th" data-sort="plz">PLZ <span class="sort-arrow">↕</span></div>
-            <div class="th" data-sort="orderCount">Orders <span class="sort-arrow">↕</span></div>
-            <div class="th" data-sort="latestOrderId">Latest order <span class="sort-arrow">↕</span></div>
             <div class="th">Actions</div>
         </div>
 

@@ -58,8 +58,6 @@ async function loadCustomers() {
 
 function normalizeCustomer(entry) {
     const customer = entry?.customer || {};
-    const orders = Array.isArray(entry?.orders) ? entry.orders : [];
-    const latest = findLatestOrder(orders);
 
     return {
         pKdNr: customer.pKdNr,
@@ -68,27 +66,7 @@ function normalizeCustomer(entry) {
         plz: customer.plz,
         ort: customer.ort || '',
         email: customer.email || '',
-        orders,
-        orderCount: orders.length,
-        latestOrderId: latest?.pAufNr ?? null,
-        latestOrderDate: latest?.aufDat ?? null,
     };
-}
-
-function findLatestOrder(orders) {
-    if (!orders.length) return null;
-
-    return orders.reduce((latest, current) => {
-        const latestTs = Date.parse(latest?.aufDat || '') || 0;
-        const currentTs = Date.parse(current?.aufDat || '') || 0;
-
-        if (currentTs > latestTs) return current;
-        if (currentTs === latestTs && (Number(current?.pAufNr) || 0) > (Number(latest?.pAufNr) || 0)) {
-            return current;
-        }
-
-        return latest;
-    }, orders[0]);
 }
 
 // ── FILTER + SORT ─────────────────────────────────────────────────────
@@ -98,7 +76,6 @@ function applyFilters() {
     filtered = allCustomers.filter(c => {
         if (!q) return true;
 
-        const orderIds = c.orders.map(o => String(o.pAufNr || '')).join(' ');
         const haystack = [
             c.pKdNr,
             c.name,
@@ -106,7 +83,6 @@ function applyFilters() {
             c.ort,
             c.plz,
             c.strasse,
-            orderIds,
         ].join(' ').toLowerCase();
 
         return haystack.includes(q);
@@ -116,7 +92,7 @@ function applyFilters() {
         let av = a[sortKey];
         let bv = b[sortKey];
 
-        if (['pKdNr', 'plz', 'orderCount', 'latestOrderId'].includes(sortKey)) {
+        if (['pKdNr', 'plz'].includes(sortKey)) {
             av = parseFloat(av) || 0;
             bv = parseFloat(bv) || 0;
             return (av - bv) * sortDir;
@@ -129,9 +105,6 @@ function applyFilters() {
 
         return av > bv ? sortDir : (av < bv ? -sortDir : 0);
     });
-
-    document.getElementById('stat-total').textContent = allCustomers.length;
-    document.getElementById('stat-with-orders').textContent = allCustomers.filter(c => c.orderCount > 0).length;
 
     renderVirtual();
 }
@@ -174,9 +147,6 @@ function renderVirtual() {
 
 function buildRow(customer, idx) {
     const top = idx * ROW_H;
-    const latestOrder = customer.latestOrderId
-        ? `#${customer.latestOrderId}${customer.latestOrderDate ? ` • ${fmtDate(customer.latestOrderDate)}` : ''}`
-        : '—';
 
     const editBtn = CAN_WRITE
         ? `<button class="btn-icon edit" title="Edit" data-id="${customer.pKdNr}">✎</button>`
@@ -194,10 +164,9 @@ function buildRow(customer, idx) {
         <div class="cell cell-id">#${customer.pKdNr ?? '—'}</div>
         <div class="cell cell-name" title="${esc(customer.name)}">${esc(customer.name || '—')}</div>
         <div class="cell cell-muted" title="${esc(customer.email)}">${esc(customer.email || '—')}</div>
+        <div class="cell" title="${esc(customer.strasse)}">${esc(customer.strasse || '—')}</div>
         <div class="cell" title="${esc(customer.ort)}">${esc(customer.ort || '—')}</div>
         <div class="cell cell-num">${customer.plz ?? '—'}</div>
-        <div class="cell cell-num">${customer.orderCount}</div>
-        <div class="cell" title="${esc(latestOrder)}">${esc(latestOrder)}</div>
         <div class="cell"><div class="actions">${editBtn}${delBtn}</div></div>
     `;
 
@@ -210,12 +179,6 @@ function buildRow(customer, idx) {
     }
 
     return row;
-}
-
-function fmtDate(v) {
-    const d = new Date(v);
-    if (Number.isNaN(d.getTime())) return String(v || '').slice(0, 10) || '—';
-    return d.toISOString().slice(0, 10);
 }
 
 function esc(s) {
