@@ -7,6 +7,7 @@ use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
@@ -34,7 +35,7 @@ class CustomerController extends Controller
         $validated = $request->validate([
             'name'    => 'required|string|max:255',
             'strasse' => 'required|string|max:255',
-            'plz'     => 'required|integer|regex:/^[0-9]{5}$/',
+            'plz'     => 'required|digits:5',
             'ort'     => 'required|string|max:255',
             'email'   => 'required|email|max:255|unique:kunden,email',
         ]);
@@ -46,14 +47,31 @@ class CustomerController extends Controller
         return response()->json($this->formatCustomer($customer->fresh(['orders'])), 201);
     }
 
-    public function update()
+    public function update(Request $request, Customer $customer): JsonResponse
     {
-        return "update is working";
+        $validated = $request->validate([
+            'name'    => 'required|string|max:255',
+            'strasse' => 'required|string|max:255',
+            'plz'     => 'required|digits:5',
+            'ort'     => 'required|string|max:255',
+            'email'   => ['required','email','max:255',Rule::unique('kunden','email')->ignore($customer->pKdNr,'pKdNr'),],
+        ]);
+
+        $customer = DB::transaction(function () use ($validated, $customer): Customer {
+            $customer->update($validated);
+            return $customer->fresh(['orders']);
+        });
+
+        return response()->json($this->formatCustomer($customer));
     }
 
-    public function destroy()
+    public function destroy(Customer $customer): JsonResponse
     {
-        return "destroy is working";
+        DB::transaction(function () use ($customer): void {
+            $customer->delete();
+        });
+
+        return response()->json(null, 204);
     }
 
     private function formatCustomer(Customer $customer): array
@@ -68,7 +86,7 @@ class CustomerController extends Controller
                 'strasse' => $customer->strasse,
                 'plz'     => $customer->plz,
                 'ort'     => $customer->ort,
-                'email'   => $customer->email,
+                'email' => $customer->email,
             ],
             'orders' => $orders->map(fn (Order $order) => [
                 'pAufNr'    => $order->pAufNr,
