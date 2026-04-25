@@ -314,30 +314,40 @@ Restores stock for every line-item before deleting the order and all its positio
 
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
-| **GET** | `/api/customers` | List all active customers (with orders) | `viewer` |
-| **GET** | `/api/customers/{id}` | View a specific customer (with orders) | `viewer` |
-| **POST** | `/api/customers` | Create a new customer | `viewer` |
-| **PUT** | `/api/customers/{id}` | Update an existing customer | `viewer` |
-| **DELETE** | `/api/customers/{id}` | Soft-delete a customer | `viewer` |
+| **GET** | `/api/customers` | List all active customers | `all roles` |
+| **GET** | `/api/customers/{id}` | View a specific customer | `all roles` |
+| **POST** | `/api/customers` | Create a new customer | `admin, writer` |
+| **PUT** | `/api/customers/{id}` | Update an existing customer | `admin, writer` |
+| **DELETE** | `/api/customers/{id}` | Soft-delete a customer | `admin` |
 
 #### Customer Response Shape
 All customer responses share this structure:
 
+```json
+{
+  "customer": {
+    "pKdNr": 24001,
+    "name": "Baumarkt Mueller",
+    "strasse": "Postfach 134",
+    "plz": 85579,
+    "ort": "Neubiberg",
+    "email": "mueller@baumarkt.de"
+  }
+}
+```
+
 | Field | Type | Description |
 | :--- | :--- | :--- |
+| `customer` | object | Wrapper object returned by the controller |
 | `customer.pKdNr` | integer | Customer primary key |
 | `customer.name` | string | Customer name |
 | `customer.strasse` | string | Street address |
-| `customer.plz` | integer | Postal code |
+| `customer.plz` | integer | Postal code (validated as 5 digits) |
 | `customer.ort` | string | City |
-| `customer.email` | string | Email address |
-| `orders[].pAufNr` | integer | Order primary key |
-| `orders[].aufDat` | string (date) | Order date |
-| `orders[].aufTermin` | string (date) | Delivery date |
-| `orders[].fKdNr` | integer | FK to customer |
+| `customer.email` | email | Email address |
 
 #### GET `/api/customers`
-Returns all active (non-deleted) customers including their orders.
+Returns all active (non-deleted) customers.
 
 ```json
 [
@@ -349,15 +359,17 @@ Returns all active (non-deleted) customers including their orders.
       "plz": 85579,
       "ort": "Neubiberg",
       "email": "mueller@baumarkt.de"
-    },
-    "orders": [
-      {
-        "pAufNr": 22334,
-        "aufDat": "2009-01-26 00:00:00",
-        "aufTermin": "2009-02-18 00:00:00",
-        "fKdNr": 24001
-      }
-    ]
+    }
+  },
+  {
+    "customer": {
+      "pKdNr": 24002,
+      "name": "Friedrich Kunst",
+      "strasse": "Mausweg 24",
+      "plz": 72510,
+      "ort": "Stetten a.k.M.",
+      "email": "friedrich.kunst@mail.de"
+    }
   }
 ]
 ```
@@ -372,15 +384,7 @@ Returns all active (non-deleted) customers including their orders.
     "plz": 85579,
     "ort": "Neubiberg",
     "email": "mueller@baumarkt.de"
-  },
-  "orders": [
-    {
-      "pAufNr": 22334,
-      "aufDat": "2009-01-26 00:00:00",
-      "aufTermin": "2009-02-18 00:00:00",
-      "fKdNr": 24001
-    }
-  ]
+  }
 }
 ```
 
@@ -406,8 +410,7 @@ Returns all active (non-deleted) customers including their orders.
     "plz": 80331,
     "ort": "Muenchen",
     "email": "testkunde@example.com"
-  },
-  "orders": []
+  }
 }
 ```
 
@@ -433,8 +436,7 @@ Returns all active (non-deleted) customers including their orders.
     "plz": 80331,
     "ort": "Muenchen",
     "email": "testkunde.updated@example.com"
-  },
-  "orders": []
+  }
 }
 ```
 
