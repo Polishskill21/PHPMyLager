@@ -344,7 +344,7 @@ All customer responses share this structure:
 | `customer.strasse` | string | Street address |
 | `customer.plz` | integer | Postal code (validated as 5 digits) |
 | `customer.ort` | string | City |
-| `customer.email` | email | Email address |
+| `customer.email` | string | Email address |
 
 #### GET `/api/customers`
 Returns all active (non-deleted) customers.
