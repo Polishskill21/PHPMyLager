@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     .container { max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem; }
-    
+
     .alert-success {
         background: #052e16; border: 1px solid #16a34a;
         color: #4ade80; padding: 0.75rem 1rem;
@@ -16,7 +16,7 @@
     .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 2rem; }
 
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-    
+
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; }
     .card-icon { font-size: 1.8rem; margin-bottom: 0.75rem; }
     .card-title { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
@@ -52,6 +52,11 @@
             <div class="card-title">Orders</div>
             <div class="card-value">API Ready</div>
         </div>
+        <a href="{{ route('customers') }}" class="card clickable-card">
+            <div class="card-icon">🧙</div>
+            <div class="card-title">Customers</div>
+            <div class="card-value">API Ready</div>
+        </a>
         <div class="card">
             <div class="card-icon">👤</div>
             <div class="card-title">Logged in as</div>

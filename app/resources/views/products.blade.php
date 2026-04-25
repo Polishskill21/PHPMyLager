@@ -98,6 +98,9 @@
         <a href="#" class="aside-link">
             <span class="aside-icon">◳</span> Orders
         </a>
+        <a href="{{ route('customers') }}" class="aside-link">
+            <span class="aside-icon">🧙</span> Customers
+        </a>
         <a href="#" class="aside-link">
             <span class="aside-icon">◫</span> Warehouse
         </a>
