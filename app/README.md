@@ -308,6 +308,139 @@ Operates on a **full-state principle**—the `items` array you send becomes the 
 #### DELETE `/api/orders/{id}` — 204 No Content
 Restores stock for every line-item before deleting the order and all its positions. Returns an empty body.
 
+---
+
+### Customer Endpoints
+
+| Method | Path | Action | Min. Role |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/customers` | List all active customers (with orders) | `viewer` |
+| **GET** | `/api/customers/{id}` | View a specific customer (with orders) | `viewer` |
+| **POST** | `/api/customers` | Create a new customer | `viewer` |
+| **PUT** | `/api/customers/{id}` | Update an existing customer | `viewer` |
+| **DELETE** | `/api/customers/{id}` | Soft-delete a customer | `viewer` |
+
+#### Customer Response Shape
+All customer responses share this structure:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `customer.pKdNr` | integer | Customer primary key |
+| `customer.name` | string | Customer name |
+| `customer.strasse` | string | Street address |
+| `customer.plz` | integer | Postal code |
+| `customer.ort` | string | City |
+| `customer.email` | string | Email address |
+| `orders[].pAufNr` | integer | Order primary key |
+| `orders[].aufDat` | string (date) | Order date |
+| `orders[].aufTermin` | string (date) | Delivery date |
+| `orders[].fKdNr` | integer | FK to customer |
+
+#### GET `/api/customers`
+Returns all active (non-deleted) customers including their orders.
+
+```json
+[
+  {
+    "customer": {
+      "pKdNr": 24001,
+      "name": "Baumarkt Mueller",
+      "strasse": "Postfach 134",
+      "plz": 85579,
+      "ort": "Neubiberg",
+      "email": "mueller@baumarkt.de"
+    },
+    "orders": [
+      {
+        "pAufNr": 22334,
+        "aufDat": "2009-01-26 00:00:00",
+        "aufTermin": "2009-02-18 00:00:00",
+        "fKdNr": 24001
+      }
+    ]
+  }
+]
+```
+
+#### GET `/api/customers/{id}`
+```json
+{
+  "customer": {
+    "pKdNr": 24001,
+    "name": "Baumarkt Mueller",
+    "strasse": "Postfach 134",
+    "plz": 85579,
+    "ort": "Neubiberg",
+    "email": "mueller@baumarkt.de"
+  },
+  "orders": [
+    {
+      "pAufNr": 22334,
+      "aufDat": "2009-01-26 00:00:00",
+      "aufTermin": "2009-02-18 00:00:00",
+      "fKdNr": 24001
+    }
+  ]
+}
+```
+
+#### POST `/api/customers` — 201 Created
+**Request body:**
+```json
+{
+  "name": "Test Kunde",
+  "strasse": "Musterstrasse 1",
+  "plz": "80331",
+  "ort": "Muenchen",
+  "email": "testkunde@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "customer": {
+    "pKdNr": 24015,
+    "name": "Test Kunde",
+    "strasse": "Musterstrasse 1",
+    "plz": 80331,
+    "ort": "Muenchen",
+    "email": "testkunde@example.com"
+  },
+  "orders": []
+}
+```
+
+#### PUT `/api/customers/{id}`
+**Request body:**
+```json
+{
+  "name": "Test Kunde Updated",
+  "strasse": "Musterstrasse 2",
+  "plz": "80331",
+  "ort": "Muenchen",
+  "email": "testkunde.updated@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "customer": {
+    "pKdNr": 24015,
+    "name": "Test Kunde Updated",
+    "strasse": "Musterstrasse 2",
+    "plz": 80331,
+    "ort": "Muenchen",
+    "email": "testkunde.updated@example.com"
+  },
+  "orders": []
+}
+```
+
+#### DELETE `/api/customers/{id}` — 204 No Content
+Soft-deletes the customer. Returns an empty body.
+
 ## 4. Testing & Debugging
 
 The application includes a specialized debug bypass for local development, allowing you to test different roles without a manual login flow.
