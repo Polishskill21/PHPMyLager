@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +14,7 @@ class CustomerController extends Controller
     // return customers
     public function index(): JsonResponse
     {
-        $customers = Customer::with('orders')->get();
+        $customers = Customer::all();
 
         return response()->json(
             $customers->map(fn (Customer $customer) => $this->formatCustomer($customer))
@@ -25,7 +24,6 @@ class CustomerController extends Controller
     // return customer
     public function show(Customer $customer): JsonResponse
     {
-        $customer->load("orders");
         return response()->json($this->formatCustomer($customer));
     }
 
@@ -44,7 +42,7 @@ class CustomerController extends Controller
             return Customer::create($validated);
         });
 
-        return response()->json($this->formatCustomer($customer->fresh(['orders'])), 201);
+        return response()->json($this->formatCustomer($customer->fresh()), 201);
     }
 
     public function update(Request $request, Customer $customer): JsonResponse
@@ -59,7 +57,7 @@ class CustomerController extends Controller
 
         $customer = DB::transaction(function () use ($validated, $customer): Customer {
             $customer->update($validated);
-            return $customer->fresh(['orders']);
+            return $customer->fresh();
         });
 
         return response()->json($this->formatCustomer($customer));
@@ -76,9 +74,6 @@ class CustomerController extends Controller
 
     private function formatCustomer(Customer $customer): array
     {
-
-        $orders = $customer->orders;
-
         return [
             'customer' => [
                 'pKdNr'   => $customer->pKdNr,
@@ -86,14 +81,8 @@ class CustomerController extends Controller
                 'strasse' => $customer->strasse,
                 'plz'     => $customer->plz,
                 'ort'     => $customer->ort,
-                'email' => $customer->email,
+                'email'   => $customer->email,
             ],
-            'orders' => $orders->map(fn (Order $order) => [
-                'pAufNr'    => $order->pAufNr,
-                'aufDat'    => $order->aufDat,
-                'aufTermin' => $order->aufTermin,
-                'fKdNr'     => $order->fKdNr,
-            ])->values(),
         ];
     }
 }
