@@ -2,20 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
+use App\Models\Order;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
-    // list all customers
-    public function index()
+
+    // return customers
+    public function index(): JsonResponse
     {
-        return "index is working";
+        $customers = Customer::with('orders')->get();
+
+        return response()->json(
+            $customers->map(fn (Customer $customer) => $this->formatCustomer($customer))
+        );
     }
 
-    // return customer by id
-    public function show()
+    // return customer
+    public function show(Customer $customer): JsonResponse
     {
-        return "show is working";
+        $customer->load("orders");
+        return response()->json($this->formatCustomer($customer));
     }
 
     // create customer
@@ -24,15 +33,36 @@ class CustomerController extends Controller
         return "store is working";
     }
 
-    // update customer by id
     public function update()
     {
         return "update is working";
     }
 
-    // delete customer by id
     public function destroy()
     {
         return "destroy is working";
+    }
+
+    private function formatCustomer(Customer $customer): array
+    {
+
+        $orders = $customer->orders;
+
+        return [
+            'customer' => [
+                'pKdNr'   => $customer->pKdNr,
+                'name'    => $customer->name,
+                'strasse' => $customer->strasse,
+                'plz'     => $customer->plz,
+                'ort'     => $customer->ort,
+                'email'   => $customer->email,
+            ],
+            'orders' => $orders->map(fn (Order $order) => [
+                'pAufNr'    => $order->pAufNr,
+                'aufDat'    => $order->aufDat,
+                'aufTermin' => $order->aufTermin,
+                'fKdNr'     => $order->fKdNr,
+            ])->values(),
+        ];
     }
 }

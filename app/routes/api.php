@@ -5,6 +5,7 @@ use App\Http\Controllers\SystemController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\WarehouseGroupController;
 use App\Http\Controllers\Ordercontroller;
+use App\Http\Controllers\CustomerController;
 
 Route::get('/status', [SystemController::class, 'status']);
 
@@ -42,4 +43,10 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('orders/{order}',        [OrderController::class, 'destroy'])->name('orders.destroy');
     });
+
+    Route::get('customers',              [CustomerController::class, 'index'])->name('customers.index');
+    Route::get('customers/{customer}',   [CustomerController::class, 'show'])->name('customers.show');
+    Route::post('customers',             [CustomerController::class, 'store'])->name('customers.store');
+    Route::put('customers/{customer}',   [CustomerController::class, 'update'])->name('customers.update');
+    Route::delete('customers/{customer}',[CustomerController::class, 'destroy'])->name('customers.destroy');
 });
