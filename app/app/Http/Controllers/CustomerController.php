@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CustomerController extends Controller
 {
@@ -28,9 +29,21 @@ class CustomerController extends Controller
     }
 
     // create customer
-    public function store()
+    public function store(Request $request): JsonResponse
     {
-        return "store is working";
+        $validated = $request->validate([
+            'name'    => 'required|string|max:255',
+            'strasse' => 'required|string|max:255',
+            'plz'     => 'required|integer|regex:/^[0-9]{5}$/',
+            'ort'     => 'required|string|max:255',
+            'email'   => 'required|email|max:255|unique:kunden,email',
+        ]);
+
+        $customer = DB::transaction(function () use ($validated): Customer {
+            return Customer::create($validated);
+        });
+
+        return response()->json($this->formatCustomer($customer->fresh(['orders'])), 201);
     }
 
     public function update()
