@@ -32,8 +32,8 @@ class Order extends Model
         return $this->hasMany(OrderItem::class, 'fAufNr', 'pAufNr');
     }
 
-    // public function customer(): BelongsTo
-    // {
-    //     return $this->belongsTo(Customer::class, 'fKdNr', 'pKdNr');
-    // }
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'fKdNr', 'pKdNr');
+    }
 }
