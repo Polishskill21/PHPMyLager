@@ -173,12 +173,11 @@ class CustomerControllerTest extends TestCase
             ->assertStatus(404);
     }
 
-    public function test_admin_writer_and_viewer_can_create_customer(): void
+    public function test_admin_and_writer_can_create_customer(): void
     {
         $users = [
             'admin' => $this->admin,
             'writer' => $this->writer,
-            'viewer' => $this->viewer,
         ];
 
         foreach ($users as $role => $user) {
@@ -202,9 +201,18 @@ class CustomerControllerTest extends TestCase
         }
     }
 
+    public function test_viewer_cannot_create_customer(): void
+    {
+        $payload = $this->validCustomerPayload();
+
+        $this->actingAs($this->viewer)
+            ->postJson('/api/customers', $payload)
+            ->assertStatus(403);
+    }
+
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->actingAs($this->viewer)->postJson('/api/customers', []);
+        $response = $this->actingAs($this->writer)->postJson('/api/customers', []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name', 'strasse', 'plz', 'ort', 'email']);
@@ -217,7 +225,7 @@ class CustomerControllerTest extends TestCase
             'email' => 'not-an-email',
         ]);
 
-        $response = $this->actingAs($this->viewer)->postJson('/api/customers', $payload);
+        $response = $this->actingAs($this->writer)->postJson('/api/customers', $payload);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['plz', 'email']);
@@ -229,17 +237,16 @@ class CustomerControllerTest extends TestCase
 
         $payload = $this->validCustomerPayload(['email' => $existing->email]);
 
-        $response = $this->actingAs($this->viewer)->postJson('/api/customers', $payload);
+        $response = $this->actingAs($this->writer)->postJson('/api/customers', $payload);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['email']);
     }
 
-    public function test_admin_writer_and_viewer_can_update_customer(): void
+    public function test_admin_and_writer_can_update_customer(): void
     {
         $users = [
             'admin' => $this->admin,
             'writer' => $this->writer,
-            'viewer' => $this->viewer,
         ];
 
         foreach ($users as $role => $user) {
@@ -271,6 +278,19 @@ class CustomerControllerTest extends TestCase
         }
     }
 
+    public function test_viewer_cannot_update_customer(): void
+    {
+        $customer = $this->createCustomer();
+
+        $payload = $this->validCustomerPayload([
+            'email' => 'viewer.update@example.com',
+        ]);
+
+        $this->actingAs($this->viewer)
+            ->putJson("/api/customers/{$customer->pKdNr}", $payload)
+            ->assertStatus(403);
+    }
+
     public function test_update_allows_same_email_for_the_same_customer(): void
     {
         $customer = $this->createCustomer(['email' => 'same@email.com']);
@@ -280,7 +300,7 @@ class CustomerControllerTest extends TestCase
             'email' => 'same@email.com',
         ]);
 
-        $response = $this->actingAs($this->viewer)->putJson("/api/customers/{$customer->pKdNr}", $payload);
+        $response = $this->actingAs($this->writer)->putJson("/api/customers/{$customer->pKdNr}", $payload);
 
         $response->assertStatus(200)->assertJsonPath('customer.email', 'same@email.com');
 
@@ -304,7 +324,7 @@ class CustomerControllerTest extends TestCase
             'email' => $customerB->email,
         ]);
 
-        $response = $this->actingAs($this->viewer)->putJson("/api/customers/{$customerA->pKdNr}", $payload);
+        $response = $this->actingAs($this->writer)->putJson("/api/customers/{$customerA->pKdNr}", $payload);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['email']);
     }
@@ -318,7 +338,7 @@ class CustomerControllerTest extends TestCase
             'plz' => '12',
         ]);
 
-        $response = $this->actingAs($this->viewer)->putJson("/api/customers/{$customer->pKdNr}", $payload);
+        $response = $this->actingAs($this->writer)->putJson("/api/customers/{$customer->pKdNr}", $payload);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['name', 'plz']);
     }
@@ -327,32 +347,42 @@ class CustomerControllerTest extends TestCase
     {
         $payload = $this->validCustomerPayload();
 
-        $this->actingAs($this->viewer)
+        $this->actingAs($this->admin)
             ->putJson('/api/customers/999999', $payload)
             ->assertStatus(404);
     }
 
-    public function test_admin_writer_and_viewer_can_soft_delete_customer(): void
+    public function test_admin_can_soft_delete_customer(): void
     {
-        $users = [
-            'admin' => $this->admin,
-            'writer' => $this->writer,
-            'viewer' => $this->viewer,
-        ];
+        $customer = $this->createCustomer(['email' => 'admin.delete@example.com']);
 
-        foreach ($users as $role => $user) {
-            $customer = $this->createCustomer(['email' => "{$role}.delete@example.com"]);
+        $response = $this->actingAs($this->admin)->deleteJson("/api/customers/{$customer->pKdNr}");
 
-            $response = $this->actingAs($user)->deleteJson("/api/customers/{$customer->pKdNr}");
+        $response->assertStatus(204);
+        $this->assertSoftDeleted('kunden', ['pKdNr' => $customer->pKdNr]);
+    }
 
-            $response->assertStatus(204);
-            $this->assertSoftDeleted('kunden', ['pKdNr' => $customer->pKdNr]);
-        }
+    public function test_writer_cannot_soft_delete_customer(): void
+    {
+        $customer = $this->createCustomer(['email' => 'writer.delete@example.com']);
+
+        $this->actingAs($this->writer)
+            ->deleteJson("/api/customers/{$customer->pKdNr}")
+            ->assertStatus(403);
+    }
+
+    public function test_viewer_cannot_soft_delete_customer(): void
+    {
+        $customer = $this->createCustomer(['email' => 'viewer.delete@example.com']);
+
+        $this->actingAs($this->viewer)
+            ->deleteJson("/api/customers/{$customer->pKdNr}")
+            ->assertStatus(403);
     }
 
     public function test_deleting_non_existent_customer_returns_404(): void
     {
-        $this->actingAs($this->viewer)
+        $this->actingAs($this->admin)
             ->deleteJson('/api/customers/999999')
             ->assertStatus(404);
     }
@@ -362,7 +392,7 @@ class CustomerControllerTest extends TestCase
         $customer = $this->createCustomer(['email' => 'deleted.customer@example.com']);
         $orderId = $this->createOrderForCustomer($customer->pKdNr);
 
-        $this->actingAs($this->viewer)
+        $this->actingAs($this->admin)
             ->deleteJson("/api/customers/{$customer->pKdNr}")
             ->assertStatus(204);
 
@@ -388,17 +418,17 @@ class CustomerControllerTest extends TestCase
     {
         $customer = $this->createCustomer();
 
-        $this->actingAs($this->viewer)
+        $this->actingAs($this->admin)
             ->deleteJson("/api/customers/{$customer->pKdNr}")
             ->assertStatus(204);
 
         $payload = $this->validCustomerPayload(['email' => 'after.delete@example.com']);
 
-        $this->actingAs($this->viewer)
+        $this->actingAs($this->admin)
             ->putJson("/api/customers/{$customer->pKdNr}", $payload)
             ->assertStatus(404);
 
-        $this->actingAs($this->viewer)
+        $this->actingAs($this->admin)
             ->deleteJson("/api/customers/{$customer->pKdNr}")
             ->assertStatus(404);
     }
