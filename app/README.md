@@ -8,6 +8,8 @@ Before launching the application, you must configure local environment variables
 2.  **Update Variables:** Open the `.env` file and set your desired credentials. 
     > **⚠️ Warning:** If you skip this step, the system will use the default password `"password"`.
 
+The Nginx server allows 5 requests per second and 10 simultaneous connections from one IP on the application layer.
+
 ---
 
 ## 2. Database Management
