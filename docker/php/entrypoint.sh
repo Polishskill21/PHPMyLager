@@ -36,8 +36,11 @@ mkdir -p \
   bootstrap/cache
 
 # Keep local bind-mounted files owned by the host user.
+chown -R www-data:www-data storage bootstrap/cache || true
+
+# Only in non-local: chown the source files too (no bind mount in prod)
 if [ "${APP_ENV}" != "local" ]; then
-  chown -R www-data:www-data storage bootstrap/cache || true
+  chown -R www-data:www-data . || true
 fi
 
 # Directories need execute bits for traversal; regular files do not.
