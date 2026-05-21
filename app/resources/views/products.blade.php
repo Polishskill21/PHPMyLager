@@ -92,10 +92,10 @@
         <a href="{{ route('dashboard') }}" class="aside-link">
             <span class="aside-icon">⬡</span> Dashboard
         </a>
-        <a href="#" class="aside-link active">
+        <a href="{{ route('products') }}" class="aside-link active">
             <span class="aside-icon">◈</span> Products
         </a>
-        <a href="#" class="aside-link">
+        <a href="{{ route('orders') }}" class="aside-link">
             <span class="aside-icon">◳</span> Orders
         </a>
         <a href="{{ route('customers') }}" class="aside-link">

@@ -47,11 +47,11 @@
             <div class="card-title">Products</div>
             <div class="card-value">Go to Catalog ➔</div>
         </a>
-        <div class="card">
+        <a href="{{ route('orders') }}" class="card clickable-card">
             <div class="card-icon">🗂️</div>
             <div class="card-title">Orders</div>
-            <div class="card-value">API Ready</div>
-        </div>
+            <div class="card-value">Go to Orders ➔</div>
+        </a>
         <a href="{{ route('customers') }}" class="card clickable-card">
             <div class="card-icon">🧙</div>
             <div class="card-title">Customers</div>
