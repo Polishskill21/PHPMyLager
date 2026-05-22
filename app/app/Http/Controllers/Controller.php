@@ -75,9 +75,7 @@ abstract class Controller
     }
 
     /**
-     * 422 Unprocessable — mirrors Laravel's ValidationException envelope
-     * so the frontend sees a consistent shape for both rule-based and
-     * business-logic validation failures.
+     * 422 Unprocessable.
      *
      * @param  string|array  $errors  Either a plain message string or an
      *                                associative ['field' => ['msg']] map.
@@ -96,8 +94,7 @@ abstract class Controller
     }
 
     /**
-     * 500 Internal Server Error — never expose raw exception messages in
-     * production; pass them through Laravel's logging instead.
+     * 500 Internal Server Error.
      */
     protected function serverError(string $message = 'An unexpected error occurred.'): JsonResponse
     {
