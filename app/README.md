@@ -529,7 +529,7 @@ Stock is decremented for each item. The `kaufPreis` is snapshotted from the prod
 }
 ```
 
-#### PUT `/api/orders/{id}`
+#### PUT `/api/orders/{id}` — 200 OK
 Operates on a **full-state principle**—the `items` array you send becomes the complete new state of the order. Any existing line-items not present in the request are deleted and their stock is restored.
 
 **Request body:**
@@ -590,6 +590,116 @@ Operates on a **full-state principle**—the `items` array you send becomes the 
 
 #### DELETE `/api/orders/{id}` — 204 No Content
 Restores stock for every line-item before deleting the order and all its positions. Returns an empty body.
+
+---
+
+### Supplier Endpoints (Lieferanten)
+
+Suppliers represent the wholesale vendors and manufacturers that fulfill your inbound purchase orders. 
+
+| Method | Path | Action | Min. Role |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/suppliers` | List all registered suppliers | `viewer` |
+| **GET** | `/api/suppliers/{id}` | View a specific supplier profile | `viewer` |
+| **POST** | `/api/suppliers` | Register a new supplier | `writer` |
+| **PUT** | `/api/suppliers/{id}` | Update supplier contact details | `writer` |
+| **DELETE** | `/api/suppliers/{id}` | Hard-delete a supplier | `admin` |
+
+#### GET `/api/suppliers`
+Returns all active suppliers in the system.
+
+```json
+{
+  "data": [
+    {
+      "pLiefNr": 5001,
+      "name": "Remscheid Werkzeuge GmbH",
+      "strasse": "Industriepark Nord 4",
+      "plz": 42853,
+      "ort": "Remscheid",
+      "email": "vertrieb@remscheid-tools.de",
+      "telefon": "+49 2191 555120"
+    },
+    {
+      "pLiefNr": 5002,
+      "name": "Sheffield Steel Co.",
+      "strasse": "22 Ironworks Lane",
+      "plz": 54321,
+      "ort": "Sheffield",
+      "email": "orders@sheffieldsteel.co.uk",
+      "telefon": "+44 114 9620000"
+    }
+  ]
+}
+```
+
+#### POST `/api/suppliers` — 201 Created
+Registers a new supplier profile.
+
+**Request body:**
+```json
+{
+  "name": "Alpen Werkzeuge Import S.A.",
+  "strasse": "Rue du Commerce 77",
+  "plz": "10050",
+  "ort": "Lausanne",
+  "email": "info@alpenimport.ch",
+  "telefon": "+41 21 3456789"
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "pLiefNr": 5003,
+    "name": "Alpen Werkzeuge Import S.A.",
+    "strasse": "Rue du Commerce 77",
+    "plz": 10050,
+    "ort": "Lausanne",
+    "email": "info@alpenimport.ch",
+    "telefon": "+41 21 3456789"
+  },
+  "message": "Supplier created successfully."
+}
+```
+
+#### PUT `/api/suppliers/{id}` — 200 OK
+Updates an existing supplier's details.
+
+**Request body:**
+```json
+{
+  "name": "Alpen Werkzeuge Import S.A.",
+  "strasse": "Rue du Commerce 77",
+  "plz": "10050",
+  "ort": "Lausanne",
+  "email": "new-contact@alpenimport.ch",
+  "telefon": "+41 21 3456789"
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "pLiefNr": 5003,
+    "name": "Alpen Werkzeuge Import S.A.",
+    "strasse": "Rue du Commerce 77",
+    "plz": 10050,
+    "ort": "Lausanne",
+    "email": "new-contact@alpenimport.ch",
+    "telefon": "+41 21 3456789"
+  },
+  "message": "Supplier updated successfully."
+}
+```
+
+#### DELETE `/api/suppliers/{id}` — 204 No Content
+Hard-deletes the supplier.
+
+**Success Response:**
+HTTP `204 No Content` (Empty body).
 
 ---
 
