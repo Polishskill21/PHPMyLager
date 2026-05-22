@@ -188,7 +188,8 @@ class OrderController extends Controller
                 // ── Remove lines omitted from the request ───────────────────
                 foreach ($currentItems as $posNr => $item) {
                     if (!in_array($posNr, $submittedPosNrs, true)) {
-                        Product::where('pArtikelNr', $item->fArtikelNr)
+                        Product::withTrashed()
+                               ->where('pArtikelNr', $item->fArtikelNr)
                                ->increment('bestand', $item->aufMenge);
                         $item->delete();
                     }
@@ -223,7 +224,8 @@ class OrderController extends Controller
                 $order->load('items');
 
                 foreach ($order->items as $item) {
-                    Product::where('pArtikelNr', $item->fArtikelNr)
+                    Product::withTrashed()
+                           ->where('pArtikelNr', $item->fArtikelNr)
                            ->increment('bestand', $item->aufMenge);
                 }
 

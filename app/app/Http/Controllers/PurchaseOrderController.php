@@ -176,11 +176,18 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
 
-                // Increment stock
-                Product::where('pArtikelNr', $line->fArtikelNr)
-                       ->lockForUpdate()
-                       ->firstOrFail()
-                       ->increment('bestand', $newQty);
+                $product = Product::withTrashed()
+                                  ->where('pArtikelNr', $line->fArtikelNr)
+                                  ->lockForUpdate()
+                                  ->firstOrFail();
+
+                if ($product->trashed()) {
+                    throw ValidationException::withMessages([
+                        'items' => "pBestPosNr={$posNr}: Cannot receive product {$product->pArtikelNr} because it has been discontinued and removed from the catalog.",
+                    ]);
+                }
+
+                $product->increment('bestand', $newQty);
 
                 // Update delivered quantity on the line
                 $line->increment('gelieferteMenge', $newQty);
