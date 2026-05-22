@@ -16,6 +16,7 @@ Route::middleware('auth')->group(function () {
     // All roles can read
     Route::get('products',                     [ProductController::class, 'index'])->name('products.index');
     Route::get('products/{product}',           [ProductController::class, 'show'])->name('products.show');
+    Route::get('products/{product}/stock-history', [ProductController::class, 'stockHistory']);
 
     Route::get('warehouse-groups',             [WarehouseGroupController::class, 'index'])->name('warehouse-groups.index');
     Route::get('warehouse-groups/{id}',        [WarehouseGroupController::class, 'show'])->name('warehouse-groups.show');
