@@ -137,7 +137,7 @@ class OrderControllerTest extends TestCase
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/orders', $payload);
 
-        return $response->json();
+        return $response->json('data');
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -153,11 +153,13 @@ class OrderControllerTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonStructure([
-                     '*' => [
-                         'order_info' => ['pAufNr', 'aufDat', 'aufTermin', 'fKdNr'],
-                         'items',
-                         'order_total',
-                         'preis_total',
+                     'data' => [
+                         '*' => [
+                             'order_info' => ['pAufNr', 'aufDat', 'aufTermin', 'fKdNr'],
+                             'items',
+                             'order_total',
+                             'preis_total',
+                         ]
                      ],
                  ]);
     }
@@ -176,22 +178,24 @@ class OrderControllerTest extends TestCase
                          ->getJson("/api/orders/{$aufNr}");
 
         $response->assertStatus(200)
-                 ->assertJsonPath('order_info.pAufNr', $aufNr)
+                 ->assertJsonPath('data.order_info.pAufNr', $aufNr)
                  ->assertJsonStructure([
-                     'order_info',
-                     'items' => [
-                         '*' => [
-                             'pAufPosNr',
-                             'fArtikelNr',
-                             'bezeichnung',
-                             'aufMenge',
-                             'kaufPreis',
-                             'line_total',
-                             'is_discontinued'
-                         ],
-                     ],
-                     'order_total',
-                     'preis_total',
+                     'data' => [
+                        'order_info',
+                        'items' => [
+                            '*' => [
+                                'pAufPosNr',
+                                'fArtikelNr',
+                                'bezeichnung',
+                                'aufMenge',
+                                'kaufPreis',
+                                'line_total',
+                                'is_discontinued'
+                            ],
+                        ],
+                        'order_total',
+                        'preis_total',
+                     ]
                  ]);
     }
 
@@ -222,9 +226,9 @@ class OrderControllerTest extends TestCase
                          ]);
 
         $response->assertStatus(201)
-                 ->assertJsonPath('order_info.fKdNr', $kdNr)
-                 ->assertJsonPath('order_total', 10)
-                 ->assertJsonPath('preis_total', 100); // 10 * 10.00
+                 ->assertJsonPath('data.order_info.fKdNr', $kdNr)
+                 ->assertJsonPath('data.order_total', 10)
+                 ->assertJsonPath('data.preis_total', 100); // 10 * 10.00
     }
 
     public function test_writer_can_create_an_order(): void
@@ -280,17 +284,17 @@ class OrderControllerTest extends TestCase
 
         $response->assertStatus(201);
 
-        $this->assertEquals(25.25, $response->json('items.0.kaufPreis'));
-        $this->assertEquals(75.75, $response->json('preis_total')); // 3 * 25.25
+        $this->assertEquals(25.25, $response->json('data.items.0.kaufPreis'));
+        $this->assertEquals(75.75, $response->json('data.preis_total')); // 3 * 25.25
 
         
         $product->update(['vkPreis' => 99.00]);
 
-        $aufNr = $response->json('order_info.pAufNr');
+        $aufNr = $response->json('data.order_info.pAufNr');
         $this->actingAs($this->viewer)
              ->getJson("/api/orders/{$aufNr}")
-             ->assertJsonPath('items.0.kaufPreis', 25.25)
-             ->assertJsonPath('preis_total', 75.75);
+             ->assertJsonPath('data.items.0.kaufPreis', 25.25)
+             ->assertJsonPath('data.preis_total', 75.75);
     }
 
     public function test_stock_is_decremented_when_order_is_created(): void
@@ -446,7 +450,7 @@ class OrderControllerTest extends TestCase
                          ]);
 
         $response->assertStatus(200)
-                 ->assertJsonPath('order_info.fKdNr', $newKdNr);
+                 ->assertJsonPath('data.order_info.fKdNr', $newKdNr);
     }
 
     public function test_writer_can_update_an_order(): void
@@ -502,8 +506,8 @@ class OrderControllerTest extends TestCase
                                ],
                            ]);
 
-        $aufNr = $createResp->json('order_info.pAufNr');
-        $posNr = $createResp->json('items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.pAufNr');
+        $posNr = $createResp->json('data.items.0.pAufPosNr');
 
         // Update quantity from 10 → 25 (diff = +15 should be deducted)
         $this->actingAs($this->admin)
@@ -516,7 +520,7 @@ class OrderControllerTest extends TestCase
                  ],
              ])
              ->assertStatus(200)
-             ->assertJsonPath('order_total', 25);
+             ->assertJsonPath('data.order_total', 25);
 
         $this->assertDatabaseHas('artikel', [
             'pArtikelNr' => $product->pArtikelNr,
@@ -541,8 +545,8 @@ class OrderControllerTest extends TestCase
                                ],
                            ]);
 
-        $aufNr = $createResp->json('order_info.pAufNr');
-        $posNr = $createResp->json('items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.pAufNr');
+        $posNr = $createResp->json('data.items.0.pAufPosNr');
 
         // Update: reduce from 20 → 8, diff = 12 should be returned to stock
         $this->actingAs($this->admin)
@@ -580,8 +584,8 @@ class OrderControllerTest extends TestCase
                                ],
                            ]);
 
-        $aufNr = $createResp->json('order_info.pAufNr');
-        $posNr = $createResp->json('items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.pAufNr');
+        $posNr = $createResp->json('data.items.0.pAufPosNr');
 
         $updateResp = $this->actingAs($this->admin)
                            ->putJson("/api/orders/{$aufNr}", [
@@ -596,10 +600,10 @@ class OrderControllerTest extends TestCase
                            ]);
 
         $updateResp->assertStatus(200)
-                   ->assertJsonCount(2, 'items');
+                   ->assertJsonCount(2, 'data.items');
 
         // New item price should be snapshotted
-        $newItem = collect($updateResp->json('items'))
+        $newItem = collect($updateResp->json('data.items'))
             ->firstWhere('fArtikelNr', $productB->pArtikelNr);
 
         $this->assertEquals(20.00, $newItem['kaufPreis']);
@@ -630,8 +634,8 @@ class OrderControllerTest extends TestCase
                                ],
                            ]);
 
-        $aufNr  = $createResp->json('order_info.pAufNr');
-        $posNrA = collect($createResp->json('items'))
+        $aufNr  = $createResp->json('data.order_info.pAufNr');
+        $posNrA = collect($createResp->json('data.items'))
             ->firstWhere('fArtikelNr', $productA->pArtikelNr)['pAufPosNr'];
 
         // Submit only product A — product B is intentionally omitted
@@ -646,7 +650,7 @@ class OrderControllerTest extends TestCase
                            ]);
 
         $updateResp->assertStatus(200)
-                   ->assertJsonCount(1, 'items');
+                   ->assertJsonCount(1, 'data.items');
 
         // Product B's stock should be fully restored (15 returned)
         $this->assertDatabaseHas('artikel', [
@@ -677,8 +681,8 @@ class OrderControllerTest extends TestCase
                                ],
                            ]);
 
-        $aufNr = $createResp->json('order_info.pAufNr');
-        $posNr = $createResp->json('items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.pAufNr');
+        $posNr = $createResp->json('data.items.0.pAufPosNr');
 
         // Try to silently swap product A → B on the existing position
         $this->actingAs($this->admin)
@@ -694,7 +698,8 @@ class OrderControllerTest extends TestCase
                      ],
                  ],
              ])
-             ->assertStatus(500); // throws \Exception caught by Laravel's handler
+             ->assertStatus(422)
+             ->assertJsonValidationErrors(['items']);
     }
 
     // ── Guard: updating with insufficient stock is rejected ────────────
@@ -714,8 +719,8 @@ class OrderControllerTest extends TestCase
                                ],
                            ]);
 
-        $aufNr = $createResp->json('order_info.pAufNr');
-        $posNr = $createResp->json('items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.pAufNr');
+        $posNr = $createResp->json('data.items.0.pAufPosNr');
 
         // bestand is now 5. Trying to order 50 (diff = +45) must fail.
         $this->actingAs($this->admin)
@@ -791,7 +796,7 @@ class OrderControllerTest extends TestCase
                                ],
                            ]);
 
-        $aufNr = $createResp->json('order_info.pAufNr');
+        $aufNr = $createResp->json('data.order_info.pAufNr');
 
         $this->actingAs($this->admin)
              ->deleteJson("/api/orders/{$aufNr}")
@@ -840,7 +845,7 @@ class OrderControllerTest extends TestCase
                            ]);
  
         $createResp->assertStatus(201);
-        $aufNr = $createResp->json('order_info.pAufNr');
+        $aufNr = $createResp->json('data.order_info.pAufNr');
  
         // Soft-delete the product
         $product->delete();
@@ -851,9 +856,9 @@ class OrderControllerTest extends TestCase
                          ->getJson("/api/orders/{$aufNr}");
  
         $response->assertStatus(200)
-                 ->assertJsonCount(1, 'items');
+                 ->assertJsonCount(1, 'data.items');
  
-        $item = $response->json('items.0');
+        $item = $response->json('data.items.0');
  
         $this->assertEquals($product->pArtikelNr, $item['fArtikelNr']);
         $this->assertEquals('Legacy Widget', $item['bezeichnung'],
@@ -875,9 +880,11 @@ class OrderControllerTest extends TestCase
  
         $response->assertStatus(200);
  
-        foreach ($response->json('items') as $item) {
-            $this->assertFalse($item['is_discontinued'],
-                'is_discontinued must be false for an active product');
+        foreach ($response->json('data.items') as $item) {
+            $this->assertFalse(
+                $item['is_discontinued'],
+                'is_discontinued must be false for an active product'
+            );
         }
     }
  
@@ -898,7 +905,7 @@ class OrderControllerTest extends TestCase
  
         $response->assertStatus(200);
  
-        $ids = collect($response->json('products'))->pluck('pArtikelNr');
+        $ids = collect($response->json('data'))->pluck('pArtikelNr');
  
         $this->assertContains($active->pArtikelNr, $ids->all(),
             'Active product must appear in the listing');

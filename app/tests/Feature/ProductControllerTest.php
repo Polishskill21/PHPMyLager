@@ -101,7 +101,7 @@ class ProductControllerTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonStructure([
-                     'products' => [
+                     'data' => [
                          '*' => ['pArtikelNr', 'bezeichnung', 'fWgNr', 'ekPreis', 'vkPreis']
                      ]
                  ]);
@@ -130,7 +130,7 @@ class ProductControllerTest extends TestCase
                          ]);
 
         $response->assertStatus(201)
-                 ->assertJsonPath('message', 'Product created successfully')
+                 ->assertJsonPath('message', 'Product created successfully.')
                  ->assertJsonPath('data.bezeichnung', 'New Product 100mm');
 
         $this->assertDatabaseHas('artikel', [
@@ -206,7 +206,7 @@ class ProductControllerTest extends TestCase
                          ]);
 
         $response->assertStatus(200)
-                 ->assertJsonPath('message', 'Product updated successfully')
+                 ->assertJsonPath('message', 'Product updated successfully.')
                  ->assertJsonPath('data.bezeichnung', 'Updated Name');
 
         $this->assertDatabaseHas('artikel', [
@@ -255,7 +255,7 @@ class ProductControllerTest extends TestCase
                          ->deleteJson("/api/products/{$id}");
 
         $response->assertStatus(200)
-                 ->assertJsonPath('message', "Product ID: {$id} deleted successfully");
+                 ->assertJsonPath('message', "Product {$id} deleted successfully.");
 
         $this->assertSoftDeleted('artikel', ['pArtikelNr' => $id]);
     }

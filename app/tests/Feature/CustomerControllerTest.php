@@ -132,15 +132,15 @@ class CustomerControllerTest extends TestCase
         $response = $this->actingAs($this->viewer)->getJson('/api/customers');
 
         $response->assertStatus(200)->assertJsonStructure([
-            '*' => [
-                'customer' => ['pKdNr', 'name', 'strasse', 'plz', 'ort', 'email'],
+            'data' => [
+                '*' => ['pKdNr', 'name', 'strasse', 'plz', 'ort', 'email'],
             ],
         ]);
 
-        $data = collect($response->json());
+        $data = collect($response->json('data'));
 
-        $withOrder = $data->firstWhere('customer.pKdNr', $customerWithOrder->pKdNr);
-        $withoutOrder = $data->firstWhere('customer.pKdNr', $customerWithoutOrder->pKdNr);
+        $withOrder = $data->firstWhere('pKdNr', $customerWithOrder->pKdNr);
+        $withoutOrder = $data->firstWhere('pKdNr', $customerWithoutOrder->pKdNr);
 
         $this->assertNotNull($withOrder);
         $this->assertNotNull($withoutOrder);
@@ -161,7 +161,7 @@ class CustomerControllerTest extends TestCase
         $response = $this->actingAs($this->viewer)->getJson("/api/customers/{$customer->pKdNr}");
 
         $response->assertStatus(200)
-            ->assertJsonPath('customer.pKdNr', $customer->pKdNr);
+            ->assertJsonPath('data.pKdNr', $customer->pKdNr);
 
         $this->assertArrayNotHasKey('orders', $response->json());
     }
@@ -189,8 +189,8 @@ class CustomerControllerTest extends TestCase
             $response = $this->actingAs($user)->postJson('/api/customers', $payload);
 
             $response->assertStatus(201)
-                ->assertJsonPath('customer.name', $payload['name'])
-                ->assertJsonPath('customer.email', $payload['email']);
+                ->assertJsonPath('data.name', $payload['name'])
+                ->assertJsonPath('data.email', $payload['email']);
 
             $this->assertArrayNotHasKey('orders', $response->json());
 
@@ -263,9 +263,9 @@ class CustomerControllerTest extends TestCase
             $response = $this->actingAs($user)->putJson("/api/customers/{$customer->pKdNr}", $payload);
 
             $response->assertStatus(200)
-                ->assertJsonPath('customer.pKdNr', $customer->pKdNr)
-                ->assertJsonPath('customer.name', $payload['name'])
-                ->assertJsonPath('customer.email', $payload['email']);
+                ->assertJsonPath('data.pKdNr', $customer->pKdNr)
+                ->assertJsonPath('data.name', $payload['name'])
+                ->assertJsonPath('data.email', $payload['email']);
 
             $this->assertDatabaseHas('kunden', [
                 'pKdNr' => $customer->pKdNr,
@@ -302,7 +302,7 @@ class CustomerControllerTest extends TestCase
 
         $response = $this->actingAs($this->writer)->putJson("/api/customers/{$customer->pKdNr}", $payload);
 
-        $response->assertStatus(200)->assertJsonPath('customer.email', 'same@email.com');
+        $response->assertStatus(200)->assertJsonPath('data.email', 'same@email.com');
 
         $this->assertDatabaseHas('kunden', [
             'pKdNr' => $customer->pKdNr,
