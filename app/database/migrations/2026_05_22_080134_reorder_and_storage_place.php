@@ -60,8 +60,8 @@ return new class extends Migration
 
             $table->integer('bestMenge');               // quantity ordered
             $table->integer('gelieferteMenge')->default(0); // actually delivered (partial delivery support)
-            $table->decimal('ekPreis', 8, 2)->nullable(); // agreed purchase price
-
+            $table->decimal('ekPreis', 8, 2)->nullable();
+            
             $table->foreign('fBestNr')->references('pBestNr')->on('bestellkoepfe')
                   ->cascadeOnDelete();
             $table->foreign('fArtikelNr')->references('pArtikelNr')->on('artikel');

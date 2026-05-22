@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PurchaseOrder;       
-use App\Models\PurchaseOrderItem;   
+use App\Models\PurchaseOrder; 
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,7 +41,7 @@ class PurchaseOrderController extends Controller
      * POST /purchase-orders
      *
      * Creates a new purchase order with status "offen".
-     * Stock is NOT touched yet — that happens on receive (see receiveDelivery).
+     * Stock is NOT touched yet — that happens on receive.
      */
     public function store(Request $request): JsonResponse
     {
@@ -128,7 +127,6 @@ class PurchaseOrderController extends Controller
                         'ekPreis'   => $item['ekPreis'] ?? $existing->ekPreis,
                     ]);
                 } else {
-                    // New line
                     $purchaseOrder->items()->create([
                         'fArtikelNr'      => $item['fArtikelNr'],
                         'bestMenge'       => $item['bestMenge'],
