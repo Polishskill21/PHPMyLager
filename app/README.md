@@ -24,7 +24,42 @@ Once Docker containers are running, use the following commands to manage databas
 
 # API Documentation
 
-## 3. API Reference
+## 3. Response Envelope
+Every API response follows the same predictable shape. Frontend clients only need one error-handling path.
+
+#### Success
+```json
+{ "data": { ... }, "message": "Optional human-readable confirmation." }
+```
+
+The `data` key holds the resource or array of resources. `message` is generally present on mutating operations (create, update, delete) or specific success states.
+
+#### No Content
+HTTP 204 with an empty body. Returned by all standard `DELETE` endpoints (except when soft-canceling or specifically returning a message).
+
+#### Validation Error — 422 Unprocessable Entity
+Returned when request fields fail validation rules or a business-logic constraint is violated (e.g., insufficient stock, invalid lagerplatz format).
+```json
+{
+  "message": "The given data was invalid.",
+  "errors": {
+    "field_name": ["Specific error message."]
+  }
+}
+```
+#### Other Errors
+All non-validation errors return a single `message` key with the appropriate HTTP status.
+
+| Status | Meaning |
+| :--- | :--- |
+| 403 Forbidden | Authenticated but your role lacks permission.| 
+| 404 Not Found | Resource does not exist. |
+| 409 Conflict | Constraint violation, e.g., deleting a product still referenced by an order. |
+| 500 Internal Server Error | Unexpected server-side failure. |
+
+---
+
+## 4. API Reference
 
 All API routes are protected. Access is granted based on the user's assigned role (`admin`, `writer`, or `viewer`).
 
@@ -36,41 +71,79 @@ All API routes are protected. Access is granted based on the user's assigned rol
 | :--- | :--- | :--- | :--- |
 | **GET** | `/api/products` | List all active products | `viewer` |
 | **GET** | `/api/products/{id}` | View a specific product | `viewer` |
+| **GET** | `/api/products/{id}/stock-history` | View audit trail of manual stock adjustments | `viewer` |
 | **POST** | `/api/products` | Create a new product | `writer` |
-| **PUT** | `/api/products/{id}` | Update a product | `writer` |
+| **PUT** | `/api/products/{id}` | Update a product (stock cannot be updated here) | `writer` |
+| **PATCH** | `/api/products/{id}/adjust-stock` | Manually adjust physical stock with a required reason | `admin` |
 | **DELETE** | `/api/products/{id}` | Soft-delete a product | `admin` |
+
 
 #### GET `/api/products`
 Returns all active (non-deleted) products.
 
 ```json
 {
-  "products": [
+  "data": [
     {
-      "pArtikelNr": 1,
-      "bezeichnung": "Gaming Monitor",
+      "pArtikelNr": 10005,
+      "bezeichnung": "Lupe 90mm",
+      "fWgNr": 4,
+      "ekPreis": 5,
+      "vkPreis": 9,
+      "bestand": 1010,
+      "meldeBest": 400,
+      "lagerplatz": "D01-12B"
+    },
+    {
+      "pArtikelNr": 10028,
+      "bezeichnung": "Pruefschraubendreher-Set",
       "fWgNr": 2,
-      "ekPreis": 150.00,
-      "vkPreis": 299.99,
-      "bestand": 50,
-      "meldeBest": 10
-    }
-  ]
+      "ekPreis": 13,
+      "vkPreis": 25,
+      "bestand": 680,
+      "meldeBest": 210,
+      "lagerplatz": "B04-02C"
+    },
+    ...
+  ],
+  "message": "Products retrieved successfully."
 }
 ```
 
 #### GET `/api/products/{id}`
 ```json
 {
-  "productsById": {
+  "data": {
     "pArtikelNr": 1,
     "bezeichnung": "Gaming Monitor",
     "fWgNr": 2,
     "ekPreis": 150.00,
     "vkPreis": 299.99,
     "bestand": 50,
-    "meldeBest": 10
+    "meldeBest": 10,
+    "lagerplatz": "A12-03B"
   }
+}
+```
+
+#### GET `/api/products/{id}/stock-history`
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "fArtikelNr": 1,
+      "user_id": 2,
+      "old_bestand": 50,
+      "new_bestand": 45,
+      "reason": "Damaged items removed from shelf.",
+      "created_at": "2026-05-22T17:45:00.000000Z",
+      "user": {
+        "id": 2,
+        "name": "Admin User"
+      }
+    }
+  ]
 }
 ```
 
@@ -83,7 +156,8 @@ Returns all active (non-deleted) products.
   "ekPreis": 150.00,
   "vkPreis": 299.99,
   "bestand": 50,
-  "meldeBest": 10
+  "meldeBest": 10,
+  "lagerplatz": "A12-03B"
 }
 ```
 **Response:**
@@ -96,9 +170,10 @@ Returns all active (non-deleted) products.
     "ekPreis": 150.00,
     "vkPreis": 299.99,
     "bestand": 50,
-    "meldeBest": 10
+    "meldeBest": 10,
+    "lagerplatz": "A12-03B"
   },
-  "message": "Product created successfully"
+  "message": "Product created successfully."
 }
 ```
 
@@ -108,7 +183,7 @@ Returns all active (non-deleted) products.
 ```json
 {
   "vkPreis": 349.99,
-  "bestand": 45
+  "lagerplatz": "B04-01A"
 }
 ```
 **Response:**
@@ -120,10 +195,33 @@ Returns all active (non-deleted) products.
     "fWgNr": 2,
     "ekPreis": 150.00,
     "vkPreis": 349.99,
-    "bestand": 45,
-    "meldeBest": 10
+    "bestand": 50,
+    "meldeBest": 10,
+    "lagerplatz": "B04-01A"
   },
-  "message": "Product updated successfully"
+  "message": "Product updated successfully."
+}
+```
+
+#### PATCH `/api/products/{id}/adjust-stock`
+Manually override the physical stock level. This generates an immutable log entry.
+
+**Request body:**
+```json
+{
+  "bestand": 45,
+  "reason": "Damaged items removed from shelf."
+}
+```
+**Response:**
+```json
+{
+  "data": {
+    "pArtikelNr": 1,
+    "bestand": 45,
+    "...": "..."
+  },
+  "message": "Product stock level manually adjusted successfully."
 }
 ```
 
@@ -133,11 +231,6 @@ Soft-deletes the product. The record is retained in the database and still appea
 **Success Response:**
 ```json
 { "message": "Product ID: 1 deleted successfully" }
-```
-
-**Error — product is referenced by an order (409 Conflict):**
-```json
-{ "error": "This product cannot be deleted because it is used in one or more orders." }
 ```
 
 ---
@@ -154,15 +247,12 @@ Soft-deletes the product. The record is retained in the database and still appea
 #### GET `/api/warehouse-groups`
 ```json
 {
-  "warehouse_groups": [
+  "data": [
     {
       "pWgNr": 1,
       "warengruppe": "Electronics"
     },
-    {
-      "pWgNr": 2,
-      "warengruppe": "Peripherals"
-    }
+    ...
   ]
 }
 ```
@@ -175,11 +265,11 @@ Soft-deletes the product. The record is retained in the database and still appea
 **Response:**
 ```json
 {
-  "message": "Warehouse group created successfully",
   "data": {
     "pWgNr": 3,
     "warengruppe": "Office Supplies"
-  }
+  },
+  "message": "Warehouse group created successfully."
 }
 ```
 
@@ -191,122 +281,13 @@ Soft-deletes the product. The record is retained in the database and still appea
 **Response:**
 ```json
 {
-  "message": "Warehouse group updated successfully",
   "data": {
     "pWgNr": 3,
     "warengruppe": "Office & Stationery"
-  }
+  },
+  "message": "Warehouse group updated successfully"
 }
 ```
-
----
-
-### Order Endpoints
-
-| Method | Path | Action | Min. Role |
-| :--- | :--- | :--- | :--- |
-| **GET** | `/api/orders` | List all orders | `viewer` |
-| **GET** | `/api/orders/{id}` | View a specific order | `viewer` |
-| **POST** | `/api/orders` | Create a new order | `writer` |
-| **PUT** | `/api/orders/{id}` | Update an order (requires full item list) | `writer` |
-| **DELETE** | `/api/orders/{id}` | Delete an order (restores stock) | `admin` |
-
-#### Order Response Shape
-All order responses share the same shape. The `items` array always reflects the full current state of the order.
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `order_info.pAufNr` | integer | Order primary key |
-| `order_info.aufDat` | string (date) | Order date |
-| `order_info.aufTermin` | string (date) | Requested delivery date |
-| `order_info.fKdNr` | integer | Customer FK |
-| `items[].pAufPosNr` | integer | Line-item primary key |
-| `items[].fArtikelNr` | integer | Product FK |
-| `items[].bezeichnung` | string\|null | Product name at time of response |
-| `items[].aufMenge` | integer | Ordered quantity |
-| `items[].kaufPreis` | float | Price snapshotted at time of order |
-| `items[].line_total` | float | `kaufPreis` × `aufMenge`, rounded to 2 decimals |
-| `items[].is_discontinued` | boolean | `true` if the product has since been soft-deleted |
-| `order_total` | integer | Sum of all `aufMenge` values |
-| `preis_total` | float | Sum of all `line_total` values |
-
-#### GET `/api/orders`
-```json
-[
-  {
-    "order_info": {
-      "pAufNr": 5,
-      "aufDat": "2026-04-17",
-      "aufTermin": "2026-04-25",
-      "fKdNr": 101
-    },
-    "items": [
-      {
-        "pAufPosNr": 12,
-        "fArtikelNr": 50,
-        "bezeichnung": "Gaming Monitor",
-        "aufMenge": 5,
-        "kaufPreis": 299.99,
-        "line_total": 1499.95,
-        "is_discontinued": false
-      }
-    ],
-    "order_total": 5,
-    "preis_total": 1499.95
-  }
-]
-```
-
-#### POST `/api/orders` — 201 Created
-Stock is decremented for each item. The `kaufPreis` is snapshotted from the product's current `vkPreis` at creation time.
-
-**Request body:**
-```json
-{
-  "aufDat": "2026-04-17",
-  "fKdNr": 101,
-  "aufTermin": "2026-04-25",
-  "items": [
-    { "fArtikelNr": 50, "aufMenge": 5 },
-    { "fArtikelNr": 51, "aufMenge": 2 }
-  ]
-}
-```
-
-**Error — insufficient stock (422 Unprocessable Entity):**
-```json
-{
-  "message": "The given data was invalid.",
-  "errors": {
-    "items": [
-      "Insufficient stock for product 50 (Gaming Monitor). Available: 3, requested: 5."
-    ]
-  }
-}
-```
-
-#### PUT `/api/orders/{id}`
-Operates on a **full-state principle**—the `items` array you send becomes the complete new state of the order. Any existing line-items not present in the request are deleted and their stock is restored.
-
-**Request body:**
-```json
-{
-  "aufDat": "2026-04-17",
-  "fKdNr": 101,
-  "aufTermin": "2026-04-30",
-  "items": [
-    { "pAufPosNr": 12, "fArtikelNr": 50, "aufMenge": 3 },
-    { "fArtikelNr": 52, "aufMenge": 1 }
-  ]
-}
-```
-* **Update:** Include `pAufPosNr` to update an existing line-item (quantity diff is applied to stock).
-* **Add:** Omit `pAufPosNr` to add a new line-item (full quantity is deducted from stock).
-* **Delete:** Omit a line-item entirely to delete it (full quantity is restored to stock).
-* **Restriction:** Changing `fArtikelNr` on an existing `pAufPosNr` is not permitted—remove and re-add instead.
-
-#### DELETE `/api/orders/{id}` — 204 No Content
-Restores stock for every line-item before deleting the order and all its positions. Returns an empty body.
 
 ---
 
@@ -320,70 +301,55 @@ Restores stock for every line-item before deleting the order and all its positio
 | **PUT** | `/api/customers/{id}` | Update an existing customer | `admin, writer` |
 | **DELETE** | `/api/customers/{id}` | Soft-delete a customer | `admin` |
 
-#### Customer Response Shape
-All customer responses share this structure:
 
-```json
-{
-  "customer": {
-    "pKdNr": 24001,
-    "name": "Baumarkt Mueller",
-    "strasse": "Postfach 134",
-    "plz": 85579,
-    "ort": "Neubiberg",
-    "email": "mueller@baumarkt.de"
-  }
-}
-```
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `customer` | object | Wrapper object returned by the controller |
-| `customer.pKdNr` | integer | Customer primary key |
-| `customer.name` | string | Customer name |
-| `customer.strasse` | string | Street address |
-| `customer.plz` | integer | Postal code (validated as 5 digits) |
-| `customer.ort` | string | City |
-| `customer.email` | string | Email address |
+| `data` | object | Wrapper object returned by the controller |
+| `data.pKdNr` | integer | Customer primary key |
+| `data.name` | string | Customer name |
+| `data.strasse` | string | Street address |
+| `data.plz` | integer | Postal code (validated as 5 digits) |
+| `data.ort` | string | City |
+| `data.email` | string | Email address |
 
 #### GET `/api/customers`
 Returns all active (non-deleted) customers.
 
 ```json
-[
-  {
-    "customer": {
+{
+  "data": [
+    {
       "pKdNr": 24001,
       "name": "Baumarkt Mueller",
       "strasse": "Postfach 134",
       "plz": 85579,
       "ort": "Neubiberg",
       "email": "mueller@baumarkt.de"
-    }
-  },
-  {
-    "customer": {
+    },
+    {
       "pKdNr": 24002,
       "name": "Friedrich Kunst",
       "strasse": "Mausweg 24",
       "plz": 72510,
       "ort": "Stetten a.k.M.",
       "email": "friedrich.kunst@mail.de"
-    }
-  }
-]
+    },
+    ...
+  ]
+}
 ```
 
 #### GET `/api/customers/{id}`
 ```json
 {
-  "customer": {
-    "pKdNr": 24001,
-    "name": "Baumarkt Mueller",
-    "strasse": "Postfach 134",
-    "plz": 85579,
-    "ort": "Neubiberg",
-    "email": "mueller@baumarkt.de"
+  {
+    "pKdNr": 24002,
+    "name": "Friedrich Kunst",
+    "strasse": "Mausweg 24",
+    "plz": 72510,
+    "ort": "Stetten a.k.M.",
+    "email": "friedrich.kunst@mail.de"
   }
 }
 ```
@@ -403,14 +369,15 @@ Returns all active (non-deleted) customers.
 **Response:**
 ```json
 {
-  "customer": {
+  "data": {
     "pKdNr": 24015,
     "name": "Test Kunde",
     "strasse": "Musterstrasse 1",
     "plz": 80331,
     "ort": "Muenchen",
     "email": "testkunde@example.com"
-  }
+  },
+  "message": "Customer created successfully."
 }
 ```
 
@@ -429,21 +396,311 @@ Returns all active (non-deleted) customers.
 **Response:**
 ```json
 {
-  "customer": {
+  "data": {
     "pKdNr": 24015,
     "name": "Test Kunde Updated",
     "strasse": "Musterstrasse 2",
     "plz": 80331,
     "ort": "Muenchen",
     "email": "testkunde.updated@example.com"
-  }
+  },
+  "message": "Customer updated successfully."
 }
 ```
 
 #### DELETE `/api/customers/{id}` — 204 No Content
 Soft-deletes the customer. Returns an empty body.
 
-## 4. Testing & Debugging
+---
+
+### Outbound Order Endpoints (Customer Sales)
+
+Outbound orders decrease the warehouse stock levels when created.
+
+| Method | Path | Action | Min. Role |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/orders` | List all orders | `viewer` |
+| **GET** | `/api/orders/{id}` | View a specific order | `viewer` |
+| **POST** | `/api/orders` | Create a new order | `writer` |
+| **PUT** | `/api/orders/{id}` | Update an order (requires full item list) | `writer` |
+| **DELETE** | `/api/orders/{id}` | Delete an order (restores stock) | `admin` |
+
+#### Order Response Shape
+All order responses share the same shape. The `items` array always reflects the full current state of the order.
+
+needs to be improved
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `order_info.pAufNr` | integer | Order primary key |
+| `order_info.aufDat` | string (date) | Order date |
+| `order_info.aufTermin` | string (date) | Requested delivery date |
+| `order_info.fKdNr` | integer | Customer FK |
+| `items[].pAufPosNr` | integer | Line-item primary key |
+| `items[].fArtikelNr` | integer | Product FK |
+| `items[].bezeichnung` | string\|null | Product name at time of response |
+| `items[].aufMenge` | integer | Ordered quantity |
+| `items[].kaufPreis` | float | Price snapshotted at time of order |
+| `items[].line_total` | float | `kaufPreis` × `aufMenge`, rounded to 2 decimals |
+| `items[].is_discontinued` | boolean | `true` if the product has since been soft-deleted |
+| `order_total` | integer | Sum of all `aufMenge` values |
+| `preis_total` | float | Sum of all `line_total` values |
+
+#### GET `/api/orders`
+```json
+{
+  "data": [
+    {
+      "order_info": {
+        "pAufNr": 22334,
+        "aufDat": "2009-01-26 00:00:00",
+        "aufTermin": "2009-02-18 00:00:00",
+        "fKdNr": 24001
+      },
+      "items": [
+        {
+          "pAufPosNr": 1,
+          "fArtikelNr": 10004,
+          "bezeichnung": "Handlupe 90mm",
+          "aufMenge": 20,
+          "kaufPreis": 18,
+          "line_total": 360,
+          "is_discontinued": true
+        },
+        ...
+      ],
+      "order_total": 23,
+      "preis_total": 366
+    },
+    ...
+  ]
+}
+```
+
+#### POST `/api/orders` — 201 Created
+Stock is decremented for each item. The `kaufPreis` is snapshotted from the product's current `vkPreis` at creation time.
+
+**Request body:**
+```json
+{
+  "aufDat": "2026-04-17",
+  "fKdNr": 101,
+  "aufTermin": "2026-04-25",
+  "items": [
+    { "fArtikelNr": 50, "aufMenge": 5 },
+    { "fArtikelNr": 51, "aufMenge": 2 }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "order_info": {
+      "pAufNr": 5,
+      "aufDat": "2026-04-17 00:00:00",
+      "aufTermin": "2026-04-25 00:00:00",
+      "fKdNr": 101
+    },
+    "items": [
+      {
+        "pAufPosNr": 12,
+        "fArtikelNr": 50,
+        "bezeichnung": "Gaming Monitor",
+        "aufMenge": 5,
+        "kaufPreis": 299.99,
+        "line_total": 1499.95,
+        "is_discontinued": false
+      },
+      {
+        "pAufPosNr": 13,
+        "fArtikelNr": 51,
+        "bezeichnung": "Ergonomic Keyboard",
+        "aufMenge": 2,
+        "kaufPreis": 49.99,
+        "line_total": 99.98,
+        "is_discontinued": false
+      }
+    ],
+    "order_total": 7,
+    "preis_total": 1599.93
+  },
+  "message": "Order created successfully."
+}
+```
+
+#### PUT `/api/orders/{id}`
+Operates on a **full-state principle**—the `items` array you send becomes the complete new state of the order. Any existing line-items not present in the request are deleted and their stock is restored.
+
+**Request body:**
+```json
+{
+  "aufDat": "2026-04-17",
+  "fKdNr": 101,
+  "aufTermin": "2026-04-30",
+  "items": [
+    { "pAufPosNr": 12, "fArtikelNr": 50, "aufMenge": 3 },
+    { "fArtikelNr": 52, "aufMenge": 1 }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "order_info": {
+      "pAufNr": 5,
+      "aufDat": "2026-04-17 00:00:00",
+      "aufTermin": "2026-04-30 00:00:00",
+      "fKdNr": 101
+    },
+    "items": [
+      {
+        "pAufPosNr": 12,
+        "fArtikelNr": 50,
+        "bezeichnung": "Gaming Monitor",
+        "aufMenge": 3,
+        "kaufPreis": 299.99,
+        "line_total": 899.97,
+        "is_discontinued": false
+      },
+      {
+        "pAufPosNr": 14,
+        "fArtikelNr": 52,
+        "bezeichnung": "Wireless Mouse",
+        "aufMenge": 1,
+        "kaufPreis": 25.00,
+        "line_total": 25.00,
+        "is_discontinued": false
+      }
+    ],
+    "order_total": 4,
+    "preis_total": 924.97
+  },
+  "message": "Order updated successfully."
+}
+```
+
+* **Update:** Include `pAufPosNr` to update an existing line-item (quantity diff is applied to stock).
+* **Add:** Omit `pAufPosNr` to add a new line-item (full quantity is deducted from stock).
+* **Delete:** Omit a line-item entirely to delete it (full quantity is restored to stock).
+* **Restriction:** Changing `fArtikelNr` on an existing `pAufPosNr` is not permitted—remove and re-add instead.
+
+
+#### DELETE `/api/orders/{id}` — 204 No Content
+Restores stock for every line-item before deleting the order and all its positions. Returns an empty body.
+
+---
+
+### Inbound Purchase Order Endpoints (Suppliers)
+
+Purchase orders manage stock restocking. Stock is **only** increased when a delivery is officially received.
+
+| Method | Path | Action | Min. Role |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/purchase-orders` | List all supplier orders | `viewer` |
+| **GET** | `/api/purchase-orders/{id}` | View a specific supplier order | `viewer` |
+| **POST** | `/api/purchase-orders` | Draft a new purchase order | `writer` |
+| **PUT** | `/api/purchase-orders/{id}` | Update draft/sent order | `writer` |
+| **PATCH** | `/api/purchase-orders/{id}/receive`| Register delivery & increase stock | `writer` |
+| **DELETE** | `/api/purchase-orders/{id}` | Cancel order (mark as 'storniert') | `admin` |
+
+#### Purchase Order Response Shape
+All supplier procurement responses share this unified metadata tracking design structure. 
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `order_info.pBestNr` | integer | Purchase order primary key tracking identifier (`pBestNr` from table `bestellkoepfe`). |
+| `order_info.fLiefNr` | integer\|null | Supplier foreign key reference identity row identifier (`lieferanten.pLiefNr`). |
+| `order_info.lieferant` | string\|null | Vendor company title name resolved from active supplier relations. |
+| `order_info.bestDat` | string (datetime) | Timestamp designating precisely when the procurement request was sent. |
+| `order_info.erwLieferDat` | string (datetime)\|null| Expected warehouse receiving dock arrival deadline submitted by shipping carrier. |
+| `order_info.status` | string | Active pipeline workflow state: `'offen'`, `'bestellt'`, `'geliefert'`, or `'storniert'`. |
+| `items[].pBestPosNr` | integer | Unique line item primary key reference position (`pBestPosNr` from table `bestellpositionen`). |
+| `items[].fArtikelNr` | integer | Target product catalog link mapping reference identifier (`artikel.pArtikelNr`). |
+| `items[].bezeichnung` | string\|null | Product name description text string resolved at retrieval time. |
+| `items[].lagerplatz` | string\|null | Physical storage zone assignment target code defined for warehouse organization. |
+| `items[].bestMenge` | integer | Total physical units originally ordered from the processing wholesale vendor. |
+| `items[].gelieferteMenge` | integer | Count of item units arrived and checked into stock (supports split-shipments). |
+| `items[].ekPreis` | float\|null | Agreed purchasing cost value index per unit item (`ekPreis` from table `bestellpositionen`). |
+| `items[].line_total` | float | Calculated gross row valuation subtotal (`ekPreis` × `bestMenge`), rounded to 2 decimals. |
+| `total_ordered` | integer | Accumulated total unit counts requested across all combined item positions. |
+| `total_delivered` | integer | Cumulative unit count checked into inventory. |
+| `total_value` | float | Total procurement financial liability value calculated by adding all `line_total` sums. |
+
+#### GET `/api/purchase-orders`
+```json
+{
+  "data": [
+    {
+      "order_info": {
+        "pBestNr": 80001,
+        "fLiefNr": 5001,
+        "lieferant": "Remscheid Werkzeuge GmbH",
+        "bestDat": "2026-05-01 10:00:00",
+        "erwLieferDat": "2026-05-08 14:00:00",
+        "status": "bestellt"
+      },
+      "items": [
+        {
+          "pBestPosNr": 101,
+          "fArtikelNr": 10059,
+          "bezeichnung": "Schraubendreher-Set",
+          "lagerplatz": "B05-01D",
+          "bestMenge": 100,
+          "gelieferteMenge": 0,
+          "ekPreis": 11.00,
+          "line_total": 1100.00
+        }
+      ],
+      "total_ordered": 100,
+      "total_delivered": 0,
+      "total_value": 1100.00
+    }
+  ]
+}
+```
+
+#### POST `/api/purchase-orders` — 201 Created
+Drafts a new PO (status = `offen`). Stock is untouched.
+
+**Request body:**
+```json
+{
+  "fLiefNr": 5001,
+  "bestDat": "2026-05-01",
+  "erwLieferDat": "2026-05-08",
+  "items": [
+    { "fArtikelNr": 10059, "bestMenge": 100, "ekPreis": 11.00 }
+  ]
+}
+```
+
+#### PATCH `/api/purchase-orders/{id}/receive`
+Marks goods as received (supports partial deliveries). **This is the action that actively increments your `artikel.bestand` in the database.**
+Once `gelieferteMenge` meets `bestMenge` for all items, the order status auto-promotes to `geliefert`.
+
+**Request body:**
+```json
+{
+  "items": [
+    { "pBestPosNr": 101, "gelieferteMenge": 50 }
+  ]
+}
+```
+
+#### DELETE `/api/purchase-orders/{id}`
+Cancels the order. This is a soft-cancel that updates the `status` to `storniert` rather than a hard DB delete.
+
+**Response:**
+```json
+{ "message": "Purchase order 80001 cancelled." }
+```
+
+---
+
+## 5. Testing & Debugging
 
 The application includes a specialized debug bypass for local development, allowing you to test different roles without a manual login flow.
 
