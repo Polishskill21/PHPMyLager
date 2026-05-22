@@ -61,7 +61,7 @@ class Product extends Model
         return $this->hasMany(OrderItem::class, 'fArtikelNr', 'pArtikelNr');
     }
 
-    public function inventoryLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function inventoryLogs(): HasMany
     {
         return $this->hasMany(InventoryLog::class, 'fArtikelNr', 'pArtikelNr')->latest();
     }
