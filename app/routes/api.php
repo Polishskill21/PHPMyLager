@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\WarehouseGroupController;
 use App\Http\Controllers\Ordercontroller;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\PurchaseOrderController;
 
 Route::get('/status', [SystemController::class, 'status']);
 
@@ -25,6 +26,9 @@ Route::middleware('auth')->group(function () {
     Route::get('customers',                    [CustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/{customer}',         [CustomerController::class, 'show'])->name('customers.show');
 
+    Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
+    Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->name('purchase-orders.show');
+
     // Admin + writer can create and update
     Route::middleware('role:admin,writer')->group(function () {
         Route::post('products',                [ProductController::class, 'store'])->name('products.store');
@@ -39,15 +43,21 @@ Route::middleware('auth')->group(function () {
 
         Route::post('customers',               [CustomerController::class, 'store'])->name('customers.store');
         Route::put('customers/{customer}',     [CustomerController::class, 'update'])->name('customers.update');
+
+        Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
+        Route::put('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->name('purchase-orders.update');
+        Route::patch('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receiveDelivery'])->name('purchase-orders.receive');
     });
 
     // Admin only can delete
     Route::middleware('role:admin')->group(function () {
+        Route::patch('products/{product}/adjust-stock', [ProductController::class, 'adjustStock'])->name('products.adjust-stock');
+
         Route::delete('products/{product}',    [ProductController::class, 'destroy'])->name('products.destroy');
-
-        // Route::delete('warehouse-groups/{id}', [WarehouseGroupController::class, 'destroy'])->name('warehouse-groups.destroy');
-
         Route::delete('orders/{order}',        [OrderController::class, 'destroy'])->name('orders.destroy');
         Route::delete('customers/{customer}',  [CustomerController::class, 'destroy'])->name('customers.destroy');
+        // Route::delete('warehouse-groups/{id}', [WarehouseGroupController::class, 'destroy'])->name('warehouse-groups.destroy');
+
+        Route::delete('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy'])->name('purchase-orders.destroy');
     });
 });
