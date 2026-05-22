@@ -146,9 +146,16 @@ class OrderController extends Controller
                         $diff = $newMenge - (int) $existingItem->aufMenge;
 
                         if ($diff !== 0) {
-                            $product = Product::where('pArtikelNr', $artikelNr)
+                            $product = Product::withTrashed()
+                                              ->where('pArtikelNr', $artikelNr)
                                               ->lockForUpdate()
                                               ->firstOrFail();
+
+                            if ($product->trashed()) {
+                                throw ValidationException::withMessages([
+                                    'items' => "Cannot alter the quantity of product {$product->pArtikelNr} ({$product->bezeichnung}) because it has been discontinued.",
+                                ]);
+                            }
 
                             if ($diff > 0) {
                                 $this->ensureSufficientStock($product, $diff);
