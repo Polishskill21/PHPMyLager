@@ -45,15 +45,7 @@ class PurchaseOrderController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'fLiefNr'           => 'nullable|integer|exists:lieferanten,pLiefNr',
-            'bestDat'           => 'required|date',
-            'erwLieferDat'      => 'nullable|date|after_or_equal:bestDat',
-            'items'             => 'required|array|min:1',
-            'items.*.fArtikelNr'=> 'required|integer|exists:artikel,pArtikelNr',
-            'items.*.bestMenge' => 'required|integer|min:1',
-            'items.*.ekPreis'   => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validate($this->storeRules());
 
         $order = DB::transaction(function () use ($validated): PurchaseOrder {
             $order = PurchaseOrder::create([
@@ -93,16 +85,7 @@ class PurchaseOrderController extends Controller
             return response()->json(['error' => 'Closed orders cannot be edited.'], 422);
         }
 
-        $validated = $request->validate([
-            'fLiefNr'           => 'nullable|integer|exists:lieferanten,pLiefNr',
-            'bestDat'           => 'required|date',
-            'erwLieferDat'      => 'nullable|date|after_or_equal:bestDat',
-            'items'             => 'required|array|min:1',
-            'items.*.pBestPosNr'=> 'nullable|integer',
-            'items.*.fArtikelNr'=> 'required|integer|exists:artikel,pArtikelNr',
-            'items.*.bestMenge' => 'required|integer|min:1',
-            'items.*.ekPreis'   => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validate($this->updateRules());
 
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder): PurchaseOrder {
             $purchaseOrder->update([
@@ -243,6 +226,32 @@ class PurchaseOrderController extends Controller
     // ──────────────────────────────────────────────────────────────────────────
     // HELPER
     // ──────────────────────────────────────────────────────────────────────────
+
+    private function storeRules(): array
+    {
+        return [
+            'fLiefNr'            => 'nullable|integer|exists:lieferanten,pLiefNr',
+            'bestDat'            => 'required|date',
+            'erwLieferDat'       => 'nullable|date|after_or_equal:bestDat',
+            'items'              => 'required|array|min:1',
+            'items.*.fArtikelNr' => 'required|integer|exists:artikel,pArtikelNr',
+            'items.*.bestMenge'  => 'required|integer|min:1',
+            'items.*.ekPreis'    => 'nullable|numeric|min:0',
+        ];
+    }
+
+    private function updateRules(): array {
+        return [
+            'fLiefNr'           => 'nullable|integer|exists:lieferanten,pLiefNr',
+            'bestDat'           => 'required|date',
+            'erwLieferDat'      => 'nullable|date|after_or_equal:bestDat',
+            'items'             => 'required|array|min:1',
+            'items.*.pBestPosNr'=> 'nullable|integer',
+            'items.*.fArtikelNr'=> 'required|integer|exists:artikel,pArtikelNr',
+            'items.*.bestMenge' => 'required|integer|min:1',
+            'items.*.ekPreis'   => 'nullable|numeric|min:0',
+        ];
+    }
 
     private function formatOrder(PurchaseOrder $order): array
     {
