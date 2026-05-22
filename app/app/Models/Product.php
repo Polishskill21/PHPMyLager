@@ -28,6 +28,10 @@ class Product extends Model
     protected $primaryKey = 'pArtikelNr';
     public    $timestamps = false;
 
+    protected $hidden = [
+        'deleted_at'
+    ];
+
     protected $fillable = [
         'bezeichnung',
         'fWgNr',
@@ -55,5 +59,10 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class, 'fArtikelNr', 'pArtikelNr');
+    }
+
+    public function inventoryLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(InventoryLog::class, 'fArtikelNr', 'pArtikelNr')->latest();
     }
 }
