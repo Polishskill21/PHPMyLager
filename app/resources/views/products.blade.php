@@ -90,19 +90,19 @@
     <aside>
         <div class="aside-label">Navigation</div>
         <a href="{{ route('dashboard') }}" class="aside-link">
-            <span class="aside-icon">⬡</span> Dashboard
+            <span class="aside-icon">🏠</span> Dashboard
         </a>
         <a href="{{ route('products') }}" class="aside-link active">
-            <span class="aside-icon">◈</span> Products
+            <span class="aside-icon">📦</span> Products
         </a>
         <a href="{{ route('orders') }}" class="aside-link">
-            <span class="aside-icon">◳</span> Orders
+            <span class="aside-icon">🗂️</span> Orders
         </a>
         <a href="{{ route('customers') }}" class="aside-link">
             <span class="aside-icon">🧙</span> Customers
         </a>
-        <a href="#" class="aside-link">
-            <span class="aside-icon">◫</span> Warehouse
+        <a href="{{ route('warehouse') }}" class="aside-link">
+            <span class="aside-icon">🧺</span> Product Groups
         </a>
     </aside>
 
@@ -172,7 +172,7 @@
                     <div class="form-error" id="err-bezeichnung"></div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Warehouse Group <em style="color:var(--red)">*</em></label>
+                    <label class="form-label">Product Group <em style="color:var(--red)">*</em></label>
                     <select class="form-select" id="f-fWgNr"></select>
                     <div class="form-error" id="err-fWgNr"></div>
                 </div>

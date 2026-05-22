@@ -55,7 +55,12 @@
         <a href="{{ route('customers') }}" class="card clickable-card">
             <div class="card-icon">🧙</div>
             <div class="card-title">Customers</div>
-            <div class="card-value">API Ready</div>
+            <div class="card-value">Go to Customers ➔</div>
+        </a>
+        <a href="{{ route('warehouse') }}" class="card clickable-card">
+            <div class="card-icon">🧺</div>
+            <div class="card-title">Product Groups</div>
+            <div class="card-value">Go to Product Groups ➔</div>
         </a>
         <div class="card">
             <div class="card-icon">👤</div>

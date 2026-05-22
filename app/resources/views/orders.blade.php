@@ -198,19 +198,19 @@
     <aside>
         <div class="aside-label">Navigation</div>
         <a href="{{ route('dashboard') }}" class="aside-link">
-            <span class="aside-icon">⬡</span> Dashboard
+            <span class="aside-icon">🏠</span> Dashboard
         </a>
         <a href="{{ route('products') }}" class="aside-link">
-            <span class="aside-icon">◈</span> Products
+            <span class="aside-icon">📦</span> Products
         </a>
         <a href="{{ route('orders') }}" class="aside-link active">
-            <span class="aside-icon">◳</span> Orders
+            <span class="aside-icon">🗂️</span> Orders
         </a>
         <a href="{{ route('customers') }}" class="aside-link">
             <span class="aside-icon">🧙</span> Customers
         </a>
-        <a href="#" class="aside-link">
-            <span class="aside-icon">◫</span> Warehouse
+        <a href="{{ route('warehouse') }}" class="aside-link">
+            <span class="aside-icon">🧺</span> Product Groups
         </a>
     </aside>
 
