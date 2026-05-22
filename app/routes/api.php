@@ -7,6 +7,7 @@ use App\Http\Controllers\WarehouseGroupController;
 use App\Http\Controllers\Ordercontroller;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\SupplierController;
 
 Route::get('/status', [SystemController::class, 'status']);
 
@@ -30,6 +31,9 @@ Route::middleware('auth')->group(function () {
     Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
     Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->name('purchase-orders.show');
 
+    Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+    Route::get('suppliers/{supplier}', [SupplierController::class, 'show'])->name('suppliers.show');
+
     // Admin + writer can create and update
     Route::middleware('role:admin,writer')->group(function () {
         Route::post('products',                [ProductController::class, 'store'])->name('products.store');
@@ -48,6 +52,10 @@ Route::middleware('auth')->group(function () {
         Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
         Route::put('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->name('purchase-orders.update');
         Route::patch('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receiveDelivery'])->name('purchase-orders.receive');
+
+        
+        Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+        Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
     });
 
     // Admin only can delete
@@ -60,5 +68,7 @@ Route::middleware('auth')->group(function () {
         // Route::delete('warehouse-groups/{id}', [WarehouseGroupController::class, 'destroy'])->name('warehouse-groups.destroy');
 
         Route::delete('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy'])->name('purchase-orders.destroy');
+
+        Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
     });
 });
