@@ -10,79 +10,151 @@ use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
+    // ─────────────────────────────────────────────────────────────────────────
+    // READ
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // return customers
+    /**
+     * GET /customers
+     */
     public function index(): JsonResponse
     {
-        $customers = Customer::all();
+        $customers = Customer::all()->map(fn (Customer $c) => $this->formatCustomer($c));
 
-        return response()->json(
-            $customers->map(fn (Customer $customer) => $this->formatCustomer($customer))
-        );
+        return $this->ok($customers);
     }
 
-    // return customer
+    /**
+     * GET /customers/{customer}
+     */
     public function show(Customer $customer): JsonResponse
     {
-        return response()->json($this->formatCustomer($customer));
+        return $this->ok($this->formatCustomer($customer));
     }
 
-    // create customer
+    // ─────────────────────────────────────────────────────────────────────────
+    // CREATE
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * POST /customers
+     */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name'    => 'required|string|max:255',
-            'strasse' => 'required|string|max:255',
-            'plz'     => 'required|digits:5',
-            'ort'     => 'required|string|max:255',
-            'email'   => 'required|email|max:255|unique:kunden,email',
-        ]);
+        $validated = $request->validate(
+            $this->storeRules(),
+            $this->customMessages()
+        );
 
-        $customer = DB::transaction(function () use ($validated): Customer {
-            return Customer::create($validated);
-        });
+        try {
+            $customer = DB::transaction(fn () => Customer::create($validated));
 
-        return response()->json($this->formatCustomer($customer->fresh()), 201);
+            return $this->created($this->formatCustomer($customer->fresh()), 'Customer created successfully.');
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UPDATE
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * PUT /customers/{customer}
+     */
     public function update(Request $request, Customer $customer): JsonResponse
     {
-        $validated = $request->validate([
-            'name'    => 'required|string|max:255',
-            'strasse' => 'required|string|max:255',
-            'plz'     => 'required|digits:5',
-            'ort'     => 'required|string|max:255',
-            'email'   => ['required','email','max:255',Rule::unique('kunden','email')->ignore($customer->pKdNr,'pKdNr'),],
-        ]);
+        $validated = $request->validate(
+            $this->updateRules($customer),
+            $this->customMessages()
+        );
 
-        $customer = DB::transaction(function () use ($validated, $customer): Customer {
-            $customer->update($validated);
-            return $customer->fresh();
-        });
+        try {
+            $customer = DB::transaction(function () use ($validated, $customer): Customer {
+                $customer->update($validated);
+                return $customer->fresh();
+            });
 
-        return response()->json($this->formatCustomer($customer));
+            return $this->ok($this->formatCustomer($customer), 'Customer updated successfully.');
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // DELETE
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * DELETE /customers/{customer}
+     * Soft-deletes the customer record.
+     */
     public function destroy(Customer $customer): JsonResponse
     {
-        DB::transaction(function () use ($customer): void {
-            $customer->delete();
-        });
+        try {
+            $id = $customer->pKdNr;
+            DB::transaction(fn () => $customer->delete());
 
-        return response()->json(null, 204);
+            return $this->noContent();
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Validation rule sets
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function storeRules(): array
+    {
+        return [
+            'name'    => 'required|string|max:50',
+            'strasse' => 'required|string|max:50',
+            'plz'     => 'required|digits:5',
+            'ort'     => 'required|string|max:50',
+            'email'   => 'required|email|max:50|unique:kunden,email',
+        ];
+    }
+
+    private function updateRules(Customer $customer): array
+    {
+        return [
+            'name'    => 'required|string|max:50',
+            'strasse' => 'required|string|max:50',
+            'plz'     => 'required|digits:5',
+            'ort'     => 'required|string|max:50',
+            // Ignore the current customer's email so they can keep their own
+            'email'   => [
+                'required', 'email', 'max:50',
+                Rule::unique('kunden', 'email')->ignore($customer->pKdNr, 'pKdNr'),
+            ],
+        ];
+    }
+
+    private function customMessages(): array
+    {
+        return [
+            'plz.digits'    => 'The postal code must be exactly 5 digits.',
+            'email.unique'  => 'A customer with this email address already exists.',
+        ];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Formatting
+    // ─────────────────────────────────────────────────────────────────────────
 
     private function formatCustomer(Customer $customer): array
     {
         return [
-            'customer' => [
-                'pKdNr'   => $customer->pKdNr,
-                'name'    => $customer->name,
-                'strasse' => $customer->strasse,
-                'plz'     => $customer->plz,
-                'ort'     => $customer->ort,
-                'email'   => $customer->email,
-            ],
+            'pKdNr'   => $customer->pKdNr,
+            'name'    => $customer->name,
+            'strasse' => $customer->strasse,
+            'plz'     => $customer->plz,
+            'ort'     => $customer->ort,
+            'email'   => $customer->email,
         ];
     }
 }
