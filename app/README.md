@@ -65,7 +65,7 @@ All API routes are protected. Access is granted based on the user's assigned rol
 
 ---
 
-### Product Endpoints
+### Product Endpoints (Produkte)
 
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
@@ -235,7 +235,7 @@ Soft-deletes the product. The record is retained in the database and still appea
 
 ---
 
-### Warehouse Group Endpoints
+### Warehouse Group Endpoints (Warengruppe)
 
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
@@ -291,7 +291,7 @@ Soft-deletes the product. The record is retained in the database and still appea
 
 ---
 
-### Customer Endpoints
+### Customer Endpoints (Kunden)
 
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
@@ -413,9 +413,119 @@ Soft-deletes the customer. Returns an empty body.
 
 ---
 
-### Outbound Order Endpoints (Customer Sales)
+### Supplier Endpoints (Lieferanten)
 
-Outbound orders decrease the warehouse stock levels when created.
+Suppliers represent the wholesale vendors and manufacturers that fulfill your inbound purchase orders. 
+
+| Method | Path | Action | Min. Role |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/suppliers` | List all registered suppliers | `viewer` |
+| **GET** | `/api/suppliers/{id}` | View a specific supplier profile | `viewer` |
+| **POST** | `/api/suppliers` | Register a new supplier | `writer` |
+| **PUT** | `/api/suppliers/{id}` | Update supplier contact details | `writer` |
+| **DELETE** | `/api/suppliers/{id}` | Hard-delete a supplier | `admin` |
+
+#### GET `/api/suppliers`
+Returns all active suppliers in the system.
+
+```json
+{
+  "data": [
+    {
+      "pLiefNr": 5001,
+      "name": "Remscheid Werkzeuge GmbH",
+      "strasse": "Industriepark Nord 4",
+      "plz": 42853,
+      "ort": "Remscheid",
+      "email": "vertrieb@remscheid-tools.de",
+      "telefon": "+49 2191 555120"
+    },
+    {
+      "pLiefNr": 5002,
+      "name": "Sheffield Steel Co.",
+      "strasse": "22 Ironworks Lane",
+      "plz": 54321,
+      "ort": "Sheffield",
+      "email": "orders@sheffieldsteel.co.uk",
+      "telefon": "+44 114 9620000"
+    }
+  ]
+}
+```
+
+#### POST `/api/suppliers` — 201 Created
+Registers a new supplier profile.
+
+**Request body:**
+```json
+{
+  "name": "Alpen Werkzeuge Import S.A.",
+  "strasse": "Rue du Commerce 77",
+  "plz": "10050",
+  "ort": "Lausanne",
+  "email": "info@alpenimport.ch",
+  "telefon": "+41 21 3456789"
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "pLiefNr": 5003,
+    "name": "Alpen Werkzeuge Import S.A.",
+    "strasse": "Rue du Commerce 77",
+    "plz": 10050,
+    "ort": "Lausanne",
+    "email": "info@alpenimport.ch",
+    "telefon": "+41 21 3456789"
+  },
+  "message": "Supplier created successfully."
+}
+```
+
+#### PUT `/api/suppliers/{id}` — 200 OK
+Updates an existing supplier's details.
+
+**Request body:**
+```json
+{
+  "name": "Alpen Werkzeuge Import S.A.",
+  "strasse": "Rue du Commerce 77",
+  "plz": "10050",
+  "ort": "Lausanne",
+  "email": "new-contact@alpenimport.ch",
+  "telefon": "+41 21 3456789"
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "pLiefNr": 5003,
+    "name": "Alpen Werkzeuge Import S.A.",
+    "strasse": "Rue du Commerce 77",
+    "plz": 10050,
+    "ort": "Lausanne",
+    "email": "new-contact@alpenimport.ch",
+    "telefon": "+41 21 3456789"
+  },
+  "message": "Supplier updated successfully."
+}
+```
+
+#### DELETE `/api/suppliers/{id}` — 204 No Content
+Hard-deletes the supplier.
+
+**Success Response:**
+HTTP `204 No Content` (Empty body).
+
+---
+
+### Outbound Order Endpoints (Kunden Bestellungen)
+
+Outbound orders **decrease** the warehouse stock levels when created.
 
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
@@ -593,119 +703,9 @@ Restores stock for every line-item before deleting the order and all its positio
 
 ---
 
-### Supplier Endpoints (Lieferanten)
+### Inbound Purchase Order Endpoints (Lieferanten Bestellungen)
 
-Suppliers represent the wholesale vendors and manufacturers that fulfill your inbound purchase orders. 
-
-| Method | Path | Action | Min. Role |
-| :--- | :--- | :--- | :--- |
-| **GET** | `/api/suppliers` | List all registered suppliers | `viewer` |
-| **GET** | `/api/suppliers/{id}` | View a specific supplier profile | `viewer` |
-| **POST** | `/api/suppliers` | Register a new supplier | `writer` |
-| **PUT** | `/api/suppliers/{id}` | Update supplier contact details | `writer` |
-| **DELETE** | `/api/suppliers/{id}` | Hard-delete a supplier | `admin` |
-
-#### GET `/api/suppliers`
-Returns all active suppliers in the system.
-
-```json
-{
-  "data": [
-    {
-      "pLiefNr": 5001,
-      "name": "Remscheid Werkzeuge GmbH",
-      "strasse": "Industriepark Nord 4",
-      "plz": 42853,
-      "ort": "Remscheid",
-      "email": "vertrieb@remscheid-tools.de",
-      "telefon": "+49 2191 555120"
-    },
-    {
-      "pLiefNr": 5002,
-      "name": "Sheffield Steel Co.",
-      "strasse": "22 Ironworks Lane",
-      "plz": 54321,
-      "ort": "Sheffield",
-      "email": "orders@sheffieldsteel.co.uk",
-      "telefon": "+44 114 9620000"
-    }
-  ]
-}
-```
-
-#### POST `/api/suppliers` — 201 Created
-Registers a new supplier profile.
-
-**Request body:**
-```json
-{
-  "name": "Alpen Werkzeuge Import S.A.",
-  "strasse": "Rue du Commerce 77",
-  "plz": "10050",
-  "ort": "Lausanne",
-  "email": "info@alpenimport.ch",
-  "telefon": "+41 21 3456789"
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "pLiefNr": 5003,
-    "name": "Alpen Werkzeuge Import S.A.",
-    "strasse": "Rue du Commerce 77",
-    "plz": 10050,
-    "ort": "Lausanne",
-    "email": "info@alpenimport.ch",
-    "telefon": "+41 21 3456789"
-  },
-  "message": "Supplier created successfully."
-}
-```
-
-#### PUT `/api/suppliers/{id}` — 200 OK
-Updates an existing supplier's details.
-
-**Request body:**
-```json
-{
-  "name": "Alpen Werkzeuge Import S.A.",
-  "strasse": "Rue du Commerce 77",
-  "plz": "10050",
-  "ort": "Lausanne",
-  "email": "new-contact@alpenimport.ch",
-  "telefon": "+41 21 3456789"
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "pLiefNr": 5003,
-    "name": "Alpen Werkzeuge Import S.A.",
-    "strasse": "Rue du Commerce 77",
-    "plz": 10050,
-    "ort": "Lausanne",
-    "email": "new-contact@alpenimport.ch",
-    "telefon": "+41 21 3456789"
-  },
-  "message": "Supplier updated successfully."
-}
-```
-
-#### DELETE `/api/suppliers/{id}` — 204 No Content
-Hard-deletes the supplier.
-
-**Success Response:**
-HTTP `204 No Content` (Empty body).
-
----
-
-### Inbound Purchase Order Endpoints (Suppliers)
-
-Purchase orders manage stock restocking. Stock is **only** increased when a delivery is officially received.
+Purchase orders manage stock restocking. Stock is **only increased** when a delivery is officially received.
 
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
