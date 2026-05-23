@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('reason', 255);
             $table->timestamps();
 
-            $table->foreign('fArtikelNr')->references('pArtikelNr')->on('artikel')->cascadeOnDelete();
+            $table->foreign('fArtikelNr')->references('pArtikelNr')->on('artikel')->restrictOnDelete();
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
     }
