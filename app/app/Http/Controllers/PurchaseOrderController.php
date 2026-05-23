@@ -19,8 +19,8 @@ class PurchaseOrderController extends Controller
     public function index(): JsonResponse
     {
         $orders = PurchaseOrder::with('items.product', 'supplier')->get();
-
-        return response()->json(
+ 
+        return $this->ok(
             $orders->map(fn (PurchaseOrder $o) => $this->formatOrder($o))
         );
     }
@@ -29,8 +29,8 @@ class PurchaseOrderController extends Controller
     public function show(PurchaseOrder $purchaseOrder): JsonResponse
     {
         $purchaseOrder->load('items.product', 'supplier');
-
-        return response()->json($this->formatOrder($purchaseOrder));
+ 
+        return $this->ok($this->formatOrder($purchaseOrder));
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -43,10 +43,10 @@ class PurchaseOrderController extends Controller
      * Creates a new purchase order with status "offen".
      * Stock is NOT touched yet — that happens on receive.
      */
-    public function store(Request $request): JsonResponse
+        public function store(Request $request): JsonResponse
     {
         $validated = $request->validate($this->storeRules());
-
+ 
         $order = DB::transaction(function () use ($validated): PurchaseOrder {
             $order = PurchaseOrder::create([
                 'fLiefNr'      => $validated['fLiefNr'] ?? null,
@@ -54,7 +54,7 @@ class PurchaseOrderController extends Controller
                 'erwLieferDat' => $validated['erwLieferDat'] ?? null,
                 'status'       => 'offen',
             ]);
-
+ 
             foreach ($validated['items'] as $item) {
                 $order->items()->create([
                     'fArtikelNr'      => $item['fArtikelNr'],
@@ -63,11 +63,11 @@ class PurchaseOrderController extends Controller
                     'ekPreis'         => $item['ekPreis'] ?? null,
                 ]);
             }
-
+ 
             return $order->load('items.product', 'supplier');
         });
-
-        return response()->json($this->formatOrder($order), 201);
+ 
+        return $this->created($this->formatOrder($order), 'Purchase order created successfully.');
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -80,31 +80,31 @@ class PurchaseOrderController extends Controller
      * Updates header fields and line items.
      * Blocked once status is "geliefert" or "storniert".
      */
-    public function update(Request $request, PurchaseOrder $purchaseOrder): JsonResponse {
+        public function update(Request $request, PurchaseOrder $purchaseOrder): JsonResponse {
         if (in_array($purchaseOrder->status, ['geliefert', 'storniert'], true)) {
-            return response()->json(['error' => 'Closed orders cannot be edited.'], 422);
+            return $this->unprocessable('Closed orders cannot be edited.');
         }
-
+ 
         $validated = $request->validate($this->updateRules());
-
+ 
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder): PurchaseOrder {
             $purchaseOrder->update([
                 'fLiefNr'      => $validated['fLiefNr'] ?? null,
                 'bestDat'      => $validated['bestDat'],
                 'erwLieferDat' => $validated['erwLieferDat'] ?? null,
             ]);
-
+ 
             $current         = $purchaseOrder->items->keyBy('pBestPosNr');
             $submittedPosNrs = [];
-
+ 
             foreach ($validated['items'] as $item) {
                 if (!empty($item['pBestPosNr'])) {
                     $posNr             = (int) $item['pBestPosNr'];
                     $submittedPosNrs[] = $posNr;
-
+ 
                     $existing = $current->get($posNr)
                         ?? throw new \Exception("pBestPosNr={$posNr} does not belong to this order.");
-
+ 
                     $existing->update([
                         'bestMenge' => $item['bestMenge'],
                         'ekPreis'   => $item['ekPreis'] ?? $existing->ekPreis,
@@ -118,18 +118,18 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
             }
-
+ 
             // Remove lines not in the request
             foreach ($current as $posNr => $line) {
                 if (!in_array($posNr, $submittedPosNrs, true)) {
                     $line->delete();
                 }
             }
-
+ 
             return $purchaseOrder->fresh(['items.product', 'supplier']);
         });
-
-        return response()->json($this->formatOrder($purchaseOrder));
+ 
+        return $this->ok($this->formatOrder($purchaseOrder), 'Purchase order updated successfully.');
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -143,70 +143,70 @@ class PurchaseOrderController extends Controller
      * Supports partial delivery: pass gelieferteMenge per line.
      * If all lines are fully delivered the order status → "geliefert".
      */
-    public function receiveDelivery(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
+        public function receiveDelivery(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
     {
         if ($purchaseOrder->status === 'storniert') {
-            return response()->json(['error' => 'Cannot receive a cancelled order.'], 422);
+            return $this->unprocessable('Cannot receive a cancelled order.');
         }
         if ($purchaseOrder->status === 'geliefert') {
-            return response()->json(['error' => 'Order already fully received.'], 422);
+            return $this->unprocessable('Order already fully received.');
         }
-
+ 
         $validated = $request->validate([
             'items'                       => 'required|array|min:1',
             'items.*.pBestPosNr'          => 'required|integer',
             'items.*.gelieferteMenge'     => 'required|integer|min:1',
         ]);
-
+ 
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder): PurchaseOrder {
-            $lines = $purchaseOrder->items->keyBy('pBestPosNr');
-
+            $lines = $purchaseOrder->lockForUpdate()->items->keyBy('pBestPosNr');
+ 
             foreach ($validated['items'] as $incoming) {
                 $posNr     = (int) $incoming['pBestPosNr'];
                 $newQty    = (int) $incoming['gelieferteMenge'];
                 $line      = $lines->get($posNr)
                     ?? throw new \Exception("pBestPosNr={$posNr} does not belong to this order.");
-
+ 
                 $remaining = $line->bestMenge - $line->gelieferteMenge;
-
+ 
                 if ($newQty > $remaining) {
                     throw ValidationException::withMessages([
                         'items' => "pBestPosNr={$posNr}: cannot receive {$newQty} units, " .
                                    "only {$remaining} remaining.",
                     ]);
                 }
-
+ 
                 $product = Product::withTrashed()
                                   ->where('pArtikelNr', $line->fArtikelNr)
                                   ->lockForUpdate()
                                   ->firstOrFail();
-
+ 
                 if ($product->trashed()) {
                     throw ValidationException::withMessages([
                         'items' => "pBestPosNr={$posNr}: Cannot receive product {$product->pArtikelNr} because it has been discontinued and removed from the catalog.",
                     ]);
                 }
-
+ 
                 $product->increment('bestand', $newQty);
-
+ 
                 // Update delivered quantity on the line
                 $line->increment('gelieferteMenge', $newQty);
             }
-
+ 
             // Refresh lines and check if all fully delivered
             $purchaseOrder->load('items');
             $allDelivered = $purchaseOrder->items->every(
                 fn ($l) => $l->gelieferteMenge >= $l->bestMenge
             );
-
+ 
             $purchaseOrder->update([
                 'status' => $allDelivered ? 'geliefert' : 'bestellt',
             ]);
-
+ 
             return $purchaseOrder->fresh(['items.product', 'supplier']);
         });
-
-        return response()->json($this->formatOrder($purchaseOrder));
+ 
+        return $this->ok($this->formatOrder($purchaseOrder), 'Delivery received successfully.');
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -222,12 +222,12 @@ class PurchaseOrderController extends Controller
     public function destroy(PurchaseOrder $purchaseOrder): JsonResponse
     {
         if (in_array($purchaseOrder->status, ['geliefert', 'storniert'], true)) {
-            return response()->json(['error' => 'Only open or ordered purchases can be cancelled.'], 422);
+            return $this->unprocessable('Only open or ordered purchases can be cancelled.');
         }
-
+ 
         $purchaseOrder->update(['status' => 'storniert']);
-
-        return response()->json(['message' => "Purchase order {$purchaseOrder->pBestNr} cancelled."]);
+ 
+        return $this->ok(null, "Purchase order {$purchaseOrder->pBestNr} cancelled.");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
