@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Database\QueryException;
+use App\Models\OrderItem;
 use Illuminate\Support\Facades\DB;
 use App\Models\InventoryLog;
 use Illuminate\Support\Facades\Auth;
@@ -166,24 +166,27 @@ class ProductController extends Controller
      */
     public function destroy(Product $product): JsonResponse
     {
+        $hasOpenOrders = OrderItem::where('fArtikelNr', $product->pArtikelNr)
+            ->whereHas('order', fn ($q) => $q->whereNull('deleted_at'))
+            ->exists();
+ 
+        if ($hasOpenOrders) {
+            return $this->conflict(
+                'This product cannot be deleted because it is referenced by one or more open orders.'
+            );
+        }
+ 
         try {
             $id = $product->pArtikelNr;
             DB::transaction(fn () => $product->delete());
-
+ 
             return $this->ok(null, "Product {$id} deleted successfully.");
-        } catch (QueryException $e) {
-            if ($e->getCode() === '23000') {
-                return $this->conflict(
-                    'This product cannot be deleted because it is referenced by one or more orders.'
-                );
-            }
-            report($e);
-            return $this->serverError();
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
         }
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // Validation rule sets
