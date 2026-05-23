@@ -264,7 +264,7 @@ class OrderController extends Controller
             'aufTermin'               => 'required|date|after_or_equal:aufDat',
             'items'                   => 'required|array|min:1',
             'items.*.pAufPosNr'       => 'nullable|integer',
-            'items.*.fArtikelNr'      => 'required|integer',
+            'items.*.fArtikelNr'      => 'required|integer|exists:artikel,pArtikelNr',
             'items.*.aufMenge'        => 'required|integer|min:1',
         ];
     }
