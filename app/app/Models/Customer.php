@@ -30,6 +30,10 @@ class Customer extends Model
 
     public $timestamps = false;
 
+    protected $hidden = [
+        'deleted_at'
+    ];
+
     protected $fillable = [
         'name',
         'strasse',

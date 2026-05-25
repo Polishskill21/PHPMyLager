@@ -25,8 +25,8 @@ return new class extends Migration
             
             $table->decimal('ekPreis', 8, 2)->nullable();
             $table->decimal('vkPreis', 8, 2)->nullable();
-            $table->integer('bestand')->nullable();
-            $table->integer('meldeBest')->nullable();
+            $table->integer('bestand')->default(0);
+            $table->integer('meldeBest')->default(0);
 
             $table->softDeletes();
             

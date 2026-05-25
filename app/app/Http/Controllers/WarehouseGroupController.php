@@ -3,84 +3,132 @@
 namespace App\Http\Controllers;
 
 use App\Models\WarehouseGroup;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class WarehouseGroupController extends Controller
 {
+    // ─────────────────────────────────────────────────────────────────────────
+    // READ
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Get all warehouse groups.
+     * GET /warehouse-groups
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        return response()->json([
-            'warehouse_groups' => WarehouseGroup::all()
-        ], 200);
+        return $this->ok(WarehouseGroup::all());
     }
 
     /**
-     * Retrieve a single warehouse group by its ID.
+     * GET /warehouse-groups/{id}
      */
-    public function show($id)
+    public function show(int $id): JsonResponse
     {
-        $group = WarehouseGroup::findOrFail($id);
-        
-        return response()->json($group, 200);
+        $group = WarehouseGroup::find($id);
+
+        if (!$group) {
+            return $this->notFound("Warehouse group {$id} not found.");
+        }
+
+        return $this->ok($group);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // CREATE
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Create a new warehouse group safely inside a transaction.
+     * POST /warehouse-groups
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'warengruppe' => 'nullable|string|max:50',
-        ]);
+        $validated = $request->validate(
+            $this->rules(),
+            $this->customMessages()
+        );
 
-        $group = DB::transaction(function () use ($validated) {
-            return WarehouseGroup::create($validated);
-        });
+        try {
+            $group = DB::transaction(fn () => WarehouseGroup::create($validated));
 
-        return response()->json([
-            'message' => 'Warehouse group created successfully',
-            'data'    => $group
-        ], 201);
+            return $this->created($group, 'Warehouse group created successfully.');
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UPDATE
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Update an existing warehouse group safely inside a transaction.
+     * PUT /warehouse-groups/{id}
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id): JsonResponse
     {
-        $validated = $request->validate([
-            'warengruppe' => 'nullable|string|max:50',
-        ]);
+        $group = WarehouseGroup::find($id);
 
-        $group = DB::transaction(function () use ($id, $validated) {
-            $groupToUpdate = WarehouseGroup::findOrFail($id);
-            $groupToUpdate->update($validated);
-            
-            return $groupToUpdate;
-        });
+        if (!$group) {
+            return $this->notFound("Warehouse group {$id} not found.");
+        }
 
-        return response()->json([
-            'message' => 'Warehouse group updated successfully',
-            'data'    => $group
-        ], 200);
+        $validated = $request->validate(
+            $this->rules(),
+            $this->customMessages()
+        );
+
+        try {
+            $group = DB::transaction(function () use ($group, $validated): WarehouseGroup {
+                $group->update($validated);
+                return $group->fresh();
+            });
+
+            return $this->ok($group, 'Warehouse group updated successfully.');
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
 
-    /**
-     * Delete a warehouse group safely inside a transaction.
-     */
-    // public function destroy($id)
+    // ─────────────────────────────────────────────────────────────────────────
+    // DELETE
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // public function destroy(int $id): JsonResponse
     // {
-    //     DB::transaction(function () use ($id) {
-    //         $group = WarehouseGroup::findOrFail($id);
-    //         $group->delete();
-    //     });
-
-    //     return response()->json([
-    //         'message' => "Warehouse Group ID: {$id} deleted successfully"
-    //     ], 200);
+    //     $group = WarehouseGroup::find($id);
+    //
+    //     if (!$group) {
+    //         return $this->notFound("Warehouse group {$id} not found.");
+    //     }
+    //
+    //     try {
+    //         DB::transaction(fn () => $group->delete());
+    //         return $this->ok(null, "Warehouse group {$id} deleted successfully.");
+    //     } catch (\Exception $e) {
+    //         report($e);
+    //         return $this->serverError();
+    //     }
     // }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Validation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function rules(): array
+    {
+        return [
+            'warengruppe' => 'required|string|max:50',
+        ];
+    }
+
+    private function customMessages(): array
+    {
+        return [
+            'warengruppe.required' => 'The warehouse group name is required.',
+            'warengruppe.max'      => 'The warehouse group name may not exceed 50 characters.',
+        ];
+    }
 }
