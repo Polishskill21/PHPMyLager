@@ -162,13 +162,11 @@ class ProductController extends Controller
     /**
      * DELETE /products/{product}
      * Soft-deletes the product. Returns 409 if it is still referenced by
-     * open orders (FK constraint), 500 for any other DB error.
+     * existing orders, 500 for any other DB error.
      */
     public function destroy(Product $product): JsonResponse
     {
-        $hasOpenOrders = OrderItem::where('fArtikelNr', $product->pArtikelNr)
-            ->whereHas('order', fn ($q) => $q->whereNull('deleted_at'))
-            ->exists();
+        $hasOpenOrders = OrderItem::where('fArtikelNr', $product->pArtikelNr)->exists();
  
         if ($hasOpenOrders) {
             return $this->conflict(

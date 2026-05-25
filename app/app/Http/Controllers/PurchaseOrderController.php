@@ -80,31 +80,40 @@ class PurchaseOrderController extends Controller
      * Updates header fields and line items.
      * Blocked once status is "geliefert" or "storniert".
      */
-        public function update(Request $request, PurchaseOrder $purchaseOrder): JsonResponse {
+    public function update(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
+    {
         if (in_array($purchaseOrder->status, ['geliefert', 'storniert'], true)) {
             return $this->unprocessable('Closed orders cannot be edited.');
         }
- 
+
+        $isLocked = $purchaseOrder->status === 'bestellt';
+
         $validated = $request->validate($this->updateRules());
- 
-        $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder): PurchaseOrder {
+
+        $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder, $isLocked): PurchaseOrder {
             $purchaseOrder->update([
                 'fLiefNr'      => $validated['fLiefNr'] ?? null,
                 'bestDat'      => $validated['bestDat'],
                 'erwLieferDat' => $validated['erwLieferDat'] ?? null,
             ]);
- 
+
             $current         = $purchaseOrder->items->keyBy('pBestPosNr');
             $submittedPosNrs = [];
- 
+
             foreach ($validated['items'] as $item) {
                 if (!empty($item['pBestPosNr'])) {
                     $posNr             = (int) $item['pBestPosNr'];
                     $submittedPosNrs[] = $posNr;
- 
+
                     $existing = $current->get($posNr)
                         ?? throw new \Exception("pBestPosNr={$posNr} does not belong to this order.");
- 
+
+                    if ($isLocked && (int) $item['bestMenge'] < (int) $existing->gelieferteMenge) {
+                        throw ValidationException::withMessages([
+                            'items' => "pBestPosNr={$posNr}: bestMenge cannot be less than already delivered ({$existing->gelieferteMenge}).",
+                        ]);
+                    }
+
                     $existing->update([
                         'bestMenge' => $item['bestMenge'],
                         'ekPreis'   => $item['ekPreis'] ?? $existing->ekPreis,
@@ -118,17 +127,22 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
             }
- 
+
             // Remove lines not in the request
             foreach ($current as $posNr => $line) {
                 if (!in_array($posNr, $submittedPosNrs, true)) {
+                    if ($isLocked) {
+                        throw ValidationException::withMessages([
+                            'items' => "pBestPosNr={$posNr}: line items cannot be removed after delivery has started.",
+                        ]);
+                    }
                     $line->delete();
                 }
             }
- 
+
             return $purchaseOrder->fresh(['items.product', 'supplier']);
         });
- 
+
         return $this->ok($this->formatOrder($purchaseOrder), 'Purchase order updated successfully.');
     }
 
@@ -159,7 +173,11 @@ class PurchaseOrderController extends Controller
         ]);
  
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder): PurchaseOrder {
-            $lines = $purchaseOrder->lockForUpdate()->items->keyBy('pBestPosNr');
+            $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $lines = $purchaseOrder->items()->lockForUpdate()->get()->keyBy('pBestPosNr');
  
             foreach ($validated['items'] as $incoming) {
                 $posNr     = (int) $incoming['pBestPosNr'];
