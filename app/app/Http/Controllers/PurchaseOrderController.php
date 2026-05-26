@@ -85,35 +85,35 @@ class PurchaseOrderController extends Controller
         if (in_array($purchaseOrder->status, ['geliefert', 'storniert'], true)) {
             return $this->unprocessable('Closed orders cannot be edited.');
         }
-
+        
         $isLocked = $purchaseOrder->status === 'bestellt';
-
+ 
         $validated = $request->validate($this->updateRules());
-
+ 
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder, $isLocked): PurchaseOrder {
             $purchaseOrder->update([
                 'fLiefNr'      => $validated['fLiefNr'] ?? null,
                 'bestDat'      => $validated['bestDat'],
                 'erwLieferDat' => $validated['erwLieferDat'] ?? null,
             ]);
-
+ 
             $current         = $purchaseOrder->items->keyBy('pBestPosNr');
             $submittedPosNrs = [];
-
+ 
             foreach ($validated['items'] as $item) {
                 if (!empty($item['pBestPosNr'])) {
                     $posNr             = (int) $item['pBestPosNr'];
                     $submittedPosNrs[] = $posNr;
-
+ 
                     $existing = $current->get($posNr)
                         ?? throw new \Exception("pBestPosNr={$posNr} does not belong to this order.");
-
+ 
                     if ($isLocked && (int) $item['bestMenge'] < (int) $existing->gelieferteMenge) {
                         throw ValidationException::withMessages([
                             'items' => "pBestPosNr={$posNr}: bestMenge cannot be less than already delivered ({$existing->gelieferteMenge}).",
                         ]);
                     }
-
+ 
                     $existing->update([
                         'bestMenge' => $item['bestMenge'],
                         'ekPreis'   => $item['ekPreis'] ?? $existing->ekPreis,
@@ -127,7 +127,7 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
             }
-
+ 
             // Remove lines not in the request
             foreach ($current as $posNr => $line) {
                 if (!in_array($posNr, $submittedPosNrs, true)) {
@@ -139,10 +139,10 @@ class PurchaseOrderController extends Controller
                     $line->delete();
                 }
             }
-
+ 
             return $purchaseOrder->fresh(['items.product', 'supplier']);
         });
-
+ 
         return $this->ok($this->formatOrder($purchaseOrder), 'Purchase order updated successfully.');
     }
 
@@ -157,7 +157,7 @@ class PurchaseOrderController extends Controller
      * Supports partial delivery: pass gelieferteMenge per line.
      * If all lines are fully delivered the order status → "geliefert".
      */
-        public function receiveDelivery(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
+    public function receiveDelivery(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
     {
         if ($purchaseOrder->status === 'storniert') {
             return $this->unprocessable('Cannot receive a cancelled order.');
@@ -167,16 +167,16 @@ class PurchaseOrderController extends Controller
         }
  
         $validated = $request->validate([
-            'items'                       => 'required|array|min:1',
-            'items.*.pBestPosNr'          => 'required|integer',
-            'items.*.gelieferteMenge'     => 'required|integer|min:1',
+            'items'                   => 'required|array|min:1',
+            'items.*.pBestPosNr'      => 'required|integer',
+            'items.*.gelieferteMenge' => 'required|integer|min:1',
         ]);
  
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder): PurchaseOrder {
             $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
-
+ 
             $lines = $purchaseOrder->items()->lockForUpdate()->get()->keyBy('pBestPosNr');
  
             foreach ($validated['items'] as $incoming) {
@@ -206,7 +206,6 @@ class PurchaseOrderController extends Controller
                 }
  
                 $product->increment('bestand', $newQty);
- 
                 // Update delivered quantity on the line
                 $line->increment('gelieferteMenge', $newQty);
             }
@@ -226,6 +225,7 @@ class PurchaseOrderController extends Controller
  
         return $this->ok($this->formatOrder($purchaseOrder), 'Delivery received successfully.');
     }
+    
 
     // ──────────────────────────────────────────────────────────────────────────
     // CANCEL
@@ -243,10 +243,33 @@ class PurchaseOrderController extends Controller
             return $this->unprocessable('Only open or ordered purchases can be cancelled.');
         }
  
-        $purchaseOrder->update(['status' => 'storniert']);
+        DB::transaction(function () use ($purchaseOrder): void {
+            $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+ 
+            $lines = $purchaseOrder->items()->lockForUpdate()->get();
+ 
+            foreach ($lines as $line) {
+                if ($line->gelieferteMenge > 0) {
+                    $product = Product::withTrashed()
+                        ->where('pArtikelNr', $line->fArtikelNr)
+                        ->lockForUpdate()
+                        ->first();
+ 
+                    if ($product) {
+                        $newStock = max(0, $product->bestand - $line->gelieferteMenge);
+                        $product->update(['bestand' => $newStock]);
+                    }
+                }
+            }
+ 
+            $purchaseOrder->update(['status' => 'storniert']);
+        });
  
         return $this->ok(null, "Purchase order {$purchaseOrder->pBestNr} cancelled.");
     }
+
 
     // ──────────────────────────────────────────────────────────────────────────
     // HELPER
