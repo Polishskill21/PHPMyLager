@@ -40,7 +40,8 @@ async function loadWarehouseGroups() {
     if (!ok) return;
     const sel = document.getElementById('filter-wg');
     const fSel = document.getElementById('f-fWgNr');
-    (data.warehouse_groups || []).forEach(g => {
+    const list = Array.isArray(data.data) ? data.data : [];
+    list.forEach(g => {
         warehouseGroups[g.pWgNr] = g.warengruppe || `Group ${g.pWgNr}`;
         sel.insertAdjacentHTML('beforeend', `<option value="${g.pWgNr}">${g.warengruppe || g.pWgNr}</option>`);
         fSel.insertAdjacentHTML('beforeend', `<option value="${g.pWgNr}">${g.warengruppe || g.pWgNr}</option>`);
@@ -52,7 +53,7 @@ async function loadProducts() {
     wrap.innerHTML = `<div class="loading-row"><div class="spinner"></div> Loading products…</div>`;
     const { ok, data } = await api('GET', '/products');
     if (!ok) { toast('Failed to load products', 'error'); return; }
-    allProducts = data.products || [];
+    allProducts = Array.isArray(data.data) ? data.data : [];
     applyFilters();
 }
 
@@ -276,7 +277,7 @@ document.getElementById('modal-del-confirm')?.addEventListener('click', async ()
         toast(data.message || 'Product discontinued.', 'success');
         await loadProducts();
     } else {
-        toast(data.error || 'Delete failed.', 'error');
+        toast(data.message || data.error || 'Delete failed.', 'error');
     }
     pendingDeleteId = null;
 });

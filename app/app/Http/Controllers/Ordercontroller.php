@@ -12,213 +12,287 @@ use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
+    // ─────────────────────────────────────────────────────────────────────────
+    // READ
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Returns all orders, each formatted with their items and totals.
+     * GET /orders
      */
     public function index(): JsonResponse
     {
-        $orders = Order::with('items.product')->get();
+        $orders = Order::with('items.product')->get()
+                       ->map(fn (Order $o) => $this->formatOrder($o));
 
-        return response()->json(
-            $orders->map(fn (Order $order) => $this->formatOrder($order))
-        );
+        return $this->ok($orders);
     }
 
     /**
-     * Returns a single order with all its line-items and calculated totals.
+     * GET /orders/{order}
      */
     public function show(Order $order): JsonResponse
     {
         $order->load('items.product');
 
-        return response()->json($this->formatOrder($order));
+        return $this->ok($this->formatOrder($order));
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // CREATE
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
+     * POST /orders
      * Creates the order header, attaches all line-items, snapshots each
      * product's current selling price and decrements stock.
      */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'aufDat'                 => 'required|date',
-            'fKdNr'                  => 'required|integer|exists:kunden,pKdNr',
-            'aufTermin'              => 'required|date',
-            'items'                  => 'required|array|min:1',
-            'items.*.fArtikelNr'     => 'required|integer|exists:artikel,pArtikelNr',
-            'items.*.aufMenge'       => 'required|integer|min:1',
-        ]);
+        $validated = $request->validate(
+            $this->storeRules(),
+            $this->customMessages()
+        );
 
-        $order = DB::transaction(function () use ($validated): Order {
-            // Create the order header
-            $order = Order::create([
-                'aufDat'    => $validated['aufDat'],
-                'fKdNr'     => $validated['fKdNr'],
-                'aufTermin' => $validated['aufTermin'],
-            ]);
-
-            // Process each line-item
-            foreach ($validated['items'] as $item) {
-                $product = Product::where('pArtikelNr', $item['fArtikelNr'])
-                                  ->lockForUpdate()
-                                  ->firstOrFail();
-
-                $this->ensureSufficientStock($product, $item['aufMenge']);
-
-                $order->items()->create([
-                    'fArtikelNr'        => $product->pArtikelNr,
-                    'aufMenge'          => $item['aufMenge'],
-                    'kaufPreis' => $product->vkPreis,
+        try {
+            $order = DB::transaction(function () use ($validated): Order {
+                $order = Order::create([
+                    'aufDat'    => $validated['aufDat'],
+                    'fKdNr'     => $validated['fKdNr'],
+                    'aufTermin' => $validated['aufTermin'],
                 ]);
 
-                $product->decrement('bestand', $item['aufMenge']);
-            }
+                foreach ($validated['items'] as $item) {
+                    $product = Product::where('pArtikelNr', $item['fArtikelNr'])
+                                      ->lockForUpdate()
+                                      ->firstOrFail();
 
-            return $order->load('items.product');
-        });
+                    $this->ensureSufficientStock($product, $item['aufMenge']);
 
-        return response()->json($this->formatOrder($order), 201);
+                    $order->items()->create([
+                        'fArtikelNr' => $product->pArtikelNr,
+                        'aufMenge'   => $item['aufMenge'],
+                        'kaufPreis'  => $product->vkPreis,
+                    ]);
+
+                    $product->decrement('bestand', $item['aufMenge']);
+                }
+
+                return $order->load('items.product');
+            });
+
+            return $this->created($this->formatOrder($order), 'Order created successfully.');
+
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // UPDATE
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Updates the alreayd existing order, need to pass the whole order with all of
-     * items, otherwise it will delete from the order
+     * PUT /orders/{order}
+     * Full replacement: send the complete list of items; omitted items are
+     * deleted and their stock is restored.
      */
     public function update(Request $request, Order $order): JsonResponse
     {
-        $validated = $request->validate([
-            'aufDat'                  => 'required|date',
-            'fKdNr'                   => 'required|integer|exists:kunden,pKdNr',
-            'aufTermin'               => 'required|date',
-            'items'                   => 'required|array|min:1',
-            'items.*.pAufPosNr'       => 'nullable|integer',
-            'items.*.fArtikelNr'      => 'required|integer',
-            'items.*.aufMenge'        => 'required|integer|min:1',
-        ]);
+        $validated = $request->validate(
+            $this->updateRules(),
+            $this->customMessages()
+        );
 
-        $order = DB::transaction(function () use ($validated, $order): Order {
+        try {
+            $order = DB::transaction(function () use ($validated, $order): Order {
 
-            // ─── Update order header ───
-            $order->update([
-                'aufDat'    => $validated['aufDat'],
-                'fKdNr'     => $validated['fKdNr'],
-                'aufTermin' => $validated['aufTermin'],
-            ]);
+                $order->update([
+                    'aufDat'    => $validated['aufDat'],
+                    'fKdNr'     => $validated['fKdNr'],
+                    'aufTermin' => $validated['aufTermin'],
+                ]);
 
-            // ─── Load current DB items, keyed by PK ───
-            $currentItems   = $order->items->keyBy('pAufPosNr');
-            $submittedPosNrs = [];
+                $currentItems    = $order->items->keyBy('pAufPosNr');
+                $submittedPosNrs = [];
 
-            // ─── Process submitted items ───
-            foreach ($validated['items'] as $index => $submittedItem) {
-                $artikelNr = (int) $submittedItem['fArtikelNr'];
-                $newMenge  = (int) $submittedItem['aufMenge'];
+                foreach ($validated['items'] as $submittedItem) {
+                    $artikelNr = (int) $submittedItem['fArtikelNr'];
+                    $newMenge  = (int) $submittedItem['aufMenge'];
 
-                if (!empty($submittedItem['pAufPosNr'])) {
-                    $posNr = (int) $submittedItem['pAufPosNr'];
-                    $submittedPosNrs[] = $posNr;
+                    if (!empty($submittedItem['pAufPosNr'])) {
+                        // ── Existing line: adjust quantity ──────────────────
+                        $posNr             = (int) $submittedItem['pAufPosNr'];
+                        $submittedPosNrs[] = $posNr;
 
-                    $existingItem = $currentItems->get($posNr);
-                    if (!$existingItem) {
-                        throw new \Exception(
-                            "Order item pAufPosNr={$posNr} does not belong to order {$order->pAufNr}."
-                        );
-                    }
+                        $existingItem = $currentItems->get($posNr);
 
-                    // Guard: changing the product on an existing position
-                    // is not allowed
-                    if ((int) $existingItem->fArtikelNr !== $artikelNr) {
-                        throw new \Exception(
-                            "Cannot change fArtikelNr on pAufPosNr={$posNr}. " .
-                            "Remove the item and add it again with the new product."
-                        );
-                    }
+                        if (!$existingItem) {
+                            // Business-logic error, not a user input error — 422
+                            throw ValidationException::withMessages([
+                                'items' => "Order item pAufPosNr={$posNr} does not belong to order {$order->pAufNr}.",
+                            ]);
+                        }
 
-                    $diff = $newMenge - (int) $existingItem->aufMenge;
+                        if ((int) $existingItem->fArtikelNr !== $artikelNr) {
+                            throw ValidationException::withMessages([
+                                'items' => "Cannot change fArtikelNr on pAufPosNr={$posNr}. " .
+                                           "Remove the item and re-add it with the new product.",
+                            ]);
+                        }
 
-                    if ($diff !== 0) {
+                        $diff = $newMenge - (int) $existingItem->aufMenge;
+
+                        if ($diff !== 0) {
+                            $product = Product::withTrashed()
+                                              ->where('pArtikelNr', $artikelNr)
+                                              ->lockForUpdate()
+                                              ->firstOrFail();
+
+                            if ($product->trashed()) {
+                                throw ValidationException::withMessages([
+                                    'items' => "Cannot alter the quantity of product {$product->pArtikelNr} ({$product->bezeichnung}) because it has been discontinued.",
+                                ]);
+                            }
+
+                            if ($diff > 0) {
+                                $this->ensureSufficientStock($product, $diff);
+                                $product->decrement('bestand', $diff);
+                            } else {
+                                $product->increment('bestand', abs($diff));
+                            }
+                        }
+
+                        $existingItem->update(['aufMenge' => $newMenge]);
+
+                    } else {
+                        // ── New line ────────────────────────────────────────
                         $product = Product::where('pArtikelNr', $artikelNr)
                                           ->lockForUpdate()
                                           ->firstOrFail();
 
-                        if ($diff > 0) {
-                            $this->ensureSufficientStock($product, $diff);
-                            $product->decrement('bestand', $diff);
-                        } else {
-                            $product->increment('bestand', abs($diff));
-                        }
+                        $this->ensureSufficientStock($product, $newMenge);
+
+                        $order->items()->create([
+                            'fArtikelNr' => $artikelNr,
+                            'aufMenge'   => $newMenge,
+                            'kaufPreis'  => $product->vkPreis,
+                        ]);
+
+                        $product->decrement('bestand', $newMenge);
                     }
-
-                    $existingItem->update(['aufMenge' => $newMenge]);
-
-                } else {
-                    // ─── brand-new line-item ───
-                    $product = Product::where('pArtikelNr', $artikelNr)
-                                      ->lockForUpdate()
-                                      ->firstOrFail();
-
-                    $this->ensureSufficientStock($product, $newMenge);
-
-                    $order->items()->create([
-                        'fArtikelNr'        => $artikelNr,
-                        'aufMenge'          => $newMenge,
-                        'kaufPreis' => $product->vkPreis,
-                    ]);
-
-                    $product->decrement('bestand', $newMenge);
                 }
-            }
 
-            // ─── Delete items that were omitted from the request ────
-            foreach ($currentItems as $posNr => $item) {
-                if (!in_array($posNr, $submittedPosNrs, true)) {
-                    Product::where('pArtikelNr', $item->fArtikelNr)
-                           ->increment('bestand', $item->aufMenge);
-
-                    $item->delete();
+                // ── Remove lines omitted from the request ───────────────────
+                foreach ($currentItems as $posNr => $item) {
+                    if (!in_array($posNr, $submittedPosNrs, true)) {
+                        Product::withTrashed()
+                               ->where('pArtikelNr', $item->fArtikelNr)
+                               ->increment('bestand', $item->aufMenge);
+                        $item->delete();
+                    }
                 }
-            }
 
-            return $order->fresh(['items.product']);
-        });
+                return $order->fresh(['items.product']);
+            });
 
-        return response()->json($this->formatOrder($order));
+            return $this->ok($this->formatOrder($order), 'Order updated successfully.');
+
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // DELETE
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Cancels the order:
-     *  1. Restores stock for every line-item.
-     *  2. Removes all auftragspositionen rows.
-     *  3. Removes the auftragskoepfe row.
+     * DELETE /orders/{order}
+     * Restores stock for every line-item, then removes all positions and the
+     * order header.
      */
     public function destroy(Order $order): JsonResponse
     {
-        DB::transaction(function () use ($order): void {
-            $order->load('items');
+        try {
+            DB::transaction(function () use ($order): void {
+                $order->load('items');
 
-            foreach ($order->items as $item) {
-                Product::where('pArtikelNr', $item->fArtikelNr)
-                       ->increment('bestand', $item->aufMenge);
-            }
+                foreach ($order->items as $item) {
+                    Product::withTrashed()
+                           ->where('pArtikelNr', $item->fArtikelNr)
+                           ->increment('bestand', $item->aufMenge);
+                }
 
-            $order->items()->delete();
-            $order->delete();
-        });
+                $order->items()->delete();
+                $order->delete();
+            });
 
-        return response()->json(null, 204);
+            return $this->noContent();
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Validation rule sets
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function storeRules(): array
+    {
+        return [
+            'aufDat'              => 'required|date',
+            'fKdNr'               => 'required|integer|exists:kunden,pKdNr',
+            'aufTermin'           => 'required|date|after_or_equal:aufDat',
+            'items'               => 'required|array|min:1',
+            'items.*.fArtikelNr'  => 'required|integer|exists:artikel,pArtikelNr',
+            'items.*.aufMenge'    => 'required|integer|min:1',
+        ];
+    }
+
+    private function updateRules(): array
+    {
+        return [
+            'aufDat'                  => 'required|date',
+            'fKdNr'                   => 'required|integer|exists:kunden,pKdNr',
+            'aufTermin'               => 'required|date|after_or_equal:aufDat',
+            'items'                   => 'required|array|min:1',
+            'items.*.pAufPosNr'       => 'nullable|integer',
+            'items.*.fArtikelNr'      => 'required|integer|exists:artikel,pArtikelNr',
+            'items.*.aufMenge'        => 'required|integer|min:1',
+        ];
+    }
+
+    private function customMessages(): array
+    {
+        return [
+            'fKdNr.exists'               => 'The selected customer does not exist.',
+            'aufTermin.after_or_equal'   => 'The delivery date must be on or after the order date.',
+            'items.required'             => 'At least one order item is required.',
+            'items.min'                  => 'At least one order item is required.',
+            'items.*.fArtikelNr.exists'  => 'One or more selected products do not exist.',
+            'items.*.aufMenge.min'       => 'Each item quantity must be at least 1.',
+        ];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Shape:
+     * Response shape:
      * {
      *   "order_info":  { pAufNr, aufDat, aufTermin, fKdNr },
-     *   "items":       [ { pAufPosNr, fArtikelNr, bezeichnung, aufMenge, kaufPreis } ],
-     *   "order_total": <sum of quantities>,
-     *   "preis_total": <sum of kaufPreis × aufMenge>
+     *   "items":       [ { pAufPosNr, fArtikelNr, bezeichnung, aufMenge,
+     *                      kaufPreis, line_total, is_discontinued } ],
+     *   "order_total": <total units>,
+     *   "preis_total": <sum kaufPreis × aufMenge>
      * }
      */
     private function formatOrder(Order $order): array
@@ -226,7 +300,6 @@ class OrderController extends Controller
         $items = $order->items;
 
         $orderTotal = $items->sum('aufMenge');
-
         $preisTotal = $items->sum(
             fn (OrderItem $item) => (float) $item->kaufPreis * (int) $item->aufMenge
         );
@@ -239,13 +312,13 @@ class OrderController extends Controller
                 'fKdNr'     => $order->fKdNr,
             ],
             'items' => $items->map(fn (OrderItem $item) => [
-                'pAufPosNr'         => $item->pAufPosNr,
-                'fArtikelNr'        => $item->fArtikelNr,
-                'bezeichnung'       => $item->product?->bezeichnung,
-                'aufMenge'          => $item->aufMenge,
-                'kaufPreis'         => $item->kaufPreis,
-                'line_total'        => round((float) $item->kaufPreis * $item->aufMenge, 2),
-                'is_discontinued'   => $item->product?->trashed() ?? false,
+                'pAufPosNr'       => $item->pAufPosNr,
+                'fArtikelNr'      => $item->fArtikelNr,
+                'bezeichnung'     => $item->product?->bezeichnung,
+                'aufMenge'        => $item->aufMenge,
+                'kaufPreis'       => $item->kaufPreis,
+                'line_total'      => round((float) $item->kaufPreis * $item->aufMenge, 2),
+                'is_discontinued' => $item->product?->trashed() ?? false,
             ])->values(),
             'order_total' => $orderTotal,
             'preis_total' => round($preisTotal, 2),
@@ -253,15 +326,21 @@ class OrderController extends Controller
     }
 
     /**
-     * Throws a ValidationException (HTTP 422) when bestand < requested quantity.
+     * Throws a ValidationException (HTTP 422) when bestand < requested qty.
+     * ValidationException is re-thrown by callers so Laravel renders it
+     * with the standard errors envelope.
      */
     private function ensureSufficientStock(Product $product, int $requested): void
     {
         if ($product->bestand < $requested) {
             throw ValidationException::withMessages([
-                'items' => "Insufficient stock for product {$product->pArtikelNr} " .
-                           "({$product->bezeichnung}). " .
-                           "Available: {$product->bestand}, requested: {$requested}.",
+                'items' => sprintf(
+                    'Insufficient stock for product %s (%s). Available: %d, requested: %d.',
+                    $product->pArtikelNr,
+                    $product->bezeichnung,
+                    $product->bestand,
+                    $requested
+                ),
             ]);
         }
     }

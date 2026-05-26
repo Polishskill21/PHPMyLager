@@ -86,7 +86,7 @@ class WarehouseGroupControllerTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonStructure([
-                     'warehouse_groups' => [
+                     'data' => [
                          '*' => ['pWgNr', 'warengruppe']
                      ]
                  ]);
@@ -110,7 +110,7 @@ class WarehouseGroupControllerTest extends TestCase
                          ]);
 
         $response->assertStatus(201)
-                 ->assertJsonPath('message', 'Warehouse group created successfully')
+                 ->assertJsonPath('message', 'Warehouse group created successfully.')
                  ->assertJsonPath('data.warengruppe', 'New Electronics');
 
         $this->assertDatabaseHas('warengruppe', [
@@ -152,7 +152,7 @@ class WarehouseGroupControllerTest extends TestCase
                          ]);
 
         $response->assertStatus(200)
-                 ->assertJsonPath('message', 'Warehouse group updated successfully')
+                 ->assertJsonPath('message', 'Warehouse group updated successfully.')
                  ->assertJsonPath('data.warengruppe', 'Updated Name');
 
         $this->assertDatabaseHas('warengruppe', [

@@ -51,13 +51,13 @@ async function loadCustomers() {
         return;
     }
 
-    const list = Array.isArray(data) ? data : [];
+    const list = Array.isArray(data.data) ? data.data : [];
     allCustomers = list.map(normalizeCustomer);
     applyFilters();
 }
 
 function normalizeCustomer(entry) {
-    const customer = entry?.customer || {};
+    const customer = entry || {};
 
     return {
         pKdNr: customer.pKdNr,

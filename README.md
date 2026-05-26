@@ -11,7 +11,9 @@ PHPMyLager is an internal warehouse management system used for internal company 
 | **Products** | Inventory and item management | ✅ | ✅ | ✅ | ✅ |
 | **Warehouse Groups** | Logical grouping of product types | ✅ | ✅ | ✅ | ❌ |
 | **Customers** | Client profiles | ✅ | ✅ | ✅ | ✅ |
-| **Orders** | Order management | ✅ | ✅ | ✅ | ✅ |
+| **Customer Orders** | ??? | ✅ | ✅ | ✅ | ✅ |
+| **Supply Orders** | ??? | ✅ | ✅ | ✅ | ✅ |
+| **Suppliers** | ??? | ✅ | ✅ | ✅ | ✅ |
 
 #### Access Control (RBAC)
 Access to the features listed above is strictly governed by the assigned user role:

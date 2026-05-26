@@ -50,7 +50,7 @@ async function loadGroups() {
         return;
     }
 
-    const list = data.warehouse_groups || [];
+    const list = Array.isArray(data.data) ? data.data : [];
     allGroups = list.map(normalizeGroup);
     applyFilters();
     void ensureProductsLoaded();
@@ -174,7 +174,7 @@ async function ensureProductsLoaded() {
         allProducts = [];
         return false;
     }
-    allProducts = data.products || [];
+    allProducts = Array.isArray(data.data) ? data.data : [];
     return true;
 }
 

@@ -53,13 +53,13 @@ async function loadLookups() {
     ]);
 
     if (customersRes.ok) {
-        const raw = Array.isArray(customersRes.data) ? customersRes.data : [];
-        customers = raw.map(entry => entry?.customer || {}).filter(c => c?.pKdNr != null);
+        const raw = Array.isArray(customersRes.data?.data) ? customersRes.data.data : [];
+        customers = raw.map(entry => entry || {}).filter(c => c?.pKdNr != null);
         customerMap = Object.fromEntries(customers.map(c => [Number(c.pKdNr), c]));
     }
 
     if (productsRes.ok) {
-        const raw = Array.isArray(productsRes.data?.products) ? productsRes.data.products : [];
+        const raw = Array.isArray(productsRes.data?.data) ? productsRes.data.data : [];
         products = raw.filter(p => p?.pArtikelNr != null);
         productMap = Object.fromEntries(products.map(p => [Number(p.pArtikelNr), p]));
     }
@@ -114,7 +114,7 @@ async function loadOrders() {
         return;
     }
 
-    const list = Array.isArray(data) ? data : [];
+    const list = Array.isArray(data.data) ? data.data : [];
     allOrders = list.map(normalizeOrder);
     applyFilters();
 }
