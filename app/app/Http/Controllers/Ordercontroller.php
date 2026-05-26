@@ -22,7 +22,7 @@ class OrderController extends Controller
      */
     public function index(): JsonResponse
     {
-        $orders = Order::with('items.product')->get()
+        $orders = Order::with(['items.product', 'customer'])->get() 
                        ->map(fn (Order $o) => $this->formatOrder($o));
 
         return $this->ok($orders);
@@ -33,7 +33,7 @@ class OrderController extends Controller
      */
     public function show(Order $order): JsonResponse
     {
-        $order->load('items.product');
+        $order->load(['items.product', 'customer']);
 
         return $this->ok($this->formatOrder($order));
     }
@@ -293,7 +293,7 @@ class OrderController extends Controller
     /**
      * Response shape:
      * {
-     *   "order_info":  { pAufNr, aufDat, aufTermin, fKdNr },
+     *   "order_info":  { pAufNr, aufDat, aufTermin, fKdNr, customer_name, is_customer_deleted },
      *   "items":       [ { pAufPosNr, fArtikelNr, bezeichnung, aufMenge,
      *                      kaufPreis, line_total, is_discontinued } ],
      *   "order_total": <total units>,
@@ -316,6 +316,8 @@ class OrderController extends Controller
                 'aufDat'    => $order->aufDat,
                 'aufTermin' => $order->aufTermin,
                 'fKdNr'     => $order->fKdNr,
+                'customer_name'       => $customer?->name,
+                'is_customer_deleted' => $customer?->trashed() ?? false,
             ],
             'items' => $items->map(fn (OrderItem $item) => [
                 'pAufPosNr'       => $item->pAufPosNr,
