@@ -241,6 +241,7 @@ Soft-deletes the product. The record is retained in the database and still appea
 | :--- | :--- | :--- | :--- |
 | **GET** | `/api/warehouse-groups` | List all warehouse groups | `viewer` |
 | **GET** | `/api/warehouse-groups/{id}` | View a specific warehouse group | `viewer` |
+| **GET** | `/api/warehouse-groups/{id}/products` | List all products to a specific warehouse group | `viewer` |
 | **POST** | `/api/warehouse-groups` | Create a new warehouse group | `writer` |
 | **PUT** | `/api/warehouse-groups/{id}` | Update a warehouse group name | `writer` |
 
@@ -251,6 +252,35 @@ Soft-deletes the product. The record is retained in the database and still appea
     {
       "pWgNr": 1,
       "warengruppe": "Electronics"
+    },
+    ...
+  ]
+}
+```
+
+#### GET `/api/warehouse-groups/{id}/products`
+```json
+{
+  "data": [
+    {
+      "pArtikelNr": 10056,
+      "bezeichnung": "Isolier-Abstreifzaengleinchen",
+      "fWgNr": 1,
+      "ekPreis": 14,
+      "vkPreis": 20,
+      "bestand": 2400,
+      "meldeBest": 250,
+      "lagerplatz": "A01-03B"
+    },
+    {
+      "pArtikelNr": 10057,
+      "bezeichnung": "Adernendhuelsen-Zaengle",
+      "fWgNr": 1,
+      "ekPreis": 17,
+      "vkPreis": 31,
+      "bestand": 1750,
+      "meldeBest": 220,
+      "lagerplatz": "A01-04C"
     },
     ...
   ]
@@ -545,6 +575,8 @@ needs to be improved
 | `order_info.aufDat` | string (date) | Order date |
 | `order_info.aufTermin` | string (date) | Requested delivery date |
 | `order_info.fKdNr` | integer | Customer FK |
+| `order_info.customer_name` | string | Name of the customer |
+| `order_info.is_customer_deleted` | bool | If the customer has been soft deleted and is still displayed in the order |
 | `items[].pAufPosNr` | integer | Line-item primary key |
 | `items[].fArtikelNr` | integer | Product FK |
 | `items[].bezeichnung` | string\|null | Product name at time of response |
@@ -564,7 +596,9 @@ needs to be improved
         "pAufNr": 22334,
         "aufDat": "2009-01-26 00:00:00",
         "aufTermin": "2009-02-18 00:00:00",
-        "fKdNr": 24001
+        "fKdNr": 24001,
+        "customer_name": "Otto",
+        "is_customer_deleted": true,
       },
       "items": [
         {
@@ -724,6 +758,7 @@ All supplier procurement responses share this unified metadata tracking design s
 | `order_info.pBestNr` | integer | Purchase order primary key tracking identifier (`pBestNr` from table `bestellkoepfe`). |
 | `order_info.fLiefNr` | integer\|null | Supplier foreign key reference identity row identifier (`lieferanten.pLiefNr`). |
 | `order_info.lieferant` | string\|null | Vendor company title name resolved from active supplier relations. |
+| `order_info.is_supplier_deleted` | bool | If the Vendor has been soft deleted or not. |
 | `order_info.bestDat` | string (datetime) | Timestamp designating precisely when the procurement request was sent. |
 | `order_info.erwLieferDat` | string (datetime)\|null| Expected warehouse receiving dock arrival deadline submitted by shipping carrier. |
 | `order_info.status` | string | Active pipeline workflow state: `'offen'`, `'bestellt'`, `'geliefert'`, or `'storniert'`. |
@@ -748,6 +783,7 @@ All supplier procurement responses share this unified metadata tracking design s
         "pBestNr": 80001,
         "fLiefNr": 5001,
         "lieferant": "Remscheid Werkzeuge GmbH",
+        "is_supplier_deleted": false,
         "bestDat": "2026-05-01 10:00:00",
         "erwLieferDat": "2026-05-08 14:00:00",
         "status": "bestellt"
