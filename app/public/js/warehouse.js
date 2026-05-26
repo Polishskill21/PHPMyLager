@@ -9,7 +9,6 @@ let allGroups = [];
 let filtered  = [];
 let sortKey   = 'pWgNr';
 let sortDir   = 1;
-let allProducts = null;
 
 // ── API HELPERS ───────────────────────────────────────────────────────
 async function api(method, path, body = null) {
@@ -53,7 +52,6 @@ async function loadGroups() {
     const list = Array.isArray(data.data) ? data.data : [];
     allGroups = list.map(normalizeGroup);
     applyFilters();
-    void ensureProductsLoaded();
 }
 
 function normalizeGroup(entry) {
@@ -167,17 +165,6 @@ function esc(s) {
         .replace(/>/g, '&gt;');
 }
 
-async function ensureProductsLoaded() {
-    if (Array.isArray(allProducts)) return true;
-    const { ok, data } = await api('GET', '/products');
-    if (!ok) {
-        allProducts = [];
-        return false;
-    }
-    allProducts = Array.isArray(data.data) ? data.data : [];
-    return true;
-}
-
 async function openGroupView(group) {
     const overlay = document.getElementById('modal-view-overlay');
     const list = document.getElementById('group-products-list');
@@ -191,13 +178,14 @@ async function openGroupView(group) {
     list.innerHTML = `<div class="list-empty">Loading products…</div>`;
     overlay.classList.add('open');
 
-    const ok = await ensureProductsLoaded();
+    const { ok, data } = await api('GET', `/warehouse-groups/${group.pWgNr}/products`);
+    
     if (!ok) {
         list.innerHTML = `<div class="list-empty">Failed to load products.</div>`;
         return;
     }
 
-    const items = allProducts.filter(p => String(p.fWgNr) === String(group.pWgNr));
+    const items = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
     count.textContent = String(items.length);
 
     if (items.length === 0) {
