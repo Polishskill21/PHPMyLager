@@ -35,6 +35,6 @@ class Order extends Model
 
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'fKdNr', 'pKdNr');
+        return $this->belongsTo(Customer::class, 'fKdNr', 'pKdNr')->withTrashed();
     }
 }
