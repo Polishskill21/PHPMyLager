@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class PurchaseOrderController extends Controller
 {
@@ -45,7 +46,7 @@ class PurchaseOrderController extends Controller
      */
         public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate($this->storeRules());
+        $validated = $request->validate($this->storeRules(), $this->customMessages());
  
         $order = DB::transaction(function () use ($validated): PurchaseOrder {
             $order = PurchaseOrder::create([
@@ -88,7 +89,7 @@ class PurchaseOrderController extends Controller
         
         $isLocked = $purchaseOrder->status === 'bestellt';
  
-        $validated = $request->validate($this->updateRules());
+        $validated = $request->validate($this->updateRules(), $this->customMessages());
  
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder, $isLocked): PurchaseOrder {
             $purchaseOrder->update([
@@ -278,11 +279,17 @@ class PurchaseOrderController extends Controller
     private function storeRules(): array
     {
         return [
-            'fLiefNr'            => 'nullable|integer|exists:lieferanten,pLiefNr',
+            'fLiefNr' => [
+                'nullable', 'integer', 
+                Rule::exists('lieferanten', 'pLiefNr')->whereNull('deleted_at')
+            ],
             'bestDat'            => 'required|date',
             'erwLieferDat'       => 'nullable|date|after_or_equal:bestDat',
             'items'              => 'required|array|min:1',
-            'items.*.fArtikelNr' => 'required|integer|exists:artikel,pArtikelNr',
+            'items.*.fArtikelNr' => [
+                'required', 'integer', 
+                Rule::exists('artikel', 'pArtikelNr')->whereNull('deleted_at')
+            ],
             'items.*.bestMenge'  => 'required|integer|min:1',
             'items.*.ekPreis'    => 'nullable|numeric|min:0',
         ];
@@ -290,7 +297,10 @@ class PurchaseOrderController extends Controller
 
     private function updateRules(): array {
         return [
-            'fLiefNr'           => 'nullable|integer|exists:lieferanten,pLiefNr',
+            'fLiefNr' => [
+                'nullable', 'integer', 
+                Rule::exists('lieferanten', 'pLiefNr')->whereNull('deleted_at')
+            ],
             'bestDat'           => 'required|date',
             'erwLieferDat'      => 'nullable|date|after_or_equal:bestDat',
             'items'             => 'required|array|min:1',
@@ -298,6 +308,18 @@ class PurchaseOrderController extends Controller
             'items.*.fArtikelNr'=> 'required|integer|exists:artikel,pArtikelNr',
             'items.*.bestMenge' => 'required|integer|min:1',
             'items.*.ekPreis'   => 'nullable|numeric|min:0',
+        ];
+    }
+
+    private function customMessages(): array
+    {
+        return [
+            'fLiefNr.exists'               => 'The selected supplier does not exist or has been deleted.',
+            'erwLieferDat.after_or_equal'  => 'The expected delivery date must be on or after the order date.',
+            'items.required'               => 'At least one order item is required.',
+            'items.min'                    => 'At least one order item is required.',
+            'items.*.fArtikelNr.exists'    => 'The product selected in row #:position is invalid or has been discontinued.',
+            'items.*.bestMenge.min'        => 'The quantity for the item in row #:position must be at least 1.',
         ];
     }
 
@@ -316,6 +338,7 @@ class PurchaseOrderController extends Controller
                 'pBestNr'      => $order->pBestNr,
                 'fLiefNr'      => $order->fLiefNr,
                 'lieferant'    => $order->supplier?->name,
+                'is_supplier_deleted' => $order->supplier?->trashed() ?? false,
                 'bestDat'      => $order->bestDat,
                 'erwLieferDat' => $order->erwLieferDat,
                 'status'       => $order->status,
