@@ -281,8 +281,8 @@ class OrderController extends Controller
             'aufTermin.after_or_equal'   => 'The delivery date must be on or after the order date.',
             'items.required'             => 'At least one order item is required.',
             'items.min'                  => 'At least one order item is required.',
-            'items.*.fArtikelNr.exists'  => 'One or more selected products do not exist.',
-            'items.*.aufMenge.min'       => 'Each item quantity must be at least 1.',
+            'items.*.fArtikelNr.exists'  => 'The product selected in row #:position is invalid or has been discontinued.',
+            'items.*.aufMenge.min'       => 'The quantity for the item in row #:position must be at least 1.',
         ];
     }
 
