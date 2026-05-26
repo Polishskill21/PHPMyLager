@@ -158,7 +158,7 @@ Foreign Key Constraint, Soft Deletes and Atomic Transactions.
 | --- | --- | --- |
 | admin@example.com | admin | password set in the ENV file |
 | writer@example.com | writer | password set in the ENV file |
-| reader@example.com | reader | password set in the ENV file |
+| viwer@example.com | viewer | password set in the ENV file |
 
 ## Bekannte Einschränkungen
 - Welche Punkte sind noch offen?
