@@ -7,6 +7,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -248,10 +249,14 @@ class OrderController extends Controller
     {
         return [
             'aufDat'              => 'required|date',
-            'fKdNr'               => 'required|integer|exists:kunden,pKdNr',
+            'fKdNr'               => ['required', 'integer', Rule::exists('kunden', 'pKdNr')->whereNull('deleted_at')],
             'aufTermin'           => 'required|date|after_or_equal:aufDat',
             'items'               => 'required|array|min:1',
-            'items.*.fArtikelNr'  => 'required|integer|exists:artikel,pArtikelNr',
+            'items.*.fArtikelNr'  => [
+                'required', 'integer',
+                Rule::exists('artikel', 'pArtikelNr')->whereNull('deleted_at'),
+            ],
+
             'items.*.aufMenge'    => 'required|integer|min:1',
         ];
     }
@@ -260,7 +265,7 @@ class OrderController extends Controller
     {
         return [
             'aufDat'                  => 'required|date',
-            'fKdNr'                   => 'required|integer|exists:kunden,pKdNr',
+            'fKdNr'                   => ['required', 'integer', Rule::exists('kunden', 'pKdNr')->whereNull('deleted_at')],
             'aufTermin'               => 'required|date|after_or_equal:aufDat',
             'items'                   => 'required|array|min:1',
             'items.*.pAufPosNr'       => 'nullable|integer',
@@ -298,6 +303,7 @@ class OrderController extends Controller
     private function formatOrder(Order $order): array
     {
         $items = $order->items;
+        $customer = $order->customer;
 
         $orderTotal = $items->sum('aufMenge');
         $preisTotal = $items->sum(
