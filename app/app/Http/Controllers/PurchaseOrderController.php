@@ -244,31 +244,53 @@ class PurchaseOrderController extends Controller
             return $this->unprocessable('Only open or ordered purchases can be cancelled.');
         }
  
-        DB::transaction(function () use ($purchaseOrder): void {
-            $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())
-                ->lockForUpdate()
-                ->firstOrFail();
+        try {
+            DB::transaction(function () use ($purchaseOrder): void {
+                $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())
+                    ->lockForUpdate()
+                    ->firstOrFail();
  
-            $lines = $purchaseOrder->items()->lockForUpdate()->get();
+                $lines = $purchaseOrder->items()->lockForUpdate()->get();
  
-            foreach ($lines as $line) {
-                if ($line->gelieferteMenge > 0) {
-                    $product = Product::withTrashed()
-                        ->where('pArtikelNr', $line->fArtikelNr)
-                        ->lockForUpdate()
-                        ->first();
+                foreach ($lines as $line) {
+                    if ($line->gelieferteMenge > 0) {
+                        $product = Product::withTrashed()
+                            ->where('pArtikelNr', $line->fArtikelNr)
+                            ->lockForUpdate()
+                            ->first();
  
-                    if ($product) {
-                        $newStock = max(0, $product->bestand - $line->gelieferteMenge);
-                        $product->update(['bestand' => $newStock]);
+                        if ($product) {
+                            // Check if removing this delivery will cause an inventory deficit
+                            if ($product->bestand < $line->gelieferteMenge) {
+                                throw \Illuminate\Validation\ValidationException::withMessages([
+                                    'items' => sprintf(
+                                        'Cannot cancel purchase order. Product %s (%s) has already been allocated to customer orders. Current stock: %d, trying to remove: %d.',
+                                        $product->pArtikelNr,
+                                        $product->bezeichnung,
+                                        $product->bestand,
+                                        $line->gelieferteMenge
+                                    ),
+                                ]);
+                            }
+                            // ───────────────────────────────────────────────────────────────
+
+                            $newStock = max(0, $product->bestand - $line->gelieferteMenge);
+                            $product->update(['bestand' => $newStock]);
+                        }
                     }
                 }
-            }
  
-            $purchaseOrder->update(['status' => 'storniert']);
-        });
+                $purchaseOrder->update(['status' => 'storniert']);
+            });
  
-        return $this->ok(null, "Purchase order {$purchaseOrder->pBestNr} cancelled.");
+            return $this->ok(null, "Purchase order {$purchaseOrder->pBestNr} cancelled.");
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
 
 
