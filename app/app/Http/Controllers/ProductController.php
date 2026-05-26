@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\OrderItem;
 use Illuminate\Support\Facades\DB;
 use App\Models\InventoryLog;
 use Illuminate\Support\Facades\Auth;
+use App\Models\PurchaseOrderItem;
 
 class ProductController extends Controller
 {
@@ -161,16 +161,23 @@ class ProductController extends Controller
 
     /**
      * DELETE /products/{product}
+     *
      * Soft-deletes the product. Returns 409 if it is still referenced by
-     * existing orders, 500 for any other DB error.
+     * an open purchase order lines.
+     * 
      */
     public function destroy(Product $product): JsonResponse
     {
-        $hasOpenOrders = OrderItem::where('fArtikelNr', $product->pArtikelNr)->exists();
+        // Block if referenced by any purchase order line that has not yet been
+        // fully received (gelieferteMenge < bestMenge). Fully delivered lines
+        // are historical records and do not block deletion.
+        $hasOpenPurchaseLines = PurchaseOrderItem::where('fArtikelNr', $product->pArtikelNr)
+            ->whereColumn('gelieferteMenge', '<', 'bestMenge')
+            ->exists();
  
-        if ($hasOpenOrders) {
+        if ($hasOpenPurchaseLines) {
             return $this->conflict(
-                'This product cannot be deleted because it is referenced by one or more open orders.'
+                'This product cannot be deleted because it has pending quantities on one or more purchase orders.'
             );
         }
  
@@ -184,6 +191,7 @@ class ProductController extends Controller
             return $this->serverError();
         }
     }
+
 
 
     // ─────────────────────────────────────────────────────────────────────────
