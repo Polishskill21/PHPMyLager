@@ -336,8 +336,8 @@ class PurchaseOrderController extends Controller
         return [
             PurchaseOrder::COL_F_LIEF_NR.'.exists'                      => 'The selected supplier does not exist or has been deleted.',
             PurchaseOrder::COL_ERW_LIEF_DAT.'.after_or_equal'           => 'The expected delivery date must be on or after the order date.',
-            'items.required'               => 'At least one order item is required.',
-            'items.min'                    => 'At least one order item is required.',
+            'items.required'                                            => 'At least one order item is required.',
+            'items.min'                                                 => 'At least one order item is required.',
             'items.*.'.PurchaseOrderItem::COL_F_ARTIKEL_NR.'.exists'    => 'The product selected in row #:position is invalid or has been discontinued.',
             'items.*.'.PurchaseOrderItem::COL_BEST_MENGE.'.min'         => 'The quantity for the item in row #:position must be at least 1.',
         ];

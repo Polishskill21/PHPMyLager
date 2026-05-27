@@ -146,7 +146,7 @@ class WarehouseGroupController extends Controller
     {
         return [
             WarehouseGroup::COL_NAME.'required' => 'The warehouse group name is required.',
-            WarehouseGroup::COL_NAME.'.max'      => 'The warehouse group name may not exceed 50 characters.',
+            WarehouseGroup::COL_NAME.'.max'     => 'The warehouse group name may not exceed 50 characters.',
         ];
     }
 }

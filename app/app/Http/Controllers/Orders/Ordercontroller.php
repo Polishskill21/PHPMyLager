@@ -261,10 +261,10 @@ class OrderController extends Controller
     private function updateRules(): array
     {
         return [
-            Order::COL_AUF_DAT                     => 'required|date',
-            Order::COL_F_KD_NR                     => ['required', 'integer', Rule::exists(Customer::TABLE, Customer::COL_ID)->whereNull('deleted_at')],
-            Order::COL_AUF_TERMIN                  => 'required|date|after_or_equal:' . Order::COL_AUF_DAT,
-            'items'                                => 'required|array|min:1',
+            Order::COL_AUF_DAT                       => 'required|date',
+            Order::COL_F_KD_NR                       => ['required', 'integer', Rule::exists(Customer::TABLE, Customer::COL_ID)->whereNull('deleted_at')],
+            Order::COL_AUF_TERMIN                    => 'required|date|after_or_equal:' . Order::COL_AUF_DAT,
+            'items'                                  => 'required|array|min:1',
             'items.*.' . OrderItem::COL_ID           => 'nullable|integer',
             'items.*.' . OrderItem::COL_F_ARTIKEL_NR => 'required|integer|exists:' . Product::TABLE . ',' . Product::COL_ID,
             'items.*.' . OrderItem::COL_AUF_MENGE    => 'required|integer|min:1',
@@ -276,8 +276,8 @@ class OrderController extends Controller
         return [
             Order::COL_F_KD_NR . '.exists'                       => 'The selected customer does not exist.',
             Order::COL_AUF_TERMIN . '.after_or_equal'            => 'The delivery date must be on or after the order date.',
-            'items.required'             => 'At least one order item is required.',
-            'items.min'                  => 'At least one order item is required.',
+            'items.required'                                     => 'At least one order item is required.',
+            'items.min'                                          => 'At least one order item is required.',
             'items.*.' . OrderItem::COL_F_ARTIKEL_NR . '.exists' => 'The product selected is invalid or has been discontinued.',
             'items.*.' . OrderItem::COL_AUF_MENGE . '.min'       => 'The quantity for the item must be at least 1.',
         ];
