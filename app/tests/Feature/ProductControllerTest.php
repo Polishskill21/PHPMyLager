@@ -2,14 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Product;
-use App\Models\User;
+use App\Models\Products\Product;
+use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 
 class ProductControllerTest extends TestCase
 {
@@ -349,7 +347,7 @@ class ProductControllerTest extends TestCase
             'meldeBest'   => 5,
         ]);
 
-        $this->mock(\App\Models\Product::class, function ($mock) {
+        $this->mock(\App\Models\Products\Product::class, function ($mock) {
             $mock->shouldReceive('update')
                 ->andThrow(new \RuntimeException('Simulated failure inside transaction'));
         });

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Customer;
-use App\Models\User;
+use App\Models\Customers\Customer;
+use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
