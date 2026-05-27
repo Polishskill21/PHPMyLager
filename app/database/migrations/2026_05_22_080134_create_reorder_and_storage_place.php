@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('ort', 50)->nullable();
             $table->string('email', 50)->nullable();
             $table->string('telefon', 30)->nullable();
-            $table->timestamps();
+
             $table->softDeletes();
         });
 
@@ -31,7 +31,7 @@ return new class extends Migration
         Schema::create('bestellkoepfe', function (Blueprint $table) {
             $table->increments('pBestNr');
 
-            $table->unsignedInteger('fLiefNr')->nullable();
+            $table->unsignedInteger('fLiefNr');
 
             $table->dateTime('bestDat');                        // order date
             $table->dateTime('erwLieferDat')->nullable();       // expected delivery
@@ -46,10 +46,7 @@ return new class extends Migration
             $table->enum('status', ['offen', 'bestellt', 'geliefert', 'storniert'])
                   ->default('offen');
 
-            $table->timestamps();
-
-            $table->foreign('fLiefNr')->references('pLiefNr')->on('lieferanten')
-                  ->nullOnDelete();
+            $table->foreign('fLiefNr')->references('pLiefNr')->on('lieferanten');
         });
 
         // ─── 4. Purchase-order line items ─────────────────────────────────────
@@ -63,8 +60,7 @@ return new class extends Migration
             $table->integer('gelieferteMenge')->default(0); // actually delivered (partial delivery support)
             $table->decimal('ekPreis', 8, 2)->nullable();
             
-            $table->foreign('fBestNr')->references('pBestNr')->on('bestellkoepfe')
-                  ->cascadeOnDelete();
+            $table->foreign('fBestNr')->references('pBestNr')->on('bestellkoepfe');
             $table->foreign('fArtikelNr')->references('pArtikelNr')->on('artikel');
         });
     }
