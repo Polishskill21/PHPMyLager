@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\PurchaseOrders;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Suppliers\Supplier;
 
 /**
  * Represents a row in the bestellkoepfe (purchase order header) table.

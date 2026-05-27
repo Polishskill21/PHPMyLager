@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Products;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\WarehouseGroups\WarehouseGroup;
+use App\Models\Orders\OrderItem;
 
 /**
  * Represents a row in the artikel (product) table.

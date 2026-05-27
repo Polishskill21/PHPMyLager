@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Customers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Orders\Order;
 
 /**
  * Represents a row in kunden (customer).

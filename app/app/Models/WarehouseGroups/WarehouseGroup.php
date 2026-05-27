@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\WarehouseGroups;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Products\Product;
 
 /**
  * Represents a row in the warengruppe (warehouse group) table.

@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Suppliers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\PurchaseOrders\PurchaseOrder;
 
 /**
  * Represents a row in the lieferanten (supplier) table.

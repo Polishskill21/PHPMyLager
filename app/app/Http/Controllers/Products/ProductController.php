@@ -1,14 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Products;
 
-use App\Models\Product;
+use App\Models\Products\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\InventoryLog;
+use App\Models\Products\InventoryLog;
 use Illuminate\Support\Facades\Auth;
-use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseOrders\PurchaseOrderItem;
+use App\Http\Controllers\Controller;
 
 class ProductController extends Controller
 {

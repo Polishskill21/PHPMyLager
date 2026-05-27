@@ -1,14 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\PurchaseOrders;
 
-use App\Models\PurchaseOrder; 
-use App\Models\Product;
+use App\Models\PurchaseOrders\PurchaseOrder; 
+use App\Models\Products\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use App\Http\Controllers\Controller;
 
 class PurchaseOrderController extends Controller
 {

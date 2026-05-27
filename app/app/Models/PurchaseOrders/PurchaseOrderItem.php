@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\PurchaseOrders;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Products\Product;
 
 /**
  * Represents a row in the bestellpositionen (purchase order line items) table.

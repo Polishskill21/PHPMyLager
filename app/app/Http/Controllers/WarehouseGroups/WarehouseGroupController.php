@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\WarehouseGroups;
 
-use App\Models\WarehouseGroup;
+use App\Models\WarehouseGroups\WarehouseGroup;
+use App\Models\Products\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Product;
+use App\Http\Controllers\Controller;
 
 class WarehouseGroupController extends Controller
 {
