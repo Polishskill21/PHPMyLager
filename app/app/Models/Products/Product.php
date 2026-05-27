@@ -62,6 +62,10 @@ class Product extends Model
         self::COL_MELDE_BEST => 'integer',
     ];
 
+    protected $appends = [
+        'has_stock_history'
+    ];
+
     // ── Relationships ─────────────────────────────────────────────────────────
 
     public function warengruppe(): BelongsTo
@@ -77,5 +81,11 @@ class Product extends Model
     public function inventoryLogs(): HasMany
     {
         return $this->hasMany(InventoryLog::class, InventoryLog::COL_F_ARTIKEL_NR, self::COL_ID)->latest();
+    }
+
+
+    public function getHasStockHistoryAttribute(): bool
+    {
+        return $this->inventoryLogs()->exists();
     }
 }
