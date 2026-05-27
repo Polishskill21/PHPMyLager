@@ -32,7 +32,6 @@ class Supplier extends Model
     const COL_PLZ     = 'plz';
     const COL_ORT     = 'ort';
     const COL_EMAIL   = 'email';
-    const COL_TELEFON = 'telefon';
 
     protected $table      = self::TABLE;
     protected $primaryKey = self::COL_ID;
@@ -47,7 +46,6 @@ class Supplier extends Model
         self::COL_PLZ,
         self::COL_ORT,
         self::COL_EMAIL,
-        self::COL_TELEFON,
     ];
 
     public function purchaseOrders(): HasMany

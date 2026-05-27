@@ -22,7 +22,6 @@ return new class extends Migration
             $table->integer('plz')->nullable();
             $table->string('ort', 50)->nullable();
             $table->string('email', 50)->nullable();
-            $table->string('telefon', 30)->nullable();
 
             $table->softDeletes();
         });

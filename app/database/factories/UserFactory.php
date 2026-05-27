@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Factories\Auth;
+namespace Database\Factories;
 
 use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Factories\Factory;

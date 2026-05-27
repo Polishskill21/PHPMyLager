@@ -101,7 +101,6 @@ class SupplierController extends Controller
             Supplier::COL_PLZ     => 'nullable|digits:5',
             Supplier::COL_ORT     => 'nullable|string|max:50',
             Supplier::COL_EMAIL   => 'nullable|email|max:50|unique:'.Supplier::TABLE .','. Supplier::COL_EMAIL,
-            Supplier::COL_TELEFON => 'nullable|string|max:30',
         ];
     }
 
@@ -116,7 +115,6 @@ class SupplierController extends Controller
                 'nullable', 'email', 'max:50',
                 Rule::unique(Supplier::TABLE, Supplier::COL_EMAIL)->ignore($supplier->{Supplier::COL_ID}, Supplier::COL_ID),
             ],
-            Supplier::COL_TELEFON => 'nullable|string|max:30',
         ];
     }
 
@@ -141,7 +139,6 @@ class SupplierController extends Controller
             Supplier::COL_PLZ     => $supplier->{Supplier::COL_PLZ},
             Supplier::COL_ORT     => $supplier->{Supplier::COL_ORT},
             Supplier::COL_EMAIL   => $supplier->{Supplier::COL_EMAIL},
-            Supplier::COL_TELEFON => $supplier->{Supplier::COL_TELEFON},
         ];
     }
 }
