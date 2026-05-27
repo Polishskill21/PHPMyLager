@@ -21,6 +21,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('warehouse-groups',             [WarehouseGroupController::class, 'index'])->name('warehouse-groups.index');
     Route::get('warehouse-groups/{id}',        [WarehouseGroupController::class, 'show'])->name('warehouse-groups.show');
+    Route::get('warehouse-groups/{id}/products', [WarehouseGroupController::class, 'products']);
 
     Route::get('orders',                       [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}',               [OrderController::class, 'show'])->name('orders.show');

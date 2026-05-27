@@ -1,16 +1,14 @@
 // ── CONFIG ────────────────────────────────────────────────────────────
 const CSRF       = document.querySelector('meta[name="csrf-token"]').content;
 const CAN_WRITE  = document.querySelector('meta[name="can-write"]')?.content === 'true';
-const CAN_DELETE = document.querySelector('meta[name="can-delete"]')?.content === 'true';
 const ROW_H      = 56;
 const OVER       = 8;
 
 // ── STATE ─────────────────────────────────────────────────────────────
-let allCustomers    = [];
-let filtered        = [];
-let sortKey         = 'pKdNr';
-let sortDir         = 1;
-let pendingDeleteId = null;
+let allGroups = [];
+let filtered  = [];
+let sortKey   = 'pWgNr';
+let sortDir   = 1;
 
 // ── API HELPERS ───────────────────────────────────────────────────────
 async function api(method, path, body = null) {
@@ -40,32 +38,26 @@ function toast(msg, type = 'info') {
 }
 
 // ── LOAD DATA ─────────────────────────────────────────────────────────
-async function loadCustomers() {
+async function loadGroups() {
     const wrap = document.getElementById('vscroll-inner');
-    wrap.innerHTML = `<div class="loading-row"><div class="spinner"></div> Loading customers…</div>`;
+    wrap.innerHTML = `<div class="loading-row"><div class="spinner"></div> Loading product groups…</div>`;
 
-    const { ok, data } = await api('GET', '/customers');
+    const { ok, data } = await api('GET', '/warehouse-groups');
     if (!ok) {
-        toast('Failed to load customers', 'error');
-        wrap.innerHTML = `<div class="empty-state"><div class="icon">🧙</div><p>Failed to load customers.</p></div>`;
+        toast('Failed to load product groups', 'error');
+        wrap.innerHTML = `<div class="empty-state"><div class="icon">◫</div><p>Failed to load product groups.</p></div>`;
         return;
     }
 
     const list = Array.isArray(data.data) ? data.data : [];
-    allCustomers = list.map(normalizeCustomer);
+    allGroups = list.map(normalizeGroup);
     applyFilters();
 }
 
-function normalizeCustomer(entry) {
-    const customer = entry || {};
-
+function normalizeGroup(entry) {
     return {
-        pKdNr: customer.pKdNr,
-        name: customer.name || '',
-        strasse: customer.strasse || '',
-        plz: customer.plz,
-        ort: customer.ort || '',
-        email: customer.email || '',
+        pWgNr: entry?.pWgNr,
+        warengruppe: entry?.warengruppe || '',
     };
 }
 
@@ -73,18 +65,9 @@ function normalizeCustomer(entry) {
 function applyFilters() {
     const q = document.getElementById('search').value.trim().toLowerCase();
 
-    filtered = allCustomers.filter(c => {
+    filtered = allGroups.filter(g => {
         if (!q) return true;
-
-        const haystack = [
-            c.pKdNr,
-            c.name,
-            c.email,
-            c.ort,
-            c.plz,
-            c.strasse,
-        ].join(' ').toLowerCase();
-
+        const haystack = [g.pWgNr, g.warengruppe].join(' ').toLowerCase();
         return haystack.includes(q);
     });
 
@@ -92,7 +75,7 @@ function applyFilters() {
         let av = a[sortKey];
         let bv = b[sortKey];
 
-        if (['pKdNr', 'plz'].includes(sortKey)) {
+        if (sortKey === 'pWgNr') {
             av = parseFloat(av) || 0;
             bv = parseFloat(bv) || 0;
             return (av - bv) * sortDir;
@@ -116,7 +99,7 @@ function renderVirtual() {
 
     if (filtered.length === 0) {
         inner.style.height = '200px';
-        inner.innerHTML = `<div class="empty-state"><div class="icon">🧙</div><p>No customers match your search.</p></div>`;
+        inner.innerHTML = `<div class="empty-state"><div class="icon">◫</div><p>No product groups match your search.</p></div>`;
         return;
     }
 
@@ -145,37 +128,31 @@ function renderVirtual() {
     vscroll.onscroll = paint;
 }
 
-function buildRow(customer, idx) {
+function buildRow(group, idx) {
     const top = idx * ROW_H;
 
     const editBtn = CAN_WRITE
-        ? `<button class="btn-icon edit" title="Edit" data-id="${customer.pKdNr}">✎</button>`
-        : '';
-
-    const delBtn = CAN_DELETE
-        ? `<button class="btn-icon del" title="Archive" data-id="${customer.pKdNr}">⊗</button>`
+        ? `<button class="btn-icon edit" title="Edit" data-id="${group.pWgNr}">✎</button>`
         : '';
 
     const row = document.createElement('div');
     row.className = 'row';
+    row.classList.add('row-clickable');
     row.dataset.idx = idx;
     row.style.top = top + 'px';
     row.innerHTML = `
-        <div class="cell cell-id">#${customer.pKdNr ?? '—'}</div>
-        <div class="cell cell-name" title="${esc(customer.name)}">${esc(customer.name || '—')}</div>
-        <div class="cell cell-muted" title="${esc(customer.email)}">${esc(customer.email || '—')}</div>
-        <div class="cell" title="${esc(customer.strasse)}">${esc(customer.strasse || '—')}</div>
-        <div class="cell" title="${esc(customer.ort)}">${esc(customer.ort || '—')}</div>
-        <div class="cell cell-num">${customer.plz ?? '—'}</div>
-        <div class="cell"><div class="actions">${editBtn}${delBtn}</div></div>
+        <div class="cell cell-id">#${group.pWgNr ?? '—'}</div>
+        <div class="cell cell-name" title="${esc(group.warengruppe)}">${esc(group.warengruppe || '—')}</div>
+        <div class="cell"><div class="actions">${editBtn}</div></div>
     `;
 
-    if (CAN_WRITE) {
-        row.querySelector('.btn-icon.edit')?.addEventListener('click', () => openEdit(customer.pKdNr));
-    }
+    row.addEventListener('click', () => openGroupView(group));
 
-    if (CAN_DELETE) {
-        row.querySelector('.btn-icon.del')?.addEventListener('click', () => openDelete(customer.pKdNr, customer.name));
+    if (CAN_WRITE) {
+        row.querySelector('.btn-icon.edit')?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            openEdit(group.pWgNr);
+        });
     }
 
     return row;
@@ -188,60 +165,91 @@ function esc(s) {
         .replace(/>/g, '&gt;');
 }
 
+async function openGroupView(group) {
+    const overlay = document.getElementById('modal-view-overlay');
+    const list = document.getElementById('group-products-list');
+    const count = document.getElementById('group-products-count');
+    const title = document.getElementById('modal-view-title');
+    const badge = document.getElementById('modal-view-badge');
+
+    title.textContent = group.warengruppe || 'Product Group';
+    badge.textContent = `#${group.pWgNr}`;
+    count.textContent = '0';
+    list.innerHTML = `<div class="list-empty">Loading products…</div>`;
+    overlay.classList.add('open');
+
+    const { ok, data } = await api('GET', `/warehouse-groups/${group.pWgNr}/products`);
+    
+    if (!ok) {
+        list.innerHTML = `<div class="list-empty">Failed to load products.</div>`;
+        return;
+    }
+
+    const items = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+    count.textContent = String(items.length);
+
+    if (items.length === 0) {
+        list.innerHTML = `<div class="list-empty">No products in this group.</div>`;
+        return;
+    }
+
+    list.innerHTML = items.map(p => {
+        const id = p.pArtikelNr ?? '—';
+        const name = esc(p.bezeichnung || '—');
+        return `
+            <div class="list-row">
+                <div class="list-cell">#${id}</div>
+                <div class="list-cell" title="${name}">${name}</div>
+            </div>
+        `;
+    }).join('');
+}
+
 // ── FORM + MODAL ──────────────────────────────────────────────────────
 function openAdd() {
     clearFormErrors();
     document.getElementById('f-id').value = '';
-    document.getElementById('customer-form').reset();
-    document.getElementById('modal-form-title').textContent = 'New Customer';
+    document.getElementById('group-form').reset();
+    document.getElementById('modal-form-title').textContent = 'New Product Group';
     document.getElementById('modal-form-badge').textContent = 'CREATE';
-    document.getElementById('modal-form-submit').textContent = 'Save Customer';
+    document.getElementById('modal-form-submit').textContent = 'Save Product Group';
     document.getElementById('modal-form-overlay').classList.add('open');
-    document.getElementById('f-name').focus();
+    document.getElementById('f-warengruppe').focus();
 }
 
 function openEdit(id) {
-    const customer = allCustomers.find(c => Number(c.pKdNr) === Number(id));
-    if (!customer) return;
+    const group = allGroups.find(g => Number(g.pWgNr) === Number(id));
+    if (!group) return;
 
     clearFormErrors();
-    document.getElementById('f-id').value = customer.pKdNr;
-    document.getElementById('f-name').value = customer.name || '';
-    document.getElementById('f-strasse').value = customer.strasse || '';
-    document.getElementById('f-plz').value = customer.plz || '';
-    document.getElementById('f-ort').value = customer.ort || '';
-    document.getElementById('f-email').value = customer.email || '';
+    document.getElementById('f-id').value = group.pWgNr;
+    document.getElementById('f-warengruppe').value = group.warengruppe || '';
 
-    document.getElementById('modal-form-title').textContent = 'Edit Customer';
-    document.getElementById('modal-form-badge').textContent = `#${customer.pKdNr}`;
-    document.getElementById('modal-form-submit').textContent = 'Update Customer';
+    document.getElementById('modal-form-title').textContent = 'Edit Product Group';
+    document.getElementById('modal-form-badge').textContent = `#${group.pWgNr}`;
+    document.getElementById('modal-form-submit').textContent = 'Update Product Group';
     document.getElementById('modal-form-overlay').classList.add('open');
-    document.getElementById('f-name').focus();
+    document.getElementById('f-warengruppe').focus();
 }
 
-document.getElementById('customer-form')?.addEventListener('submit', async e => {
+document.getElementById('group-form')?.addEventListener('submit', async e => {
     e.preventDefault();
     clearFormErrors();
 
     const id = document.getElementById('f-id').value;
-    const payload = {
-        name: document.getElementById('f-name').value.trim(),
-        strasse: document.getElementById('f-strasse').value.trim(),
-        plz: document.getElementById('f-plz').value.trim(),
-        ort: document.getElementById('f-ort').value.trim(),
-        email: document.getElementById('f-email').value.trim(),
-    };
+    const name = document.getElementById('f-warengruppe').value.trim();
+    const payload = { warengruppe: name === '' ? null : name };
 
     const btn = document.getElementById('modal-form-submit');
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
     const { ok, data } = id
-        ? await api('PUT', `/customers/${id}`, payload)
-        : await api('POST', '/customers', payload);
+        ? await api('PUT', `/warehouse-groups/${id}`, payload)
+        : await api('POST', '/warehouse-groups', payload);
 
     btn.disabled = false;
-    btn.textContent = id ? 'Update Customer' : 'Save Customer';
+    btn.textContent = id ? 'Update Product Group' : 'Save Product Group';
 
     if (!ok) {
         if (data.errors) {
@@ -259,38 +267,8 @@ document.getElementById('customer-form')?.addEventListener('submit', async e => 
     }
 
     closeModal('modal-form-overlay');
-    toast(id ? 'Customer updated.' : 'Customer created.', 'success');
-    await loadCustomers();
-});
-
-function openDelete(id, name) {
-    pendingDeleteId = id;
-    document.getElementById('del-target-name').textContent = name || 'this customer';
-    document.getElementById('del-target-id').textContent = id;
-    document.getElementById('modal-del-overlay').classList.add('open');
-}
-
-document.getElementById('modal-del-confirm')?.addEventListener('click', async () => {
-    if (!pendingDeleteId) return;
-
-    const btn = document.getElementById('modal-del-confirm');
-    btn.disabled = true;
-    btn.textContent = 'Processing…';
-
-    const { ok, status, data } = await api('DELETE', `/customers/${pendingDeleteId}`);
-
-    btn.disabled = false;
-    btn.textContent = 'Archive';
-    closeModal('modal-del-overlay');
-
-    if (ok) {
-        toast(status === 204 ? 'Customer archived.' : (data.message || 'Customer archived.'), 'success');
-        await loadCustomers();
-    } else {
-        toast(data.message || data.error || 'Archive failed.', 'error');
-    }
-
-    pendingDeleteId = null;
+    toast(id ? 'Product group updated.' : 'Product group created.', 'success');
+    await loadGroups();
 });
 
 function closeModal(id) {
@@ -298,7 +276,7 @@ function closeModal(id) {
 }
 
 document.getElementById('modal-form-cancel')?.addEventListener('click', () => closeModal('modal-form-overlay'));
-document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
+document.getElementById('modal-view-close')?.addEventListener('click', () => closeModal('modal-view-overlay'));
 
 document.querySelectorAll('.overlay').forEach(overlay => {
     overlay.addEventListener('click', e => {
@@ -309,7 +287,7 @@ document.querySelectorAll('.overlay').forEach(overlay => {
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
         closeModal('modal-form-overlay');
-        closeModal('modal-del-overlay');
+        closeModal('modal-view-overlay');
     }
 });
 
@@ -351,5 +329,5 @@ document.getElementById('btn-add')?.addEventListener('click', openAdd);
 
 // ── INIT ──────────────────────────────────────────────────────────────
 if (document.getElementById('vscroll-inner')) {
-    loadCustomers();
+    loadGroups();
 }

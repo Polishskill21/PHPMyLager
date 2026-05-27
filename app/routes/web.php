@@ -16,6 +16,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard',  fn() => view('dashboard'))->name('dashboard');
     Route::get('/products',  fn() => view('products'))->name('products');
+    Route::get('/warehouse', fn() => view('warehouse'))->name('warehouse');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/customers',  fn() => view('customers'))->name('customers');
     Route::get('/orders',  fn() => view('orders'))->name('orders');

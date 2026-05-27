@@ -77,21 +77,17 @@ class SupplierController extends Controller
 
     public function destroy(Supplier $supplier): JsonResponse
     {
-        if ($supplier->purchaseOrders()->exists()) {
-            return $this->conflict(
-                'This supplier cannot be deleted because they are attached to existing purchase orders.'
-            );
-        }
-
         try {
+            $id = $supplier->pLiefNr;
             DB::transaction(fn () => $supplier->delete());
-
-            return $this->noContent();
+ 
+            return $this->ok(null, "Suppler {$id} deleted successfully.");
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
         }
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // Validation rule sets

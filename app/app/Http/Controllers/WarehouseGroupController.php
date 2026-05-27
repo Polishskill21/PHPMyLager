@@ -6,6 +6,7 @@ use App\Models\WarehouseGroup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Product;
 
 class WarehouseGroupController extends Controller
 {
@@ -33,6 +34,22 @@ class WarehouseGroupController extends Controller
         }
 
         return $this->ok($group);
+    }
+
+    /**
+     * GET /warehouse-groups/{id}/products
+     */
+    public function products(int $id): JsonResponse
+    {
+        $group = WarehouseGroup::find($id);
+
+        if (!$group) {
+            return $this->notFound("Warehouse group {$id} not found.");
+        }
+
+        $products = Product::where('fWgNr', $id)->get();
+
+        return $this->ok($products);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

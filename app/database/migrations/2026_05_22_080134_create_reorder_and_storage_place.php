@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('email', 50)->nullable();
             $table->string('telefon', 30)->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         // ─── 3. Purchase-order headers ────────────────────────────────────────

@@ -7,6 +7,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -21,7 +22,7 @@ class OrderController extends Controller
      */
     public function index(): JsonResponse
     {
-        $orders = Order::with('items.product')->get()
+        $orders = Order::with(['items.product', 'customer'])->get() 
                        ->map(fn (Order $o) => $this->formatOrder($o));
 
         return $this->ok($orders);
@@ -32,7 +33,7 @@ class OrderController extends Controller
      */
     public function show(Order $order): JsonResponse
     {
-        $order->load('items.product');
+        $order->load(['items.product', 'customer']);
 
         return $this->ok($this->formatOrder($order));
     }
@@ -248,10 +249,14 @@ class OrderController extends Controller
     {
         return [
             'aufDat'              => 'required|date',
-            'fKdNr'               => 'required|integer|exists:kunden,pKdNr',
+            'fKdNr'               => ['required', 'integer', Rule::exists('kunden', 'pKdNr')->whereNull('deleted_at')],
             'aufTermin'           => 'required|date|after_or_equal:aufDat',
             'items'               => 'required|array|min:1',
-            'items.*.fArtikelNr'  => 'required|integer|exists:artikel,pArtikelNr',
+            'items.*.fArtikelNr'  => [
+                'required', 'integer',
+                Rule::exists('artikel', 'pArtikelNr')->whereNull('deleted_at'),
+            ],
+
             'items.*.aufMenge'    => 'required|integer|min:1',
         ];
     }
@@ -260,7 +265,7 @@ class OrderController extends Controller
     {
         return [
             'aufDat'                  => 'required|date',
-            'fKdNr'                   => 'required|integer|exists:kunden,pKdNr',
+            'fKdNr'                   => ['required', 'integer', Rule::exists('kunden', 'pKdNr')->whereNull('deleted_at')],
             'aufTermin'               => 'required|date|after_or_equal:aufDat',
             'items'                   => 'required|array|min:1',
             'items.*.pAufPosNr'       => 'nullable|integer',
@@ -276,8 +281,8 @@ class OrderController extends Controller
             'aufTermin.after_or_equal'   => 'The delivery date must be on or after the order date.',
             'items.required'             => 'At least one order item is required.',
             'items.min'                  => 'At least one order item is required.',
-            'items.*.fArtikelNr.exists'  => 'One or more selected products do not exist.',
-            'items.*.aufMenge.min'       => 'Each item quantity must be at least 1.',
+            'items.*.fArtikelNr.exists'  => 'The product selected in row #:position is invalid or has been discontinued.',
+            'items.*.aufMenge.min'       => 'The quantity for the item in row #:position must be at least 1.',
         ];
     }
 
@@ -288,7 +293,7 @@ class OrderController extends Controller
     /**
      * Response shape:
      * {
-     *   "order_info":  { pAufNr, aufDat, aufTermin, fKdNr },
+     *   "order_info":  { pAufNr, aufDat, aufTermin, fKdNr, customer_name, is_customer_deleted },
      *   "items":       [ { pAufPosNr, fArtikelNr, bezeichnung, aufMenge,
      *                      kaufPreis, line_total, is_discontinued } ],
      *   "order_total": <total units>,
@@ -298,6 +303,7 @@ class OrderController extends Controller
     private function formatOrder(Order $order): array
     {
         $items = $order->items;
+        $customer = $order->customer;
 
         $orderTotal = $items->sum('aufMenge');
         $preisTotal = $items->sum(
@@ -310,6 +316,8 @@ class OrderController extends Controller
                 'aufDat'    => $order->aufDat,
                 'aufTermin' => $order->aufTermin,
                 'fKdNr'     => $order->fKdNr,
+                'customer_name'       => $customer?->name,
+                'is_customer_deleted' => $customer?->trashed() ?? false,
             ],
             'items' => $items->map(fn (OrderItem $item) => [
                 'pAufPosNr'       => $item->pAufPosNr,

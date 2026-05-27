@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class PurchaseOrderController extends Controller
 {
@@ -45,7 +46,7 @@ class PurchaseOrderController extends Controller
      */
         public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate($this->storeRules());
+        $validated = $request->validate($this->storeRules(), $this->customMessages());
  
         $order = DB::transaction(function () use ($validated): PurchaseOrder {
             $order = PurchaseOrder::create([
@@ -85,35 +86,35 @@ class PurchaseOrderController extends Controller
         if (in_array($purchaseOrder->status, ['geliefert', 'storniert'], true)) {
             return $this->unprocessable('Closed orders cannot be edited.');
         }
-
+        
         $isLocked = $purchaseOrder->status === 'bestellt';
-
-        $validated = $request->validate($this->updateRules());
-
+ 
+        $validated = $request->validate($this->updateRules(), $this->customMessages());
+ 
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder, $isLocked): PurchaseOrder {
             $purchaseOrder->update([
                 'fLiefNr'      => $validated['fLiefNr'] ?? null,
                 'bestDat'      => $validated['bestDat'],
                 'erwLieferDat' => $validated['erwLieferDat'] ?? null,
             ]);
-
+ 
             $current         = $purchaseOrder->items->keyBy('pBestPosNr');
             $submittedPosNrs = [];
-
+ 
             foreach ($validated['items'] as $item) {
                 if (!empty($item['pBestPosNr'])) {
                     $posNr             = (int) $item['pBestPosNr'];
                     $submittedPosNrs[] = $posNr;
-
+ 
                     $existing = $current->get($posNr)
                         ?? throw new \Exception("pBestPosNr={$posNr} does not belong to this order.");
-
+ 
                     if ($isLocked && (int) $item['bestMenge'] < (int) $existing->gelieferteMenge) {
                         throw ValidationException::withMessages([
                             'items' => "pBestPosNr={$posNr}: bestMenge cannot be less than already delivered ({$existing->gelieferteMenge}).",
                         ]);
                     }
-
+ 
                     $existing->update([
                         'bestMenge' => $item['bestMenge'],
                         'ekPreis'   => $item['ekPreis'] ?? $existing->ekPreis,
@@ -127,7 +128,7 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
             }
-
+ 
             // Remove lines not in the request
             foreach ($current as $posNr => $line) {
                 if (!in_array($posNr, $submittedPosNrs, true)) {
@@ -139,10 +140,10 @@ class PurchaseOrderController extends Controller
                     $line->delete();
                 }
             }
-
+ 
             return $purchaseOrder->fresh(['items.product', 'supplier']);
         });
-
+ 
         return $this->ok($this->formatOrder($purchaseOrder), 'Purchase order updated successfully.');
     }
 
@@ -157,7 +158,7 @@ class PurchaseOrderController extends Controller
      * Supports partial delivery: pass gelieferteMenge per line.
      * If all lines are fully delivered the order status → "geliefert".
      */
-        public function receiveDelivery(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
+    public function receiveDelivery(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
     {
         if ($purchaseOrder->status === 'storniert') {
             return $this->unprocessable('Cannot receive a cancelled order.');
@@ -167,16 +168,16 @@ class PurchaseOrderController extends Controller
         }
  
         $validated = $request->validate([
-            'items'                       => 'required|array|min:1',
-            'items.*.pBestPosNr'          => 'required|integer',
-            'items.*.gelieferteMenge'     => 'required|integer|min:1',
+            'items'                   => 'required|array|min:1',
+            'items.*.pBestPosNr'      => 'required|integer',
+            'items.*.gelieferteMenge' => 'required|integer|min:1',
         ]);
  
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder): PurchaseOrder {
             $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
-
+ 
             $lines = $purchaseOrder->items()->lockForUpdate()->get()->keyBy('pBestPosNr');
  
             foreach ($validated['items'] as $incoming) {
@@ -206,7 +207,6 @@ class PurchaseOrderController extends Controller
                 }
  
                 $product->increment('bestand', $newQty);
- 
                 // Update delivered quantity on the line
                 $line->increment('gelieferteMenge', $newQty);
             }
@@ -226,6 +226,7 @@ class PurchaseOrderController extends Controller
  
         return $this->ok($this->formatOrder($purchaseOrder), 'Delivery received successfully.');
     }
+    
 
     // ──────────────────────────────────────────────────────────────────────────
     // CANCEL
@@ -243,10 +244,55 @@ class PurchaseOrderController extends Controller
             return $this->unprocessable('Only open or ordered purchases can be cancelled.');
         }
  
-        $purchaseOrder->update(['status' => 'storniert']);
+        try {
+            DB::transaction(function () use ($purchaseOrder): void {
+                $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())
+                    ->lockForUpdate()
+                    ->firstOrFail();
  
-        return $this->ok(null, "Purchase order {$purchaseOrder->pBestNr} cancelled.");
+                $lines = $purchaseOrder->items()->lockForUpdate()->get();
+ 
+                foreach ($lines as $line) {
+                    if ($line->gelieferteMenge > 0) {
+                        $product = Product::withTrashed()
+                            ->where('pArtikelNr', $line->fArtikelNr)
+                            ->lockForUpdate()
+                            ->first();
+ 
+                        if ($product) {
+                            // Check if removing this delivery will cause an inventory deficit
+                            if ($product->bestand < $line->gelieferteMenge) {
+                                throw \Illuminate\Validation\ValidationException::withMessages([
+                                    'items' => sprintf(
+                                        'Cannot cancel purchase order. Product %s (%s) has already been allocated to customer orders. Current stock: %d, trying to remove: %d.',
+                                        $product->pArtikelNr,
+                                        $product->bezeichnung,
+                                        $product->bestand,
+                                        $line->gelieferteMenge
+                                    ),
+                                ]);
+                            }
+                            // ───────────────────────────────────────────────────────────────
+
+                            $newStock = max(0, $product->bestand - $line->gelieferteMenge);
+                            $product->update(['bestand' => $newStock]);
+                        }
+                    }
+                }
+ 
+                $purchaseOrder->update(['status' => 'storniert']);
+            });
+ 
+            return $this->ok(null, "Purchase order {$purchaseOrder->pBestNr} cancelled.");
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            report($e);
+            return $this->serverError();
+        }
     }
+
 
     // ──────────────────────────────────────────────────────────────────────────
     // HELPER
@@ -255,11 +301,17 @@ class PurchaseOrderController extends Controller
     private function storeRules(): array
     {
         return [
-            'fLiefNr'            => 'nullable|integer|exists:lieferanten,pLiefNr',
+            'fLiefNr' => [
+                'nullable', 'integer', 
+                Rule::exists('lieferanten', 'pLiefNr')->whereNull('deleted_at')
+            ],
             'bestDat'            => 'required|date',
             'erwLieferDat'       => 'nullable|date|after_or_equal:bestDat',
             'items'              => 'required|array|min:1',
-            'items.*.fArtikelNr' => 'required|integer|exists:artikel,pArtikelNr',
+            'items.*.fArtikelNr' => [
+                'required', 'integer', 
+                Rule::exists('artikel', 'pArtikelNr')->whereNull('deleted_at')
+            ],
             'items.*.bestMenge'  => 'required|integer|min:1',
             'items.*.ekPreis'    => 'nullable|numeric|min:0',
         ];
@@ -267,7 +319,10 @@ class PurchaseOrderController extends Controller
 
     private function updateRules(): array {
         return [
-            'fLiefNr'           => 'nullable|integer|exists:lieferanten,pLiefNr',
+            'fLiefNr' => [
+                'nullable', 'integer', 
+                Rule::exists('lieferanten', 'pLiefNr')->whereNull('deleted_at')
+            ],
             'bestDat'           => 'required|date',
             'erwLieferDat'      => 'nullable|date|after_or_equal:bestDat',
             'items'             => 'required|array|min:1',
@@ -275,6 +330,18 @@ class PurchaseOrderController extends Controller
             'items.*.fArtikelNr'=> 'required|integer|exists:artikel,pArtikelNr',
             'items.*.bestMenge' => 'required|integer|min:1',
             'items.*.ekPreis'   => 'nullable|numeric|min:0',
+        ];
+    }
+
+    private function customMessages(): array
+    {
+        return [
+            'fLiefNr.exists'               => 'The selected supplier does not exist or has been deleted.',
+            'erwLieferDat.after_or_equal'  => 'The expected delivery date must be on or after the order date.',
+            'items.required'               => 'At least one order item is required.',
+            'items.min'                    => 'At least one order item is required.',
+            'items.*.fArtikelNr.exists'    => 'The product selected in row #:position is invalid or has been discontinued.',
+            'items.*.bestMenge.min'        => 'The quantity for the item in row #:position must be at least 1.',
         ];
     }
 
@@ -293,6 +360,7 @@ class PurchaseOrderController extends Controller
                 'pBestNr'      => $order->pBestNr,
                 'fLiefNr'      => $order->fLiefNr,
                 'lieferant'    => $order->supplier?->name,
+                'is_supplier_deleted' => $order->supplier?->trashed() ?? false,
                 'bestDat'      => $order->bestDat,
                 'erwLieferDat' => $order->erwLieferDat,
                 'status'       => $order->status,

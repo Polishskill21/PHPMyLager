@@ -37,7 +37,7 @@ class PurchaseOrder extends Model
 
     public function supplier(): BelongsTo
     {
-        return $this->belongsTo(Supplier::class, 'fLiefNr', 'pLiefNr');
+        return $this->belongsTo(Supplier::class, 'fLiefNr', 'pLiefNr')->withTrashed();
     }
 }
 
