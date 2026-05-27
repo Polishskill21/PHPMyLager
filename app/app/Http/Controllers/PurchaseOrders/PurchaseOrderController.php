@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\PurchaseOrders;
 
 use App\Models\PurchaseOrders\PurchaseOrder; 
+use App\Models\PurchaseOrders\PurchaseOrderItem;
 use App\Models\Products\Product;
+use App\Models\Suppliers\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
+use App\Enums\PurchaseOrderStatus;
+
 
 class PurchaseOrderController extends Controller
 {
@@ -51,18 +55,18 @@ class PurchaseOrderController extends Controller
  
         $order = DB::transaction(function () use ($validated): PurchaseOrder {
             $order = PurchaseOrder::create([
-                'fLiefNr'      => $validated['fLiefNr'] ?? null,
-                'bestDat'      => $validated['bestDat'],
-                'erwLieferDat' => $validated['erwLieferDat'] ?? null,
-                'status'       => 'offen',
+                PurchaseOrder::COL_F_LIEF_NR    => $validated[PurchaseOrder::COL_F_LIEF_NR] ?? null,
+                PurchaseOrder::COL_BEST_DAT     => $validated[PurchaseOrder::COL_BEST_DAT],
+                PurchaseOrder::COL_ERW_LIEF_DAT => $validated[PurchaseOrder::COL_ERW_LIEF_DAT] ?? null,
+                PurchaseOrder::COL_STATUS       => PurchaseOrderStatus::Open,
             ]);
  
             foreach ($validated['items'] as $item) {
                 $order->items()->create([
-                    'fArtikelNr'      => $item['fArtikelNr'],
-                    'bestMenge'       => $item['bestMenge'],
-                    'gelieferteMenge' => 0,
-                    'ekPreis'         => $item['ekPreis'] ?? null,
+                    PurchaseOrderItem::COL_F_ARTIKEL_NR     => $item[PurchaseOrderItem::COL_F_ARTIKEL_NR],
+                    PurchaseOrderItem::COL_BEST_MENGE       => $item[PurchaseOrderItem::COL_BEST_MENGE],
+                    PurchaseOrderItem::COL_GELIEFERTE_MENGE => 0,
+                    PurchaseOrderItem::COL_EK_PREIS         => $item[PurchaseOrderItem::COL_EK_PREIS] ?? null,
                 ]);
             }
  
@@ -84,48 +88,48 @@ class PurchaseOrderController extends Controller
      */
     public function update(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
     {
-        if (in_array($purchaseOrder->status, ['geliefert', 'storniert'], true)) {
+        if (in_array($purchaseOrder->{PurchaseOrder::COL_STATUS}, [PurchaseOrderStatus::Delivered, PurchaseOrderStatus::Cancelled], true)) {
             return $this->unprocessable('Closed orders cannot be edited.');
         }
         
-        $isLocked = $purchaseOrder->status === 'bestellt';
+        $isLocked = $purchaseOrder->{PurchaseOrder::COL_STATUS} === PurchaseOrderStatus::Ordered;
  
         $validated = $request->validate($this->updateRules(), $this->customMessages());
  
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder, $isLocked): PurchaseOrder {
             $purchaseOrder->update([
-                'fLiefNr'      => $validated['fLiefNr'] ?? null,
-                'bestDat'      => $validated['bestDat'],
-                'erwLieferDat' => $validated['erwLieferDat'] ?? null,
+                PurchaseOrder::COL_F_LIEF_NR    => $validated[PurchaseOrder::COL_F_LIEF_NR] ?? null,
+                PurchaseOrder::COL_BEST_DAT     => $validated[PurchaseOrder::COL_BEST_DAT],
+                PurchaseOrder::COL_ERW_LIEF_DAT => $validated[PurchaseOrder::COL_ERW_LIEF_DAT] ?? null,
             ]);
  
-            $current         = $purchaseOrder->items->keyBy('pBestPosNr');
+            $current         = $purchaseOrder->items->keyBy(PurchaseOrderItem::COL_ID);
             $submittedPosNrs = [];
  
             foreach ($validated['items'] as $item) {
-                if (!empty($item['pBestPosNr'])) {
-                    $posNr             = (int) $item['pBestPosNr'];
+                if (!empty($item[PurchaseOrderItem::COL_ID])) {
+                    $posNr             = (int) $item[PurchaseOrderItem::COL_ID];
                     $submittedPosNrs[] = $posNr;
  
                     $existing = $current->get($posNr)
-                        ?? throw new \Exception("pBestPosNr={$posNr} does not belong to this order.");
+                        ?? throw new \Exception(PurchaseOrderItem::COL_ID . "={$posNr} does not belong to this order.");
  
-                    if ($isLocked && (int) $item['bestMenge'] < (int) $existing->gelieferteMenge) {
+                    if ($isLocked && (int) $item[PurchaseOrderItem::COL_BEST_MENGE] < (int) $existing->{PurchaseOrderItem::COL_GELIEFERTE_MENGE}) {
                         throw ValidationException::withMessages([
-                            'items' => "pBestPosNr={$posNr}: bestMenge cannot be less than already delivered ({$existing->gelieferteMenge}).",
+                            'items' => "Row #{$posNr}: bestMenge cannot be less than already delivered ({$existing->{PurchaseOrderItem::COL_GELIEFERTE_MENGE}}).",
                         ]);
                     }
  
                     $existing->update([
-                        'bestMenge' => $item['bestMenge'],
-                        'ekPreis'   => $item['ekPreis'] ?? $existing->ekPreis,
+                        PurchaseOrderItem::COL_BEST_MENGE => $item[PurchaseOrderItem::COL_BEST_MENGE],
+                        PurchaseOrderItem::COL_EK_PREIS   => $item[PurchaseOrderItem::COL_EK_PREIS] ?? $existing->{PurchaseOrderItem::COL_EK_PREIS},
                     ]);
                 } else {
                     $purchaseOrder->items()->create([
-                        'fArtikelNr'      => $item['fArtikelNr'],
-                        'bestMenge'       => $item['bestMenge'],
-                        'gelieferteMenge' => 0,
-                        'ekPreis'         => $item['ekPreis'] ?? null,
+                        PurchaseOrderItem::COL_F_ARTIKEL_NR     => $item[PurchaseOrderItem::COL_F_ARTIKEL_NR],
+                        PurchaseOrderItem::COL_BEST_MENGE       => $item[PurchaseOrderItem::COL_BEST_MENGE],
+                        PurchaseOrderItem::COL_GELIEFERTE_MENGE => 0,
+                        PurchaseOrderItem::COL_EK_PREIS         => $item[PurchaseOrderItem::COL_EK_PREIS] ?? null,
                     ]);
                 }
             }
@@ -135,7 +139,7 @@ class PurchaseOrderController extends Controller
                 if (!in_array($posNr, $submittedPosNrs, true)) {
                     if ($isLocked) {
                         throw ValidationException::withMessages([
-                            'items' => "pBestPosNr={$posNr}: line items cannot be removed after delivery has started.",
+                            'items' => "Row #{$posNr}: line items cannot be removed after delivery has started.",
                         ]);
                     }
                     $line->delete();
@@ -161,65 +165,61 @@ class PurchaseOrderController extends Controller
      */
     public function receiveDelivery(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
     {
-        if ($purchaseOrder->status === 'storniert') {
+        if ($purchaseOrder->{PurchaseOrder::COL_STATUS} === PurchaseOrderStatus::Cancelled) {
             return $this->unprocessable('Cannot receive a cancelled order.');
         }
-        if ($purchaseOrder->status === 'geliefert') {
+        if ($purchaseOrder->{PurchaseOrder::COL_STATUS} === PurchaseOrderStatus::Delivered) {
             return $this->unprocessable('Order already fully received.');
         }
  
         $validated = $request->validate([
-            'items'                   => 'required|array|min:1',
-            'items.*.pBestPosNr'      => 'required|integer',
-            'items.*.gelieferteMenge' => 'required|integer|min:1',
+            'items'                                            => 'required|array|min:1',
+            'items.*.'.PurchaseOrderItem::COL_ID               => 'required|integer',
+            'items.*.'.PurchaseOrderItem::COL_GELIEFERTE_MENGE => 'required|integer|min:1',
         ]);
  
         $purchaseOrder = DB::transaction(function () use ($validated, $purchaseOrder): PurchaseOrder {
-            $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())
-                ->lockForUpdate()
-                ->firstOrFail();
+            $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())->lockForUpdate()->firstOrFail();
  
-            $lines = $purchaseOrder->items()->lockForUpdate()->get()->keyBy('pBestPosNr');
+            $lines = $purchaseOrder->items()->lockForUpdate()->get()->keyBy(PurchaseOrderItem::COL_ID);
  
             foreach ($validated['items'] as $incoming) {
-                $posNr     = (int) $incoming['pBestPosNr'];
-                $newQty    = (int) $incoming['gelieferteMenge'];
-                $line      = $lines->get($posNr)
-                    ?? throw new \Exception("pBestPosNr={$posNr} does not belong to this order.");
+                $posNr  = (int) $incoming[PurchaseOrderItem::COL_ID];
+                $newQty = (int) $incoming[PurchaseOrderItem::COL_GELIEFERTE_MENGE];
+                $line   = $lines->get($posNr) ?? throw new \Exception("Row #{$posNr} does not belong to this order.");
  
-                $remaining = $line->bestMenge - $line->gelieferteMenge;
+                $remaining = $line->{PurchaseOrderItem::COL_BEST_MENGE} - $line->{PurchaseOrderItem::COL_GELIEFERTE_MENGE};
  
                 if ($newQty > $remaining) {
                     throw ValidationException::withMessages([
-                        'items' => "pBestPosNr={$posNr}: cannot receive {$newQty} units, " .
-                                   "only {$remaining} remaining.",
+                        'items' => "Row #{$posNr}: cannot receive {$newQty} units, only {$remaining} remaining.",
                     ]);
                 }
  
                 $product = Product::withTrashed()
-                                  ->where('pArtikelNr', $line->fArtikelNr)
+                                  ->where(Product::COL_ID, $line->{PurchaseOrderItem::COL_F_ARTIKEL_NR})
                                   ->lockForUpdate()
                                   ->firstOrFail();
  
                 if ($product->trashed()) {
                     throw ValidationException::withMessages([
-                        'items' => "pBestPosNr={$posNr}: Cannot receive product {$product->pArtikelNr} because it has been discontinued and removed from the catalog.",
+                        'items' => "Row #{$posNr}: Cannot receive product {$product->{Product::COL_ID}} because it has been discontinued.",
                     ]);
                 }
- 
-                $product->increment('bestand', $newQty);
+
+                $product->increment(Product::COL_BESTAND, $newQty);
                 // Update delivered quantity on the line
-                $line->increment('gelieferteMenge', $newQty);
+                $line->increment(PurchaseOrderItem::COL_GELIEFERTE_MENGE, $newQty);
             }
  
             // Refresh lines and check if all fully delivered
             $purchaseOrder->load('items');
             $allDelivered = $purchaseOrder->items->every(
-                fn ($l) => $l->gelieferteMenge >= $l->bestMenge
+                fn ($l) => $l->{PurchaseOrderItem::COL_GELIEFERTE_MENGE} >= $l->{PurchaseOrderItem::COL_BEST_MENGE}
             );
  
             $purchaseOrder->update([
-                'status' => $allDelivered ? 'geliefert' : 'bestellt',
+                PurchaseOrder::COL_STATUS => $allDelivered ? PurchaseOrderStatus::Delivered : PurchaseOrderStatus::Ordered,
             ]);
  
             return $purchaseOrder->fresh(['items.product', 'supplier']);
@@ -241,52 +241,49 @@ class PurchaseOrderController extends Controller
      */
     public function destroy(PurchaseOrder $purchaseOrder): JsonResponse
     {
-        if (in_array($purchaseOrder->status, ['geliefert', 'storniert'], true)) {
+        if (in_array($purchaseOrder->{PurchaseOrder::COL_STATUS}, [PurchaseOrderStatus::Delivered, PurchaseOrderStatus::Cancelled], true)) {
             return $this->unprocessable('Only open or ordered purchases can be cancelled.');
         }
  
         try {
             DB::transaction(function () use ($purchaseOrder): void {
-                $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())
-                    ->lockForUpdate()
-                    ->firstOrFail();
- 
+                $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->getKey())->lockForUpdate()->firstOrFail();
+                
                 $lines = $purchaseOrder->items()->lockForUpdate()->get();
  
                 foreach ($lines as $line) {
-                    if ($line->gelieferteMenge > 0) {
+                    if ($line->{PurchaseOrderItem::COL_GELIEFERTE_MENGE} > 0) {
                         $product = Product::withTrashed()
-                            ->where('pArtikelNr', $line->fArtikelNr)
+                            ->where(Product::COL_ID, $line->{PurchaseOrderItem::COL_F_ARTIKEL_NR})
                             ->lockForUpdate()
                             ->first();
  
                         if ($product) {
                             // Check if removing this delivery will cause an inventory deficit
-                            if ($product->bestand < $line->gelieferteMenge) {
-                                throw \Illuminate\Validation\ValidationException::withMessages([
+                            if ($product->{Product::COL_BESTAND} < $line->{PurchaseOrderItem::COL_GELIEFERTE_MENGE}) {
+                                throw ValidationException::withMessages([
                                     'items' => sprintf(
                                         'Cannot cancel purchase order. Product %s (%s) has already been allocated to customer orders. Current stock: %d, trying to remove: %d.',
-                                        $product->pArtikelNr,
-                                        $product->bezeichnung,
-                                        $product->bestand,
-                                        $line->gelieferteMenge
+                                        $product->{Product::COL_ID},
+                                        $product->{Product::COL_NAME},
+                                        $product->{Product::COL_BESTAND},
+                                        $line->{PurchaseOrderItem::COL_GELIEFERTE_MENGE}
                                     ),
                                 ]);
                             }
-                            // ───────────────────────────────────────────────────────────────
 
-                            $newStock = max(0, $product->bestand - $line->gelieferteMenge);
-                            $product->update(['bestand' => $newStock]);
+                            $newStock = max(0, $product->{Product::COL_BESTAND} - $line->{PurchaseOrderItem::COL_GELIEFERTE_MENGE});
+                            $product->update([Product::COL_BESTAND => $newStock]);
                         }
                     }
                 }
  
-                $purchaseOrder->update(['status' => 'storniert']);
+                $purchaseOrder->update([PurchaseOrder::COL_STATUS => PurchaseOrderStatus::Cancelled]);
             });
  
             return $this->ok(null, "Purchase order {$purchaseOrder->pBestNr} cancelled.");
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
             report($e);
@@ -302,47 +299,47 @@ class PurchaseOrderController extends Controller
     private function storeRules(): array
     {
         return [
-            'fLiefNr' => [
+            PurchaseOrder::COL_F_LIEF_NR                     => [
                 'nullable', 'integer', 
-                Rule::exists('lieferanten', 'pLiefNr')->whereNull('deleted_at')
+                Rule::exists(Supplier::TABLE, Supplier::COL_ID)->whereNull('deleted_at')
             ],
-            'bestDat'            => 'required|date',
-            'erwLieferDat'       => 'nullable|date|after_or_equal:bestDat',
-            'items'              => 'required|array|min:1',
-            'items.*.fArtikelNr' => [
+            PurchaseOrder::COL_BEST_DAT                      => 'required|date',
+            PurchaseOrder::COL_ERW_LIEF_DAT                  => 'nullable|date|after_or_equal:'.PurchaseOrder::COL_BEST_DAT,
+            'items'                                          => 'required|array|min:1',
+            'items.*.' . PurchaseOrderItem::COL_F_ARTIKEL_NR => [
                 'required', 'integer', 
-                Rule::exists('artikel', 'pArtikelNr')->whereNull('deleted_at')
+                Rule::exists(Product::TABLE, Product::COL_ID)->whereNull('deleted_at')
             ],
-            'items.*.bestMenge'  => 'required|integer|min:1',
-            'items.*.ekPreis'    => 'nullable|numeric|min:0',
+            'items.*.' . PurchaseOrderItem::COL_BEST_MENGE   => 'required|integer|min:1',
+            'items.*.' . PurchaseOrderItem::COL_EK_PREIS     => 'nullable|numeric|min:0',
         ];
     }
 
     private function updateRules(): array {
         return [
-            'fLiefNr' => [
+            PurchaseOrder::COL_F_LIEF_NR => [
                 'nullable', 'integer', 
-                Rule::exists('lieferanten', 'pLiefNr')->whereNull('deleted_at')
+                Rule::exists(Supplier::TABLE, Supplier::COL_ID)->whereNull('deleted_at')
             ],
-            'bestDat'           => 'required|date',
-            'erwLieferDat'      => 'nullable|date|after_or_equal:bestDat',
-            'items'             => 'required|array|min:1',
-            'items.*.pBestPosNr'=> 'nullable|integer',
-            'items.*.fArtikelNr'=> 'required|integer|exists:artikel,pArtikelNr',
-            'items.*.bestMenge' => 'required|integer|min:1',
-            'items.*.ekPreis'   => 'nullable|numeric|min:0',
+            PurchaseOrder::COL_BEST_DAT                      => 'required|date',
+            PurchaseOrder::COL_ERW_LIEF_DAT                  => 'nullable|date|after_or_equal:' . PurchaseOrder::COL_BEST_DAT,
+            'items'                                          => 'required|array|min:1',
+            'items.*.' . PurchaseOrderItem::COL_ID           => 'nullable|integer',
+            'items.*.' . PurchaseOrderItem::COL_F_ARTIKEL_NR => 'required|integer|exists:'.Product::TABLE.','.Product::COL_ID,
+            'items.*.' . PurchaseOrderItem::COL_BEST_MENGE   => 'required|integer|min:1',
+            'items.*.' . PurchaseOrderItem::COL_EK_PREIS     => 'nullable|numeric|min:0',
         ];
     }
 
     private function customMessages(): array
     {
         return [
-            'fLiefNr.exists'               => 'The selected supplier does not exist or has been deleted.',
-            'erwLieferDat.after_or_equal'  => 'The expected delivery date must be on or after the order date.',
+            PurchaseOrder::COL_F_LIEF_NR.'.exists'                      => 'The selected supplier does not exist or has been deleted.',
+            PurchaseOrder::COL_ERW_LIEF_DAT.'.after_or_equal'           => 'The expected delivery date must be on or after the order date.',
             'items.required'               => 'At least one order item is required.',
             'items.min'                    => 'At least one order item is required.',
-            'items.*.fArtikelNr.exists'    => 'The product selected in row #:position is invalid or has been discontinued.',
-            'items.*.bestMenge.min'        => 'The quantity for the item in row #:position must be at least 1.',
+            'items.*.'.PurchaseOrderItem::COL_F_ARTIKEL_NR.'.exists'    => 'The product selected in row #:position is invalid or has been discontinued.',
+            'items.*.'.PurchaseOrderItem::COL_BEST_MENGE.'.min'         => 'The quantity for the item in row #:position must be at least 1.',
         ];
     }
 
@@ -350,31 +347,31 @@ class PurchaseOrderController extends Controller
     {
         $items = $order->items;
 
-        $totalOrdered   = $items->sum('bestMenge');
-        $totalDelivered = $items->sum('gelieferteMenge');
+        $totalOrdered   = $items->sum(PurchaseOrderItem::COL_BEST_MENGE);
+        $totalDelivered = $items->sum(PurchaseOrderItem::COL_GELIEFERTE_MENGE);
         $totalValue     = $items->sum(
-            fn ($i) => (float) ($i->ekPreis ?? 0) * (int) $i->bestMenge
+            fn ($i) => (float) ($i->{PurchaseOrderItem::COL_EK_PREIS} ?? 0) * (int) $i->{PurchaseOrderItem::COL_BEST_MENGE}
         );
 
         return [
             'order_info' => [
-                'pBestNr'      => $order->pBestNr,
-                'fLiefNr'      => $order->fLiefNr,
-                'lieferant'    => $order->supplier?->name,
-                'is_supplier_deleted' => $order->supplier?->trashed() ?? false,
-                'bestDat'      => $order->bestDat,
-                'erwLieferDat' => $order->erwLieferDat,
-                'status'       => $order->status,
+                PurchaseOrder::COL_ID           => $order->{PurchaseOrder::COL_ID},
+                PurchaseOrder::COL_F_LIEF_NR    => $order->{PurchaseOrder::COL_F_LIEF_NR},
+                'lieferant'                     => $order->supplier?->{Supplier::COL_NAME},
+                'is_supplier_deleted'           => $order->supplier?->trashed() ?? false,
+                PurchaseOrder::COL_BEST_DAT     => $order->{PurchaseOrder::COL_BEST_DAT},
+                PurchaseOrder::COL_ERW_LIEF_DAT => $order->{PurchaseOrder::COL_ERW_LIEF_DAT},
+                PurchaseOrder::COL_STATUS       => $order->{PurchaseOrder::COL_STATUS},
             ],
             'items' => $items->map(fn ($item) => [
-                'pBestPosNr'      => $item->pBestPosNr,
-                'fArtikelNr'      => $item->fArtikelNr,
-                'bezeichnung'     => $item->product?->bezeichnung,
-                'lagerplatz'      => $item->product?->lagerplatz,
-                'bestMenge'       => $item->bestMenge,
-                'gelieferteMenge' => $item->gelieferteMenge,
-                'ekPreis'         => $item->ekPreis,
-                'line_total'      => round((float) ($item->ekPreis ?? 0) * $item->bestMenge, 2),
+                PurchaseOrderItem::COL_ID                 => $item->{PurchaseOrderItem::COL_ID},
+                PurchaseOrderItem::COL_F_ARTIKEL_NR       => $item->{PurchaseOrderItem::COL_F_ARTIKEL_NR},
+                Product::COL_NAME                         => $item->product?->{Product::COL_NAME},
+                Product::COL_LAGERPLATZ                   => $item->product?->{Product::COL_LAGERPLATZ},
+                PurchaseOrderItem::COL_BEST_MENGE         => $item->{PurchaseOrderItem::COL_BEST_MENGE},
+                PurchaseOrderItem::COL_GELIEFERTE_MENGE   => $item->{PurchaseOrderItem::COL_GELIEFERTE_MENGE},
+                PurchaseOrderItem::COL_EK_PREIS           => $item->{PurchaseOrderItem::COL_EK_PREIS},
+                'line_total'                              => round((float) ($item->{PurchaseOrderItem::COL_EK_PREIS} ?? 0) * $item->{PurchaseOrderItem::COL_BEST_MENGE}, 2),
             ])->values(),
             'total_ordered'   => $totalOrdered,
             'total_delivered' => $totalDelivered,

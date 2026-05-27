@@ -95,10 +95,10 @@ class CustomerController extends Controller
     public function destroy(Customer $customer): JsonResponse
     {
         try {
-            $id = $customer->pKdNr;
+            $id = $customer->{Customer::COL_ID};
             DB::transaction(fn () => $customer->delete());
 
-            return $this->noContent();
+            return $this->ok(null, "Customer {$id} deleted successfully.");
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
@@ -112,25 +112,23 @@ class CustomerController extends Controller
     private function storeRules(): array
     {
         return [
-            'name'    => 'required|string|max:50',
-            'strasse' => 'required|string|max:50',
-            'plz'     => 'required|digits:5',
-            'ort'     => 'required|string|max:50',
-            'email'   => 'required|email|max:50|unique:kunden,email',
+            Customer::COL_NAME    => 'required|string|max:50',
+            Customer::COL_STRASSE => 'required|string|max:50',
+            Customer::COL_PLZ     => 'required|digits:5',
+            Customer::COL_ORT     => 'required|string|max:50',
+            Customer::COL_EMAIL   => 'required|email|max:50|unique:' . Customer::TABLE . ',' . Customer::COL_EMAIL,
         ];
     }
 
     private function updateRules(Customer $customer): array
     {
         return [
-            'name'    => 'required|string|max:50',
-            'strasse' => 'required|string|max:50',
-            'plz'     => 'required|digits:5',
-            'ort'     => 'required|string|max:50',
-            // Ignore the current customer's email so they can keep their own
-            'email'   => [
-                'required', 'email', 'max:50',
-                Rule::unique('kunden', 'email')->ignore($customer->pKdNr, 'pKdNr'),
+            Customer::COL_NAME    => 'required|string|max:50',
+            Customer::COL_STRASSE => 'required|string|max:50',
+            Customer::COL_PLZ     => 'required|digits:5',
+            Customer::COL_ORT     => 'required|string|max:50',
+            Customer::COL_EMAIL   => ['required', 'email', 'max:50',
+            Rule::unique(Customer::TABLE, Customer::COL_EMAIL)->ignore($customer->{Customer::COL_ID}, Customer::COL_ID),
             ],
         ];
     }
@@ -138,8 +136,8 @@ class CustomerController extends Controller
     private function customMessages(): array
     {
         return [
-            'plz.digits'    => 'The postal code must be exactly 5 digits.',
-            'email.unique'  => 'A customer with this email address already exists.',
+            Customer::COL_PLZ.'.digits'   => 'The postal code must be exactly 5 digits.',
+            Customer::COL_EMAIL.'.unique' => 'A customer with this email address already exists.',
         ];
     }
 
@@ -150,12 +148,12 @@ class CustomerController extends Controller
     private function formatCustomer(Customer $customer): array
     {
         return [
-            'pKdNr'   => $customer->pKdNr,
-            'name'    => $customer->name,
-            'strasse' => $customer->strasse,
-            'plz'     => $customer->plz,
-            'ort'     => $customer->ort,
-            'email'   => $customer->email,
+            Customer::COL_ID      => $customer->{Customer::COL_ID},
+            Customer::COL_NAME    => $customer->{Customer::COL_NAME},
+            Customer::COL_STRASSE => $customer->{Customer::COL_STRASSE},
+            Customer::COL_PLZ     => $customer->{Customer::COL_PLZ},
+            Customer::COL_ORT     => $customer->{Customer::COL_ORT},
+            Customer::COL_EMAIL   => $customer->{Customer::COL_EMAIL},
         ];
     }
 }

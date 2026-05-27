@@ -48,7 +48,7 @@ class WarehouseGroupController extends Controller
             return $this->notFound("Warehouse group {$id} not found.");
         }
 
-        $products = Product::where('fWgNr', $id)->get();
+        $products = Product::where(Product::COL_WG_ID, $id)->get();
 
         return $this->ok($products);
     }
@@ -138,15 +138,15 @@ class WarehouseGroupController extends Controller
     private function rules(): array
     {
         return [
-            'warengruppe' => 'required|string|max:50',
+            WarehouseGroup::COL_NAME => 'required|string|max:50',
         ];
     }
 
     private function customMessages(): array
     {
         return [
-            'warengruppe.required' => 'The warehouse group name is required.',
-            'warengruppe.max'      => 'The warehouse group name may not exceed 50 characters.',
+            WarehouseGroup::COL_NAME.'required' => 'The warehouse group name is required.',
+            WarehouseGroup::COL_NAME.'.max'      => 'The warehouse group name may not exceed 50 characters.',
         ];
     }
 }

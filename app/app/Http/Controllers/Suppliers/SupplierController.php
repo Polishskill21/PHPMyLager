@@ -18,7 +18,6 @@ class SupplierController extends Controller
     public function index(): JsonResponse
     {
         $suppliers = Supplier::all()->map(fn (Supplier $s) => $this->formatSupplier($s));
-
         return $this->ok($suppliers);
     }
 
@@ -79,7 +78,7 @@ class SupplierController extends Controller
     public function destroy(Supplier $supplier): JsonResponse
     {
         try {
-            $id = $supplier->pLiefNr;
+            $id = $supplier->{Supplier::COL_ID};
             DB::transaction(fn () => $supplier->delete());
  
             return $this->ok(null, "Suppler {$id} deleted successfully.");
@@ -96,36 +95,36 @@ class SupplierController extends Controller
 
     private function storeRules(): array
     {
-        return [
-            'name'    => 'required|string|max:100',
-            'strasse' => 'nullable|string|max:50',
-            'plz'     => 'nullable|digits:5',
-            'ort'     => 'nullable|string|max:50',
-            'email'   => 'nullable|email|max:50|unique:lieferanten,email',
-            'telefon' => 'nullable|string|max:30',
+       return [
+            Supplier::COL_NAME    => 'required|string|max:100',
+            Supplier::COL_STRASSE => 'nullable|string|max:50',
+            Supplier::COL_PLZ     => 'nullable|digits:5',
+            Supplier::COL_ORT     => 'nullable|string|max:50',
+            Supplier::COL_EMAIL   => 'nullable|email|max:50|unique:'.Supplier::TABLE .','. Supplier::COL_EMAIL,
+            Supplier::COL_TELEFON => 'nullable|string|max:30',
         ];
     }
 
     private function updateRules(Supplier $supplier): array
     {
         return [
-            'name'    => 'required|string|max:100',
-            'strasse' => 'nullable|string|max:50',
-            'plz'     => 'nullable|digits:5',
-            'ort'     => 'nullable|string|max:50',
-            'email'   => [
+            Supplier::COL_NAME    => 'required|string|max:100',
+            Supplier::COL_STRASSE => 'nullable|string|max:50',
+            Supplier::COL_PLZ     => 'nullable|digits:5',
+            Supplier::COL_ORT     => 'nullable|string|max:50',
+            Supplier::COL_EMAIL   => [
                 'nullable', 'email', 'max:50',
-                Rule::unique('lieferanten', 'email')->ignore($supplier->pLiefNr, 'pLiefNr'),
+                Rule::unique(Supplier::TABLE, Supplier::COL_EMAIL)->ignore($supplier->{Supplier::COL_ID}, Supplier::COL_ID),
             ],
-            'telefon' => 'nullable|string|max:30',
+            Supplier::COL_TELEFON => 'nullable|string|max:30',
         ];
     }
 
     private function customMessages(): array
     {
         return [
-            'plz.digits'   => 'The postal code must be exactly 5 digits.',
-            'email.unique' => 'A supplier with this email address already exists.',
+            Supplier::COL_PLZ.'.digits'   => 'The postal code must be exactly 5 digits.',
+            Supplier::COL_EMAIL.'.unique' => 'A supplier with this email address already exists.',
         ];
     }
 
@@ -136,13 +135,13 @@ class SupplierController extends Controller
     private function formatSupplier(Supplier $supplier): array
     {
         return [
-            'pLiefNr' => $supplier->pLiefNr,
-            'name'    => $supplier->name,
-            'strasse' => $supplier->strasse,
-            'plz'     => $supplier->plz,
-            'ort'     => $supplier->ort,
-            'email'   => $supplier->email,
-            'telefon' => $supplier->telefon,
+            Supplier::COL_ID      => $supplier->{Supplier::COL_ID},
+            Supplier::COL_NAME    => $supplier->{Supplier::COL_NAME},
+            Supplier::COL_STRASSE => $supplier->{Supplier::COL_STRASSE},
+            Supplier::COL_PLZ     => $supplier->{Supplier::COL_PLZ},
+            Supplier::COL_ORT     => $supplier->{Supplier::COL_ORT},
+            Supplier::COL_EMAIL   => $supplier->{Supplier::COL_EMAIL},
+            Supplier::COL_TELEFON => $supplier->{Supplier::COL_TELEFON},
         ];
     }
 }

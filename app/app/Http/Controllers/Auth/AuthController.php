@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
+use App\Models\Auth\User;
 
 class AuthController extends Controller
 {
@@ -19,8 +20,8 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
+            User::COL_EMAIL    => 'required|email',
+            User::COL_PASSWORD => 'required|string',
         ]);
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
@@ -29,8 +30,8 @@ class AuthController extends Controller
         }
 
         return back()->withErrors([
-            'email' => 'These credentials do not match our records.',
-        ])->onlyInput('email');
+            User::COL_EMAIL => 'These credentials do not match our records.',
+        ])->onlyInput(User::COL_EMAIL);
     }
 
     public function logout(Request $request)
