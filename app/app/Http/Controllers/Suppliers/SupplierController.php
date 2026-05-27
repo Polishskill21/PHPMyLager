@@ -78,10 +78,9 @@ class SupplierController extends Controller
     public function destroy(Supplier $supplier): JsonResponse
     {
         try {
-            $id = $supplier->{Supplier::COL_ID};
             DB::transaction(fn () => $supplier->delete());
  
-            return $this->ok(null, "Suppler {$id} deleted successfully.");
+            return $this->noContent();
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();

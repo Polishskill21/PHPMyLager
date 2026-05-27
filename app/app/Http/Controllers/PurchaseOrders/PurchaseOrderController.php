@@ -281,7 +281,7 @@ class PurchaseOrderController extends Controller
                 $purchaseOrder->update([PurchaseOrder::COL_STATUS => PurchaseOrderStatus::Cancelled]);
             });
  
-            return $this->ok(null, "Purchase order {$purchaseOrder->pBestNr} cancelled.");
+            return $this->noContent();
 
         } catch (ValidationException $e) {
             throw $e;

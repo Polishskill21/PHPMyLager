@@ -98,7 +98,7 @@ class CustomerController extends Controller
             $id = $customer->{Customer::COL_ID};
             DB::transaction(fn () => $customer->delete());
 
-            return $this->ok(null, "Customer {$id} deleted successfully.");
+            return $this->noContent();
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();

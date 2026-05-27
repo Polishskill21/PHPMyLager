@@ -183,10 +183,9 @@ class ProductController extends Controller
         }
  
         try {
-            $id = $product->{Product::COL_ID};
             DB::transaction(fn () => $product->delete());
  
-            return $this->ok(null, "Product {$id} deleted successfully.");
+            return $this->noContent();
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();

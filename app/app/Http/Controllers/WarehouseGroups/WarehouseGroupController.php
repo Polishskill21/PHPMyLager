@@ -103,7 +103,7 @@ class WarehouseGroupController extends Controller
                 return $group->fresh();
             });
 
-            return $this->ok($group, 'Warehouse group updated successfully.');
+            return $this->noContent();
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
