@@ -406,7 +406,7 @@ class CustomerControllerTest extends TestCase
         $indexResponse = $this->actingAs($this->viewer)->getJson('/api/customers');
         $indexResponse->assertStatus(200);
 
-        $ids = collect($indexResponse->json())->pluck('customer.pKdNr');
+        $ids = collect($indexResponse->json('data'))->pluck('pKdNr');
         $this->assertFalse($ids->contains($customer->pKdNr));
 
         $this->actingAs($this->viewer)

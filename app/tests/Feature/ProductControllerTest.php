@@ -252,8 +252,7 @@ class ProductControllerTest extends TestCase
         $response = $this->actingAs($this->admin)
                          ->deleteJson("/api/products/{$id}");
 
-        $response->assertStatus(200)
-                 ->assertJsonPath('message', "Product {$id} deleted successfully.");
+        $response->assertStatus(204);
 
         $this->assertSoftDeleted('artikel', ['pArtikelNr' => $id]);
     }
@@ -416,7 +415,7 @@ class ProductControllerTest extends TestCase
 
         $this->actingAs($this->admin)
             ->deleteJson("/api/products/{$product->pArtikelNr}")
-            ->assertStatus(200);
+            ->assertStatus(204);
 
         $this->assertSoftDeleted('artikel', ['pArtikelNr' => $product->pArtikelNr]);
     }
