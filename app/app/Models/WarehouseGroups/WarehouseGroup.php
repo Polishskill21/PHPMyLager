@@ -5,6 +5,7 @@ namespace App\Models\WarehouseGroups;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Products\Product;
+use Dom\Text;
 
 /**
  * Represents a row in the warengruppe (warehouse group) table.
@@ -16,19 +17,22 @@ class WarehouseGroup extends Model
 {
     use HasFactory;
 
-    protected $table = 'warengruppe';
+    const TABLE    = 'warengruppe';
+    const COL_ID   = 'pWgNr';
+    const COL_NAME = 'warengruppe';
 
-    protected $primaryKey = 'pWgNr';
+    protected $table      = self::TABLE;
+    protected $primaryKey = self::COL_ID;
 
     public $timestamps = false;
 
     protected $fillable = [
-        'warengruppe',
+        self::COL_NAME,
     ];
 
 
     public function products()
     {
-        return $this->hasMany(Product::class, 'fWgNr', 'pWgNr');
+        return $this->hasMany(Product::class, Product::COL_WG_ID, self::COL_ID);
     }
 }

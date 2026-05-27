@@ -25,24 +25,33 @@ class Supplier extends Model
 {
     use SoftDeletes;
 
-    protected $table      = 'lieferanten';
-    protected $primaryKey = 'pLiefNr';
+    const TABLE       = 'lieferanten';
+    const COL_ID      = 'pLiefNr';
+    const COL_NAME    = 'name';
+    const COL_STRASSE = 'strasse';
+    const COL_PLZ     = 'plz';
+    const COL_ORT     = 'ort';
+    const COL_EMAIL   = 'email';
+    const COL_TELEFON = 'telefon';
+
+    protected $table      = self::TABLE;
+    protected $primaryKey = self::COL_ID;
 
     protected $hidden = [
         'deleted_at'
     ];
 
     protected $fillable = [
-        'name',
-        'strasse',
-        'plz',
-        'ort',
-        'email',
-        'telefon',
+        self::COL_NAME,
+        self::COL_STRASSE,
+        self::COL_PLZ,
+        self::COL_ORT,
+        self::COL_EMAIL,
+        self::COL_TELEFON,
     ];
 
     public function purchaseOrders(): HasMany
     {
-        return $this->hasMany(PurchaseOrder::class, 'fLiefNr', 'pLiefNr');
+        return $this->hasMany(PurchaseOrder::class, PurchaseOrder::COL_F_LIEF_NR, self::COL_ID);
     }
 }

@@ -17,25 +17,32 @@ use App\Models\Customers\Customer;
  */
 class Order extends Model
 {
-    protected $table      = 'auftragskoepfe';
-    protected $primaryKey = 'pAufNr';
+    const TABLE          = 'auftragskoepfe';
+    const COL_ID         = 'pAufNr';
+    const COL_AUF_DAT    = 'aufDat';
+    const COL_F_KD_NR    = 'fKdNr';
+    const COL_AUF_TERMIN = 'aufTermin';
 
+    protected $table      = self::TABLE;
+    protected $primaryKey = self::COL_ID;
     public $timestamps = false;
 
     protected $fillable = [
-        'aufDat',
-        'fKdNr',
-        'aufTermin',
+        self::COL_AUF_DAT,
+        self::COL_F_KD_NR,
+        self::COL_AUF_TERMIN,
     ];
 
 
+    // ── Relationships ──────────────────────────────────────────────────
+    
     public function items(): HasMany
     {
-        return $this->hasMany(OrderItem::class, 'fAufNr', 'pAufNr');
+        return $this->hasMany(OrderItem::class, OrderItem::COL_F_AUF_NR, self::COL_ID);
     }
 
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'fKdNr', 'pKdNr')->withTrashed();
+        return $this->belongsTo(Customer::class, self::COL_F_KD_NR, Customer::COL_ID)->withTrashed();
     }
 }

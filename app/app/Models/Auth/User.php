@@ -25,17 +25,36 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role'];
+    const TABLE                 = 'users';
+    const COL_ID                = 'id';
+    const COL_NAME              = 'name';
+    const COL_EMAIL             = 'email';
+    const COL_PASSWORD          = 'password';
+    const COL_ROLE              = 'role';
+    const COL_EMAIL_VERIFIED_AT = 'email_verified_at';
+    const COL_REMEMBER_TOKEN    = 'remember_token';
+
+    protected $table = self::TABLE;
+
+    protected $fillable = [
+        self::COL_NAME, 
+        self::COL_EMAIL, 
+        self::COL_PASSWORD, 
+        self::COL_ROLE
+    ];
 
     protected function casts(): array
     {
-        return ['email_verified_at' => 'datetime', 'password' => 'hashed'];
+        return [
+            self::COL_EMAIL_VERIFIED_AT => 'datetime', 
+            self::COL_PASSWORD          => 'hashed'
+        ];
     }
 
-    public function isAdmin() : bool  { return $this->role === 'admin'; }
-    public function isWriter(): bool  { return $this->role === 'writer'; }
-    public function isViewer(): bool  { return $this->role === 'viewer'; }
+    public function isAdmin(): bool  { return $this->{self::COL_ROLE} === 'admin'; }
+    public function isWriter(): bool { return $this->{self::COL_ROLE} === 'writer'; }
+    public function isViewer(): bool { return $this->{self::COL_ROLE} === 'viewer'; }
 
-    public function canWrite() : bool  { return in_array($this->role, ['admin', 'writer']); }
-    public function canDelete(): bool  { return $this->role === 'admin'; }
+    public function canWrite(): bool { return in_array($this->{self::COL_ROLE}, ['admin', 'writer']); }
+    public function canDelete(): bool { return $this->{self::COL_ROLE} === 'admin'; }
 }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Suppliers\Supplier;
+use App\Enums\PurchaseOrderStatus;
 
 /**
  * Represents a row in the bestellkoepfe (purchase order header) table.
@@ -21,24 +22,37 @@ use App\Models\Suppliers\Supplier;
 
 class PurchaseOrder extends Model
 {
-    protected $table      = 'bestellkoepfe';
-    protected $primaryKey = 'pBestNr';
+    const TABLE            = 'bestellkoepfe';
+    const COL_ID           = 'pBestNr';
+    const COL_STATUS       = 'status';
+    const COL_F_LIEF_NR    = 'fLiefNr';
+    const COL_BEST_DAT     = 'bestDat';
+    const COL_ERW_LIEF_DAT = 'erwLieferDat';
+
+    protected $table      = self::TABLE;
+    protected $primaryKey = self::COL_ID;
 
     protected $fillable = [
-        'fLiefNr',
-        'bestDat',
-        'erwLieferDat',
-        'status',
+        self::COL_F_LIEF_NR,
+        self::COL_BEST_DAT,
+        self::COL_ERW_LIEF_DAT,
+        self::COL_STATUS,
     ];
+
+    protected $casts = [
+        // Laravel will now automatically serialize/deserialize the enum
+        self::COL_STATUS => PurchaseOrderStatus::class,
+    ];
+
 
     public function items(): HasMany
     {
-        return $this->hasMany(PurchaseOrderItem::class, 'fBestNr', 'pBestNr');
+        return $this->hasMany(PurchaseOrderItem::class, PurchaseOrderItem::COL_F_BEST_NR, self::COL_ID);
     }
 
     public function supplier(): BelongsTo
     {
-        return $this->belongsTo(Supplier::class, 'fLiefNr', 'pLiefNr')->withTrashed();
+        return $this->belongsTo(Supplier::class, self::COL_F_LIEF_NR, Supplier::COL_ID)->withTrashed();
     }
 }
 

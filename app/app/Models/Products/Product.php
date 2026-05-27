@@ -26,8 +26,19 @@ class Product extends Model
 {
     use SoftDeletes;
 
-    protected $table      = 'artikel';
-    protected $primaryKey = 'pArtikelNr';
+    const TABLE          = 'artikel';
+    const COL_ID         = 'pArtikelNr';
+    const COL_NAME       = 'bezeichnung';
+    const COL_WG_ID      = 'fWgNr';
+    const COL_EK_PREIS   = 'ekPreis';
+    const COL_VK_PREIS   = 'vkPreis';
+    const COL_BESTAND    = 'bestand';
+    const COL_MELDE_BEST = 'meldeBest';
+    const COL_LAGERPLATZ = 'lagerplatz';
+
+    protected $table      = self::TABLE;
+    protected $primaryKey = self::COL_ID;
+
     public    $timestamps = false;
 
     protected $hidden = [
@@ -35,36 +46,36 @@ class Product extends Model
     ];
 
     protected $fillable = [
-        'bezeichnung',
-        'fWgNr',
-        'ekPreis',
-        'vkPreis',
-        'bestand',
-        'meldeBest',
-        'lagerplatz',   
+        self::COL_NAME,
+        self::COL_WG_ID,
+        self::COL_EK_PREIS,
+        self::COL_VK_PREIS,
+        self::COL_BESTAND,
+        self::COL_MELDE_BEST,
+        self::COL_LAGERPLATZ,   
     ];
 
     protected $casts = [
-        'ekPreis'   => 'float',
-        'vkPreis'   => 'float',
-        'bestand'   => 'integer',
-        'meldeBest' => 'integer',
+        self::COL_EK_PREIS   => 'float',
+        self::COL_VK_PREIS   => 'float',
+        self::COL_BESTAND    => 'integer',
+        self::COL_MELDE_BEST => 'integer',
     ];
 
     // ── Relationships ─────────────────────────────────────────────────────────
 
     public function warengruppe(): BelongsTo
     {
-        return $this->belongsTo(WarehouseGroup::class, 'fWgNr', 'pWgNr');
+        return $this->belongsTo(WarehouseGroup::class, self::COL_WG_ID, WarehouseGroup::COL_ID);
     }
 
     public function orderItems(): HasMany
     {
-        return $this->hasMany(OrderItem::class, 'fArtikelNr', 'pArtikelNr');
+        return $this->hasMany(OrderItem::class, OrderItem::COL_F_ARTIKEL_NR, self::COL_ID);
     }
 
     public function inventoryLogs(): HasMany
     {
-        return $this->hasMany(InventoryLog::class, 'fArtikelNr', 'pArtikelNr')->latest();
+        return $this->hasMany(InventoryLog::class, InventoryLog::COL_F_ARTIKEL_NR, self::COL_ID)->latest();
     }
 }
