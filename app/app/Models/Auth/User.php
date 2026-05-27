@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * Represents a user in the system.
@@ -57,4 +58,9 @@ class User extends Authenticatable
 
     public function canWrite(): bool { return in_array($this->{self::COL_ROLE}, ['admin', 'writer']); }
     public function canDelete(): bool { return $this->{self::COL_ROLE} === 'admin'; }
+
+    protected static function newFactory(): Factory
+    {
+        return \Database\Factories\UserFactory::new();
+    }
 }
