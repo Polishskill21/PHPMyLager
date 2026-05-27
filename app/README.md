@@ -471,7 +471,6 @@ Returns all active suppliers in the system.
       "plz": 42853,
       "ort": "Remscheid",
       "email": "vertrieb@remscheid-tools.de",
-      "telefon": "+49 2191 555120"
     },
     {
       "pLiefNr": 5002,
@@ -480,7 +479,6 @@ Returns all active suppliers in the system.
       "plz": 54321,
       "ort": "Sheffield",
       "email": "orders@sheffieldsteel.co.uk",
-      "telefon": "+44 114 9620000"
     }
   ]
 }
@@ -497,7 +495,6 @@ Registers a new supplier profile.
   "plz": "10050",
   "ort": "Lausanne",
   "email": "info@alpenimport.ch",
-  "telefon": "+41 21 3456789"
 }
 ```
 
@@ -511,7 +508,6 @@ Registers a new supplier profile.
     "plz": 10050,
     "ort": "Lausanne",
     "email": "info@alpenimport.ch",
-    "telefon": "+41 21 3456789"
   },
   "message": "Supplier created successfully."
 }
@@ -528,7 +524,6 @@ Updates an existing supplier's details.
   "plz": "10050",
   "ort": "Lausanne",
   "email": "new-contact@alpenimport.ch",
-  "telefon": "+41 21 3456789"
 }
 ```
 
@@ -542,7 +537,6 @@ Updates an existing supplier's details.
     "plz": 10050,
     "ort": "Lausanne",
     "email": "new-contact@alpenimport.ch",
-    "telefon": "+41 21 3456789"
   },
   "message": "Supplier updated successfully."
 }

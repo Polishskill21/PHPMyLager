@@ -16,7 +16,6 @@ use App\Models\PurchaseOrders\PurchaseOrder;
  * @property int|null               $plz         Postal code identifier (Postleitzahl)
  * @property string|null            $ort         City or region location designation
  * @property string|null            $email       Primary B2B contact email address
- * @property string|null            $telefon     Corporate phone interaction details string
  * @property \Carbon\Carbon         $created_at  Timestamp when the supplier was registered in the database
  * @property \Carbon\Carbon         $updated_at  Timestamp when supplier records were last altered
  */
