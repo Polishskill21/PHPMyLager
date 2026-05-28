@@ -86,11 +86,11 @@ class ProductUpdateTest extends TestCase
     public function test_update_commits_and_change_persists(): void
     {
         $product = Product::create([
-            Product::COL_NAME => 'Before Update',
-            Product::COL_WG_ID       => 4,
+            Product::COL_NAME         => 'Before Update',
+            Product::COL_WG_ID        => 4,
             Product::COL_EK_PREIS     => 10,
             Product::COL_VK_PREIS     => 20,
-            Product::COL_BESTAND     => 10,
+            Product::COL_BESTAND      => 10,
             Product::COL_MELDE_BEST   => 5,
         ]);
 
@@ -107,11 +107,11 @@ class ProductUpdateTest extends TestCase
     public function test_transaction_is_atomic_on_update(): void
     {
         $product = Product::create([
-            Product::COL_NAME => 'Before Update',
-            Product::COL_WG_ID       => 4,
+            Product::COL_NAME         => 'Before Update',
+            Product::COL_WG_ID        => 4,
             Product::COL_EK_PREIS     => 10,
             Product::COL_VK_PREIS     => 20,
-            Product::COL_BESTAND     => 10,
+            Product::COL_BESTAND      => 10,
             Product::COL_MELDE_BEST   => 5,
         ]);
 
@@ -128,11 +128,11 @@ class ProductUpdateTest extends TestCase
     public function test_update_rolls_back_if_transaction_fails(): void
     {
         $product = Product::create([
-            Product::COL_NAME => 'Original Name',
-            Product::COL_WG_ID       => 4,
+            Product::COL_NAME         => 'Original Name',
+            Product::COL_WG_ID        => 4,
             Product::COL_EK_PREIS     => 10,
             Product::COL_VK_PREIS     => 20,
-            Product::COL_BESTAND     => 10,
+            Product::COL_BESTAND      => 10,
             Product::COL_MELDE_BEST   => 5,
         ]);
 
@@ -149,7 +149,7 @@ class ProductUpdateTest extends TestCase
         $response->assertStatus(500);
 
         $this->assertDatabaseHas('artikel', [
-            Product::COL_ID  => $product->{Product::COL_ID},
+            Product::COL_ID   => $product->{Product::COL_ID},
             Product::COL_NAME => 'Original Name',
         ]);
     }

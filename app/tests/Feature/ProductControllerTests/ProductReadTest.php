@@ -3,6 +3,7 @@
 namespace Tests\Feature\Products;
 
 use App\Models\Products\Product;
+use App\Models\WarehouseGroups\WarehouseGroup;
 use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -27,9 +28,9 @@ class ProductReadTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert([
-            'pWgNr'       => 4,
-            'warengruppe' => 'Test Group',
+        DB::table(WarehouseGroup::TABLE)->insert([
+            WarehouseGroup::COL_ID     => 4,
+            WarehouseGroup::COL_NAME   => 'Test Group',
         ]);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
@@ -40,12 +41,12 @@ class ProductReadTest extends TestCase
     public function test_viewer_can_fetch_all_products(): void
     {
         Product::create([
-            'bezeichnung' => 'Test Item',
-            'fWgNr'       => 4,
-            'ekPreis'     => 10.50,
-            'vkPreis'     => 20.00,
-            'bestand'     => 100,
-            'meldeBest'   => 20,
+            Product::COL_NAME         => 'Test Item',
+            Product::COL_WG_ID        => 4,
+            Product::COL_EK_PREIS     => 10.50,
+            Product::COL_VK_PREIS     => 20.00,
+            Product::COL_BESTAND      => 100,
+            Product::COL_MELDE_BEST   => 20,
         ]);
 
         $response = $this->actingAs($this->viewer)
@@ -54,7 +55,7 @@ class ProductReadTest extends TestCase
         $response->assertStatus(200)
                  ->assertJsonStructure([
                      'data' => [
-                         '*' => ['pArtikelNr', 'bezeichnung', 'fWgNr', 'ekPreis', 'vkPreis'],
+                         '*' => [Product::COL_ID, Product::COL_NAME, Product::COL_WG_ID , Product::COL_EK_PREIS, Product::COL_VK_PREIS],
                      ],
                  ]);
     }

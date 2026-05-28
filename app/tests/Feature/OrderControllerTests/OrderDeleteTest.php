@@ -3,6 +3,7 @@
 namespace Tests\Feature\Orders;
 
 use App\Models\Products\Product;
+use App\Models\WarehouseGroups\WarehouseGroup;
 use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,7 @@ class OrderDeleteTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert(['pWgNr' => 1, 'warengruppe' => 'Test Group']);
+        DB::table('warengruppe')->insert([WarehouseGroup::COL_ID => 1, 'warengruppe' => 'Test Group']);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
         $this->writer = User::factory()->create(['role' => 'writer']);
@@ -39,12 +40,12 @@ class OrderDeleteTest extends TestCase
     private function createProduct(array $overrides = []): Product
     {
         return Product::create(array_merge([
-            'bezeichnung' => 'Test Product',
-            'fWgNr'       => 1,
-            'ekPreis'     => 5.00,
-            'vkPreis'     => 10.00,
-            'bestand'     => 100,
-            'meldeBest'   => 20,
+            Product::COL_NAME => 'Test Product',
+            Product::COL_WG_ID        => 1,
+            Product::COL_EK_PREIS     => 5.00,
+            Product::COL_VK_PREIS     => 10.00,
+            Product::COL_BESTAND     => 100,
+            Product::COL_MELDE_BEST   => 20,
         ], $overrides));
     }
 
@@ -125,8 +126,8 @@ class OrderDeleteTest extends TestCase
     public function test_stock_is_fully_restored_when_order_is_deleted(): void
     {
         $kdNr     = $this->createCustomer();
-        $productA = $this->createProduct(['bestand' => 50, 'bezeichnung' => 'A']);
-        $productB = $this->createProduct(['bestand' => 80, 'bezeichnung' => 'B']);
+        $productA = $this->createProduct([Product::COL_BESTAND => 50, Product::COL_NAME => 'A']);
+        $productB = $this->createProduct([Product::COL_BESTAND => 80, Product::COL_NAME => 'B']);
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
@@ -145,7 +146,7 @@ class OrderDeleteTest extends TestCase
              ->deleteJson("/api/orders/{$aufNr}")
              ->assertStatus(204);
 
-        $this->assertDatabaseHas('artikel', ['pArtikelNr' => $productA->pArtikelNr, 'bestand' => 50]);
-        $this->assertDatabaseHas('artikel', ['pArtikelNr' => $productB->pArtikelNr, 'bestand' => 80]);
+        $this->assertDatabaseHas('artikel', [Product::COL_ID => $productA->pArtikelNr, Product::COL_BESTAND => 50]);
+        $this->assertDatabaseHas('artikel', [Product::COL_ID => $productB->pArtikelNr, Product::COL_BESTAND => 80]);
     }
 }

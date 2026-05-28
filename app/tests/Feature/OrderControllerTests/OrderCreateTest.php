@@ -3,6 +3,7 @@
 namespace Tests\Feature\Orders;
 
 use App\Models\Products\Product;
+use App\Models\WarehouseGroups\WarehouseGroup;
 use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,7 @@ class OrderCreateTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert(['pWgNr' => 1, 'warengruppe' => 'Test Group']);
+        DB::table('warengruppe')->insert([WarehouseGroup::COL_ID => 1, 'warengruppe' => 'Test Group']);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
         $this->writer = User::factory()->create(['role' => 'writer']);
@@ -39,12 +40,12 @@ class OrderCreateTest extends TestCase
     private function createProduct(array $overrides = []): Product
     {
         return Product::create(array_merge([
-            'bezeichnung' => 'Test Product',
-            'fWgNr'       => 1,
-            'ekPreis'     => 5.00,
-            'vkPreis'     => 10.00,
-            'bestand'     => 100,
-            'meldeBest'   => 20,
+            Product::COL_NAME => 'Test Product',
+            Product::COL_WG_ID        => 1,
+            Product::COL_EK_PREIS     => 5.00,
+            Product::COL_VK_PREIS     => 10.00,
+            Product::COL_BESTAND     => 100,
+            Product::COL_MELDE_BEST   => 20,
         ], $overrides));
     }
 
@@ -64,7 +65,7 @@ class OrderCreateTest extends TestCase
     public function test_admin_can_create_an_order(): void
     {
         $kdNr    = $this->createCustomer();
-        $product = $this->createProduct(['vkPreis' => 10.05, 'bestand' => 50]);
+        $product = $this->createProduct([Product::COL_VK_PREIS => 10.05, Product::COL_BESTAND => 50]);
 
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/orders', [
@@ -122,7 +123,7 @@ class OrderCreateTest extends TestCase
     public function test_price_at_purchase_is_snapshotted_at_creation(): void
     {
         $kdNr    = $this->createCustomer();
-        $product = $this->createProduct(['vkPreis' => 25.25, 'bestand' => 50]);
+        $product = $this->createProduct([Product::COL_VK_PREIS => 25.25, Product::COL_BESTAND => 50]);
 
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/orders', [
@@ -139,7 +140,7 @@ class OrderCreateTest extends TestCase
         $this->assertEquals(75.75, $response->json('data.preis_total')); // 3 × 25.25
 
         // Changing the price must not affect the saved snapshot
-        $product->update(['vkPreis' => 99.00]);
+        $product->update([Product::COL_VK_PREIS => 99.00]);
 
         $aufNr = $response->json('data.order_info.pAufNr');
         $this->actingAs($this->viewer)
@@ -151,7 +152,7 @@ class OrderCreateTest extends TestCase
     public function test_stock_is_decremented_when_order_is_created(): void
     {
         $kdNr    = $this->createCustomer();
-        $product = $this->createProduct(['bestand' => 100]);
+        $product = $this->createProduct([Product::COL_BESTAND => 100]);
 
         $this->actingAs($this->admin)
              ->postJson('/api/orders', [
@@ -165,8 +166,8 @@ class OrderCreateTest extends TestCase
              ->assertStatus(201);
 
         $this->assertDatabaseHas('artikel', [
-            'pArtikelNr' => $product->pArtikelNr,
-            'bestand'    => 70, // 100 − 30
+            Product::COL_ID => $product->pArtikelNr,
+            Product::COL_BESTAND    => 70, // 100 − 30
         ]);
     }
 
@@ -175,7 +176,7 @@ class OrderCreateTest extends TestCase
     public function test_order_creation_fails_when_stock_is_insufficient(): void
     {
         $kdNr    = $this->createCustomer();
-        $product = $this->createProduct(['bestand' => 5]);
+        $product = $this->createProduct([Product::COL_BESTAND => 5]);
 
         $this->actingAs($this->admin)
              ->postJson('/api/orders', [
@@ -190,16 +191,16 @@ class OrderCreateTest extends TestCase
              ->assertJsonValidationErrors(['items']);
 
         $this->assertDatabaseHas('artikel', [
-            'pArtikelNr' => $product->pArtikelNr,
-            'bestand'    => 5,
+            Product::COL_ID => $product->pArtikelNr,
+            Product::COL_BESTAND    => 5,
         ]);
     }
 
     public function test_order_creation_is_atomic_on_partial_stock_failure(): void
     {
         $kdNr     = $this->createCustomer();
-        $productA = $this->createProduct(['bestand' => 50, 'bezeichnung' => 'Product A']);
-        $productB = $this->createProduct(['bestand' => 2,  'bezeichnung' => 'Product B']);
+        $productA = $this->createProduct([Product::COL_BESTAND => 50, Product::COL_NAME => 'Product A']);
+        $productB = $this->createProduct([Product::COL_BESTAND => 2,  Product::COL_NAME => 'Product B']);
 
         $this->actingAs($this->admin)
              ->postJson('/api/orders', [
@@ -215,8 +216,8 @@ class OrderCreateTest extends TestCase
 
         // Product A stock must be rolled back despite passing individually
         $this->assertDatabaseHas('artikel', [
-            'pArtikelNr' => $productA->pArtikelNr,
-            'bestand'    => 50,
+            Product::COL_ID => $productA->pArtikelNr,
+            Product::COL_BESTAND    => 50,
         ]);
 
         $this->assertDatabaseCount('auftragskoepfe', 0);

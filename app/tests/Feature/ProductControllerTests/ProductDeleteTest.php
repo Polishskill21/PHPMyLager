@@ -3,6 +3,7 @@
 namespace Tests\Feature\Products;
 
 use App\Models\Products\Product;
+use App\Models\WarehouseGroups\WarehouseGroup;
 use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -27,9 +28,9 @@ class ProductDeleteTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert([
-            'pWgNr'       => 4,
-            'warengruppe' => 'Test Group',
+        DB::table(WarehouseGroup::TABLE)->insert([
+            WarehouseGroup::COL_ID       => 4,
+            WarehouseGroup::COL_NAME => 'Test Group',
         ]);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
@@ -40,12 +41,12 @@ class ProductDeleteTest extends TestCase
     public function test_admin_can_delete_a_product(): void
     {
         $product = Product::create([
-            'bezeichnung' => 'To Be Deleted',
-            'fWgNr'       => 4,
-            'ekPreis'     => 10,
-            'vkPreis'     => 20,
-            'bestand'     => 10,
-            'meldeBest'   => 5,
+            Product::COL_NAME         => 'To Be Deleted',
+            Product::COL_WG_ID        => 4,
+            Product::COL_EK_PREIS     => 10,
+            Product::COL_VK_PREIS     => 20,
+            Product::COL_BESTAND      => 10,
+            Product::COL_MELDE_BEST   => 5,
         ]);
 
         $id = $product->pArtikelNr;
@@ -55,18 +56,18 @@ class ProductDeleteTest extends TestCase
 
         $response->assertStatus(204);
 
-        $this->assertSoftDeleted('artikel', ['pArtikelNr' => $id]);
+        $this->assertSoftDeleted(Product::TABLE, [Product::COL_ID => $id]);
     }
 
     public function test_writer_cannot_delete_a_product(): void
     {
         $product = Product::create([
-            'bezeichnung' => 'Protected Product',
-            'fWgNr'       => 4,
-            'ekPreis'     => 10,
-            'vkPreis'     => 20,
-            'bestand'     => 10,
-            'meldeBest'   => 5,
+            Product::COL_NAME => 'Protected Product',
+            Product::COL_WG_ID        => 4,
+            Product::COL_EK_PREIS     => 10,
+            Product::COL_VK_PREIS     => 20,
+            Product::COL_BESTAND      => 10,
+            Product::COL_MELDE_BEST   => 5,
         ]);
 
         $response = $this->actingAs($this->writer)
@@ -78,12 +79,12 @@ class ProductDeleteTest extends TestCase
     public function test_viewer_cannot_delete_a_product(): void
     {
         $product = Product::create([
-            'bezeichnung' => 'Protected Product',
-            'fWgNr'       => 4,
-            'ekPreis'     => 10,
-            'vkPreis'     => 20,
-            'bestand'     => 10,
-            'meldeBest'   => 5,
+            Product::COL_NAME => 'Protected Product',
+            Product::COL_WG_ID        => 4,
+            Product::COL_EK_PREIS     => 10,
+            Product::COL_VK_PREIS     => 20,
+            Product::COL_BESTAND     => 10,
+            Product::COL_MELDE_BEST   => 5,
         ]);
 
         $response = $this->actingAs($this->viewer)
@@ -95,30 +96,30 @@ class ProductDeleteTest extends TestCase
     public function test_delete_commits_and_record_is_gone(): void
     {
         $product = Product::create([
-            'bezeichnung' => 'To Delete',
-            'fWgNr'       => 4,
-            'ekPreis'     => 10,
-            'vkPreis'     => 20,
-            'bestand'     => 10,
-            'meldeBest'   => 5,
+            Product::COL_NAME => 'To Delete',
+            Product::COL_WG_ID        => 4,
+            Product::COL_EK_PREIS     => 10,
+            Product::COL_VK_PREIS     => 20,
+            Product::COL_BESTAND     => 10,
+            Product::COL_MELDE_BEST   => 5,
         ]);
 
         $this->actingAs($this->admin)
              ->deleteJson("/api/products/{$product->pArtikelNr}")
              ->assertStatus(204);
 
-        $this->assertSoftDeleted('artikel', ['pArtikelNr' => $product->pArtikelNr]);
+        $this->assertSoftDeleted(Product::TABLE, [Product::COL_ID => $product->pArtikelNr]);
     }
 
     public function test_transaction_is_atomic_on_delete(): void
     {
         $product = Product::create([
-            'bezeichnung' => 'To Delete',
-            'fWgNr'       => 4,
-            'ekPreis'     => 10,
-            'vkPreis'     => 20,
-            'bestand'     => 10,
-            'meldeBest'   => 5,
+            Product::COL_NAME => 'To Delete',
+            Product::COL_WG_ID        => 4,
+            Product::COL_EK_PREIS     => 10,
+            Product::COL_VK_PREIS     => 20,
+            Product::COL_BESTAND     => 10,
+            Product::COL_MELDE_BEST   => 5,
         ]);
 
         DB::spy();

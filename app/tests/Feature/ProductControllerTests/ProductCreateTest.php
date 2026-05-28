@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Products;
 
+use App\Models\Products\Product;
+use App\Models\WarehouseGroups\WarehouseGroup;
 use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -26,9 +28,9 @@ class ProductCreateTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert([
-            'pWgNr'       => 4,
-            'warengruppe' => 'Test Group',
+        DB::table(WarehouseGroup::TABLE)->insert([
+            WarehouseGroup::COL_ID     => 4,
+            WarehouseGroup::COL_NAME   => 'Test Group',
         ]);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
@@ -40,21 +42,21 @@ class ProductCreateTest extends TestCase
     {
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/products', [
-                             'bezeichnung' => 'New Product 100mm',
-                             'fWgNr'       => 4,
-                             'ekPreis'     => 5.00,
-                             'vkPreis'     => 15.00,
-                             'bestand'     => 50,
-                             'meldeBest'   => 10,
+                             Product::COL_NAME         => 'New Product 100mm',
+                             Product::COL_WG_ID        => 4,
+                             Product::COL_EK_PREIS     => 5.00,
+                             Product::COL_VK_PREIS     => 15.00,
+                             Product::COL_BESTAND      => 50,
+                             Product::COL_MELDE_BEST   => 10,
                          ]);
 
         $response->assertStatus(201)
                  ->assertJsonPath('message', 'Product created successfully.')
                  ->assertJsonPath('data.bezeichnung', 'New Product 100mm');
 
-        $this->assertDatabaseHas('artikel', [
-            'bezeichnung' => 'New Product 100mm',
-            'bestand'     => 50,
+        $this->assertDatabaseHas(Product::TABLE, [
+            Product::COL_NAME => 'New Product 100mm',
+            Product::COL_BESTAND     => 50,
         ]);
     }
 
@@ -62,12 +64,12 @@ class ProductCreateTest extends TestCase
     {
         $response = $this->actingAs($this->writer)
                          ->postJson('/api/products', [
-                             'bezeichnung' => 'Writer Product',
-                             'fWgNr'       => 4,
-                             'ekPreis'     => 3.00,
-                             'vkPreis'     => 6.00,
-                             'bestand'     => 20,
-                             'meldeBest'   => 5,
+                             Product::COL_NAME         => 'Writer Product',
+                             Product::COL_WG_ID        => 4,
+                             Product::COL_EK_PREIS     => 3.00,
+                             Product::COL_VK_PREIS     => 6.00,
+                             Product::COL_BESTAND      => 20,
+                             Product::COL_MELDE_BEST   => 5,
                          ]);
 
         $response->assertStatus(201);
@@ -77,12 +79,12 @@ class ProductCreateTest extends TestCase
     {
         $response = $this->actingAs($this->viewer)
                          ->postJson('/api/products', [
-                             'bezeichnung' => 'Sneaky Product',
-                             'fWgNr'       => 4,
-                             'ekPreis'     => 3.00,
-                             'vkPreis'     => 6.00,
-                             'bestand'     => 20,
-                             'meldeBest'   => 5,
+                             Product::COL_NAME         => 'Sneaky Product',
+                             Product::COL_WG_ID        => 4,
+                             Product::COL_EK_PREIS     => 3.00,
+                             Product::COL_VK_PREIS     => 6.00,
+                             Product::COL_BESTAND      => 20,
+                             Product::COL_MELDE_BEST   => 5,
                          ]);
 
         $response->assertStatus(403);
@@ -92,32 +94,32 @@ class ProductCreateTest extends TestCase
     {
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/products', [
-                             'bezeichnung' => 'Bad Product',
-                             'fWgNr'       => 999, // does not exist
-                             'ekPreis'     => 5.00,
-                             'vkPreis'     => 15.00,
-                             'bestand'     => 50,
-                             'meldeBest'   => 10,
+                             Product::COL_NAME         => 'Bad Product',
+                             Product::COL_WG_ID        => 999, // does not exist
+                             Product::COL_EK_PREIS     => 5.00,
+                             Product::COL_VK_PREIS     => 15.00,
+                             Product::COL_BESTAND      => 50,
+                             Product::COL_MELDE_BEST   => 10,
                          ]);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['fWgNr']);
+                 ->assertJsonValidationErrors([Product::COL_WG_ID ]);
     }
 
     public function test_store_commits_and_data_persists(): void
     {
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/products', [
-                             'bezeichnung' => 'Atomic Product',
-                             'fWgNr'       => 4,
-                             'ekPreis'     => 5.00,
-                             'vkPreis'     => 15.00,
-                             'bestand'     => 50,
-                             'meldeBest'   => 10,
+                             Product::COL_NAME => 'Atomic Product',
+                             Product::COL_WG_ID        => 4,
+                             Product::COL_EK_PREIS     => 5.00,
+                             Product::COL_VK_PREIS     => 15.00,
+                             Product::COL_BESTAND     => 50,
+                             Product::COL_MELDE_BEST   => 10,
                          ]);
 
         $response->assertStatus(201);
 
-        $this->assertDatabaseHas('artikel', ['bezeichnung' => 'Atomic Product']);
+        $this->assertDatabaseHas(Product::TABLE, [Product::COL_NAME => 'Atomic Product']);
     }
 }

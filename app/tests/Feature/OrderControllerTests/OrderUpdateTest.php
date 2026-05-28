@@ -3,6 +3,7 @@
 namespace Tests\Feature\Orders;
 
 use App\Models\Products\Product;
+use App\Models\WarehouseGroups\WarehouseGroup;
 use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,7 @@ class OrderUpdateTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert(['pWgNr' => 1, 'warengruppe' => 'Test Group']);
+        DB::table('warengruppe')->insert([WarehouseGroup::COL_ID => 1, 'warengruppe' => 'Test Group']);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
         $this->writer = User::factory()->create(['role' => 'writer']);
@@ -39,12 +40,12 @@ class OrderUpdateTest extends TestCase
     private function createProduct(array $overrides = []): Product
     {
         return Product::create(array_merge([
-            'bezeichnung' => 'Test Product',
-            'fWgNr'       => 1,
-            'ekPreis'     => 5.00,
-            'vkPreis'     => 10.00,
-            'bestand'     => 100,
-            'meldeBest'   => 20,
+            Product::COL_NAME         => 'Test Product',
+            Product::COL_WG_ID        => 1,
+            Product::COL_EK_PREIS     => 5.00,
+            Product::COL_VK_PREIS     => 10.00,
+            Product::COL_BESTAND      => 100,
+            Product::COL_MELDE_BEST   => 20,
         ], $overrides));
     }
 
@@ -142,7 +143,7 @@ class OrderUpdateTest extends TestCase
     public function test_increasing_item_quantity_deducts_additional_stock(): void
     {
         $kdNr    = $this->createCustomer();
-        $product = $this->createProduct(['vkPreis' => 10.00, 'bestand' => 100]);
+        $product = $this->createProduct([Product::COL_VK_PREIS => 10.00, Product::COL_BESTAND => 100]);
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
@@ -171,8 +172,8 @@ class OrderUpdateTest extends TestCase
              ->assertJsonPath('data.order_total', 25);
 
         $this->assertDatabaseHas('artikel', [
-            'pArtikelNr' => $product->pArtikelNr,
-            'bestand'    => 75, // 100 − 10 (create) − 15 (update diff)
+            Product::COL_ID => $product->pArtikelNr,
+            Product::COL_BESTAND    => 75, // 100 − 10 (create) − 15 (update diff)
         ]);
     }
 
@@ -181,7 +182,7 @@ class OrderUpdateTest extends TestCase
     public function test_decreasing_item_quantity_restores_stock(): void
     {
         $kdNr    = $this->createCustomer();
-        $product = $this->createProduct(['bestand' => 100]);
+        $product = $this->createProduct([Product::COL_BESTAND => 100]);
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
@@ -209,8 +210,8 @@ class OrderUpdateTest extends TestCase
              ->assertStatus(200);
 
         $this->assertDatabaseHas('artikel', [
-            'pArtikelNr' => $product->pArtikelNr,
-            'bestand'    => 92, // 100 − 20 + 12
+            Product::COL_ID => $product->pArtikelNr,
+            Product::COL_BESTAND    => 92, // 100 − 20 + 12
         ]);
     }
 
@@ -219,8 +220,8 @@ class OrderUpdateTest extends TestCase
     public function test_new_item_added_during_update_is_snapshotted_and_deducts_stock(): void
     {
         $kdNr     = $this->createCustomer();
-        $productA = $this->createProduct(['vkPreis' => 10.00, 'bestand' => 50, 'bezeichnung' => 'A']);
-        $productB = $this->createProduct(['vkPreis' => 20.00, 'bestand' => 50, 'bezeichnung' => 'B']);
+        $productA = $this->createProduct([Product::COL_VK_PREIS => 10.00, Product::COL_BESTAND => 50, Product::COL_NAME => 'A']);
+        $productB = $this->createProduct([Product::COL_VK_PREIS => 20.00, Product::COL_BESTAND => 50, Product::COL_NAME => 'B']);
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
@@ -255,8 +256,8 @@ class OrderUpdateTest extends TestCase
         $this->assertEquals(20.00, $newItem['kaufPreis']);
 
         $this->assertDatabaseHas('artikel', [
-            'pArtikelNr' => $productB->pArtikelNr,
-            'bestand'    => 46, // 50 − 4
+            Product::COL_ID => $productB->pArtikelNr,
+            Product::COL_BESTAND    => 46, // 50 − 4
         ]);
     }
 
@@ -265,8 +266,8 @@ class OrderUpdateTest extends TestCase
     public function test_omitted_item_during_update_is_deleted_and_stock_restored(): void
     {
         $kdNr     = $this->createCustomer();
-        $productA = $this->createProduct(['bestand' => 50, 'bezeichnung' => 'A']);
-        $productB = $this->createProduct(['bestand' => 50, 'bezeichnung' => 'B']);
+        $productA = $this->createProduct([Product::COL_BESTAND => 50, Product::COL_NAME => 'A']);
+        $productB = $this->createProduct([Product::COL_BESTAND => 50, Product::COL_NAME => 'B']);
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
@@ -298,8 +299,8 @@ class OrderUpdateTest extends TestCase
 
         // Product B stock fully restored (15 returned)
         $this->assertDatabaseHas('artikel', [
-            'pArtikelNr' => $productB->pArtikelNr,
-            'bestand'    => 50,
+            Product::COL_ID => $productB->pArtikelNr,
+            Product::COL_BESTAND    => 50,
         ]);
 
         // The position row for B must no longer exist
@@ -314,8 +315,8 @@ class OrderUpdateTest extends TestCase
     public function test_changing_artikel_nr_on_existing_item_returns_error(): void
     {
         $kdNr     = $this->createCustomer();
-        $productA = $this->createProduct(['bestand' => 50, 'bezeichnung' => 'A']);
-        $productB = $this->createProduct(['bestand' => 50, 'bezeichnung' => 'B']);
+        $productA = $this->createProduct([Product::COL_BESTAND => 50, Product::COL_NAME => 'A']);
+        $productB = $this->createProduct([Product::COL_BESTAND => 50, Product::COL_NAME => 'B']);
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
@@ -349,7 +350,7 @@ class OrderUpdateTest extends TestCase
     public function test_increasing_quantity_beyond_available_stock_is_rejected(): void
     {
         $kdNr    = $this->createCustomer();
-        $product = $this->createProduct(['bestand' => 10]);
+        $product = $this->createProduct([Product::COL_BESTAND => 10]);
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
@@ -379,8 +380,8 @@ class OrderUpdateTest extends TestCase
 
         // Stock must remain unchanged after the failed transaction
         $this->assertDatabaseHas('artikel', [
-            'pArtikelNr' => $product->pArtikelNr,
-            'bestand'    => 5,
+            Product::COL_ID        => $product->pArtikelNr,
+            Product::COL_BESTAND   => 5,
         ]);
     }
 }
