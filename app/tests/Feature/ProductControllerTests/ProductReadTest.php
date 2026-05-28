@@ -6,7 +6,7 @@ use App\Models\Products\Product;
 use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Tests\Feature\Concerns\ForcesInMemorySqlite;
+use Tests\Feature\ForcesInMemorySqlite;
 use Tests\TestCase;
 
 class ProductReadTest extends TestCase
