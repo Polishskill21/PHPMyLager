@@ -64,7 +64,7 @@ class OrderCreateTest extends TestCase
     public function test_admin_can_create_an_order(): void
     {
         $kdNr    = $this->createCustomer();
-        $product = $this->createProduct(['vkPreis' => 10.00, 'bestand' => 50]);
+        $product = $this->createProduct(['vkPreis' => 10.05, 'bestand' => 50]);
 
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/orders', [
@@ -79,7 +79,7 @@ class OrderCreateTest extends TestCase
         $response->assertStatus(201)
                  ->assertJsonPath('data.order_info.fKdNr', $kdNr)
                  ->assertJsonPath('data.order_total', 10)
-                 ->assertJsonPath('data.preis_total', 100.0); // 10 × 10.00
+                 ->assertJsonPath('data.preis_total', 100.5); // 10.05 × 10
     }
 
     public function test_writer_can_create_an_order(): void
