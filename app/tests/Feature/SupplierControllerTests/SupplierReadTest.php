@@ -70,7 +70,7 @@ class SupplierReadTest extends TestCase
             ]
         ]);
         
-        $this->assertCount(2, $response->json());
+        $this->assertCount(2, $response->json('data'));
     }
 
     public function test_viewer_can_fetch_single_supplier(): void
