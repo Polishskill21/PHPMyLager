@@ -35,15 +35,15 @@ class WarehouseGroupCreateTest extends TestCase
     {
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/warehouse-groups', [
-                             'warengruppe' => 'New Electronics',
+                             WarehouseGroup::COL_NAME => 'New Electronics',
                          ]);
 
         $response->assertStatus(201)
                  ->assertJsonPath('message', 'Warehouse group created successfully.')
-                 ->assertJsonPath('data.warengruppe', 'New Electronics');
+                 ->assertJsonPath('data.'. WarehouseGroup::COL_NAME, 'New Electronics');
 
-        $this->assertDatabaseHas('warengruppe', [
-            'warengruppe' => 'New Electronics',
+        $this->assertDatabaseHas(WarehouseGroup::TABLE, [
+            WarehouseGroup::COL_NAME => 'New Electronics',
         ]);
     }
 
@@ -51,7 +51,7 @@ class WarehouseGroupCreateTest extends TestCase
     {
         $response = $this->actingAs($this->writer)
                          ->postJson('/api/warehouse-groups', [
-                             'warengruppe' => 'Writer Group',
+                             WarehouseGroup::COL_NAME => 'Writer Group',
                          ]);
 
         $response->assertStatus(201);
@@ -61,7 +61,7 @@ class WarehouseGroupCreateTest extends TestCase
     {
         $response = $this->actingAs($this->viewer)
                          ->postJson('/api/warehouse-groups', [
-                             'warengruppe' => 'Sneaky Group',
+                             WarehouseGroup::COL_NAME => 'Sneaky Group',
                          ]);
 
         $response->assertStatus(403);

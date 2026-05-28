@@ -33,8 +33,8 @@ class WarehouseGroupReadTest extends TestCase
 
     public function test_viewer_can_fetch_all_warehouse_groups(): void
     {
-        WarehouseGroup::create(['warengruppe' => 'Test Group 1']);
-        WarehouseGroup::create(['warengruppe' => 'Test Group 2']);
+        WarehouseGroup::create([WarehouseGroup::COL_NAME => 'Test Group 1']);
+        WarehouseGroup::create([WarehouseGroup::COL_NAME => 'Test Group 2']);
 
         $response = $this->actingAs($this->viewer)
                          ->getJson('/api/warehouse-groups');
@@ -42,7 +42,7 @@ class WarehouseGroupReadTest extends TestCase
         $response->assertStatus(200)
                  ->assertJsonStructure([
                      'data' => [
-                         '*' => ['pWgNr', 'warengruppe'],
+                         '*' => [WarehouseGroup::COL_ID, WarehouseGroup::COL_NAME],
                      ],
                  ]);
     }

@@ -34,11 +34,11 @@ class SupplierReadTest extends TestCase
     {
         self::$counter++;
         return Supplier::create(array_merge([
-            'name'    => 'Test Supplier ' . self::$counter,
-            'strasse' => 'Lieferstrasse ' . self::$counter,
-            'plz'     => '10115',
-            'ort'     => 'Berlin',
-            'email'   => 'supplier' . self::$counter . '@example.com',
+            Supplier::COL_NAME    => 'Test Supplier ' . self::$counter,
+            Supplier::COL_STRASSE => 'Lieferstrasse ' . self::$counter,
+            Supplier::COL_PLZ     => '10115',
+            Supplier::COL_ORT     => 'Berlin',
+            Supplier::COL_EMAIL   => 'supplier' . self::$counter . '@example.com',
         ], $overrides));
     }
 
@@ -58,7 +58,16 @@ class SupplierReadTest extends TestCase
         $response = $this->actingAs($this->viewer)->getJson('/api/suppliers');
 
         $response->assertStatus(200)->assertJsonStructure([
-            '*' => [Supplier::COL_ID, Supplier::COL_NAME, Supplier::COL_STRASSE, Supplier::COL_PLZ, Supplier::COL_ORT, Supplier::COL_EMAIL],
+            'data' => [
+                '*' => [
+                    Supplier::COL_ID, 
+                    Supplier::COL_NAME, 
+                    Supplier::COL_STRASSE, 
+                    Supplier::COL_PLZ, 
+                    Supplier::COL_ORT, 
+                    Supplier::COL_EMAIL
+                ],
+            ]
         ]);
         
         $this->assertCount(2, $response->json());
@@ -71,8 +80,8 @@ class SupplierReadTest extends TestCase
         $response = $this->actingAs($this->viewer)->getJson("/api/suppliers/{$supplier->getKey()}");
 
         $response->assertStatus(200)
-                 ->assertJsonPath(Supplier::COL_ID, $supplier->getKey())
-                 ->assertJsonPath(Supplier::COL_NAME, $supplier->{Supplier::COL_NAME});
+                 ->assertJsonPath('data.' . Supplier::COL_ID, $supplier->getKey())
+                 ->assertJsonPath('data.' . Supplier::COL_NAME, $supplier->{Supplier::COL_NAME});
     }
 
     public function test_fetching_non_existent_supplier_returns_404(): void

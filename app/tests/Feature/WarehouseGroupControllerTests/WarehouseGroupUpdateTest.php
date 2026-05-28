@@ -33,28 +33,28 @@ class WarehouseGroupUpdateTest extends TestCase
 
     public function test_admin_can_update_a_warehouse_group(): void
     {
-        $group = WarehouseGroup::create(['warengruppe' => 'Old Name']);
+        $group = WarehouseGroup::create([WarehouseGroup::COL_NAME => 'Old Name']);
 
         $response = $this->actingAs($this->admin)
-                         ->putJson("/api/warehouse-groups/{$group->pWgNr}", [
-                             'warengruppe' => 'Updated Name',
+                         ->putJson("/api/warehouse-groups/{$group->{WarehouseGroup::COL_ID}}", [
+                             WarehouseGroup::COL_NAME => 'Updated Name',
                          ]);
 
         $response->assertStatus(204);
 
-        $this->assertDatabaseHas('warengruppe', [
-            'pWgNr'       => $group->pWgNr,
-            'warengruppe' => 'Updated Name',
+        $this->assertDatabaseHas(WarehouseGroup::TABLE, [
+            WarehouseGroup::COL_ID   => $group->{WarehouseGroup::COL_ID},
+            WarehouseGroup::COL_NAME => 'Updated Name',
         ]);
     }
 
     public function test_viewer_cannot_update_a_warehouse_group(): void
     {
-        $group = WarehouseGroup::create(['warengruppe' => 'Locked Group']);
+        $group = WarehouseGroup::create([WarehouseGroup::COL_NAME => 'Locked Group']);
 
         $response = $this->actingAs($this->viewer)
-                         ->putJson("/api/warehouse-groups/{$group->pWgNr}", [
-                             'warengruppe' => 'Hacked Name',
+                         ->putJson("/api/warehouse-groups/{$group->{WarehouseGroup::COL_ID}}", [
+                             WarehouseGroup::COL_NAME => 'Hacked Name',
                          ]);
 
         $response->assertStatus(403);
