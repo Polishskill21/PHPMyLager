@@ -2,12 +2,12 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SystemController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\WarehouseGroupController;
-use App\Http\Controllers\Ordercontroller;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\PurchaseOrderController;
-use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\Products\ProductController;
+use App\Http\Controllers\WarehouseGroups\WarehouseGroupController;
+use App\Http\Controllers\Orders\Ordercontroller;
+use App\Http\Controllers\Customers\CustomerController;
+use App\Http\Controllers\PurchaseOrders\PurchaseOrderController;
+use App\Http\Controllers\Suppliers\SupplierController;
 
 Route::get('/status', [SystemController::class, 'status']);
 

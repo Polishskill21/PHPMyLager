@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Customers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Orders\Order;
 
 /**
  * Represents a row in kunden (customer).
@@ -25,9 +26,17 @@ class Customer extends Model
 {
     use SoftDeletes;
 
-    protected $table      = 'kunden';
-    protected $primaryKey = 'pKdNr';
+    const TABLE       = 'kunden';
+    const COL_ID      = 'pKdNr';
+    const COL_NAME    = 'name';
+    const COL_STRASSE = 'strasse';
+    const COL_PLZ     = 'plz';
+    const COL_ORT     = 'ort';
+    const COL_EMAIL   = 'email';
 
+    protected $table      = self::TABLE;
+    protected $primaryKey = self::COL_ID;
+    
     public $timestamps = false;
 
     protected $hidden = [
@@ -35,18 +44,18 @@ class Customer extends Model
     ];
 
     protected $fillable = [
-        'name',
-        'strasse',
-        'plz',
-        'ort',
-        'email',
+        self::COL_NAME,
+        self::COL_STRASSE,
+        self::COL_PLZ,
+        self::COL_ORT,
+        self::COL_EMAIL,
     ];
 
     // ── Relationships ──────────────────────────────────────────────────
 
     public function orders(): HasMany
     {
-        return $this->hasMany(Order::class, 'fKdNr', 'pKdNr');
+        return $this->hasMany(Order::class, Order::COL_F_KD_NR, self::COL_ID);
     }
 
 }

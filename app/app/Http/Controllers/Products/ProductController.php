@@ -1,14 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Products;
 
-use App\Models\Product;
+use App\Models\Products\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\InventoryLog;
+use App\Models\Products\InventoryLog;
 use Illuminate\Support\Facades\Auth;
-use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseOrders\PurchaseOrderItem;
+use App\Http\Controllers\Controller;
 
 class ProductController extends Controller
 {
@@ -123,26 +124,26 @@ class ProductController extends Controller
     public function adjustStock(Request $request, Product $product): JsonResponse
     {
         $validated = $request->validate([
-            'bestand' => 'required|integer|min:0',
-            'reason'  => 'required|string|min:5|max:255',
+            Product::COL_BESTAND => 'required|integer|min:0',
+            InventoryLog::COL_REASON  => 'required|string|min:5|max:255',
         ]);
 
         try {
             $product = DB::transaction(function () use ($product, $validated) {
-                $oldBestand = $product->bestand;
+                $oldBestand = $product->{Product::COL_BESTAND};
 
                 // 1. Update the stock
                 $product->update([
-                    'bestand' => $validated['bestand']
+                    Product::COL_BESTAND => $validated[Product::COL_BESTAND]
                 ]);
                 
                 // 2. Create the immutable audit trail row
                 InventoryLog::create([
-                    'fArtikelNr'  => $product->pArtikelNr,
-                    'user_id'     => Auth::id(),
-                    'old_bestand' => $oldBestand,
-                    'new_bestand' => $validated['bestand'],
-                    'reason'      => $validated['reason'],
+                    InventoryLog::COL_F_ARTIKEL_NR => $product->{Product::COL_ID},
+                    InventoryLog::COL_USER_ID      => Auth::id(),
+                    InventoryLog::COL_OLD_BESTAND  => $oldBestand,
+                    InventoryLog::COL_NEW_BESTAND  => $validated[Product::COL_BESTAND],
+                    InventoryLog::COL_REASON       => $validated[InventoryLog::COL_REASON],
                 ]);
 
                 return $product->fresh();
@@ -171,8 +172,8 @@ class ProductController extends Controller
         // Block if referenced by any purchase order line that has not yet been
         // fully received (gelieferteMenge < bestMenge). Fully delivered lines
         // are historical records and do not block deletion.
-        $hasOpenPurchaseLines = PurchaseOrderItem::where('fArtikelNr', $product->pArtikelNr)
-            ->whereColumn('gelieferteMenge', '<', 'bestMenge')
+        $hasOpenPurchaseLines = PurchaseOrderItem::where(PurchaseOrderItem::COL_F_ARTIKEL_NR, $product->{Product::COL_ID})
+            ->whereColumn(PurchaseOrderItem::COL_GELIEFERTE_MENGE, '<', PurchaseOrderItem::COL_BEST_MENGE)
             ->exists();
  
         if ($hasOpenPurchaseLines) {
@@ -182,10 +183,9 @@ class ProductController extends Controller
         }
  
         try {
-            $id = $product->pArtikelNr;
             DB::transaction(fn () => $product->delete());
  
-            return $this->ok(null, "Product {$id} deleted successfully.");
+            return $this->noContent();
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
@@ -201,25 +201,25 @@ class ProductController extends Controller
     private function storeRules(): array
     {
         return [
-            'bezeichnung' => 'required|string|max:35',
-            'fWgNr'       => 'required|integer|exists:warengruppe,pWgNr',
-            'ekPreis'     => 'required|numeric|min:0|max:999999.99',
-            'vkPreis'     => 'required|numeric|min:0|max:999999.99',
-            'bestand'     => 'required|integer|min:0',
-            'meldeBest'   => 'required|integer|min:0',
-            'lagerplatz'  => self::LAGERPLATZ_RULE,
+            Product::COL_NAME       => 'required|string|max:35',
+            Product::COL_WG_ID      => 'required|integer|exists:warengruppe,pWgNr',
+            Product::COL_EK_PREIS   => 'required|numeric|min:0|max:999999.99',
+            Product::COL_VK_PREIS   => 'required|numeric|min:0|max:999999.99',
+            Product::COL_BESTAND    => 'required|integer|min:0',
+            Product::COL_MELDE_BEST => 'required|integer|min:0',
+            Product::COL_LAGERPLATZ => self::LAGERPLATZ_RULE,
         ];
     }
 
     private function updateRules(): array
     {
         return [
-            'bezeichnung' => 'sometimes|required|string|max:35',
-            'fWgNr'       => 'sometimes|required|integer|exists:warengruppe,pWgNr',
-            'ekPreis'     => 'sometimes|required|numeric|min:0|max:999999.99',
-            'vkPreis'     => 'sometimes|required|numeric|min:0|max:999999.99',
-            'meldeBest'   => 'sometimes|required|integer|min:0',
-            'lagerplatz'  => self::LAGERPLATZ_RULE,
+            Product::COL_NAME       => 'sometimes|required|string|max:35',
+            Product::COL_WG_ID      => 'sometimes|required|integer|exists:warengruppe,pWgNr',
+            Product::COL_EK_PREIS   => 'sometimes|required|numeric|min:0|max:999999.99',
+            Product::COL_VK_PREIS   => 'sometimes|required|numeric|min:0|max:999999.99',
+            Product::COL_MELDE_BEST => 'sometimes|required|integer|min:0',
+            Product::COL_LAGERPLATZ => self::LAGERPLATZ_RULE,
         ];
     }
 
@@ -227,10 +227,10 @@ class ProductController extends Controller
     private function customMessages(): array
     {
         return [
-            'fWgNr.exists'         => 'The selected warehouse group does not exist.',
-            'ekPreis.max'          => 'The purchase price may not exceed 999,999.99.',
-            'vkPreis.max'          => 'The selling price may not exceed 999,999.99.',
-            'lagerplatz.regex'     => self::LAGERPLATZ_MSG,
+            Product::COL_WG_ID.'.exists'      => 'The selected warehouse group does not exist.',
+            Product::COL_EK_PREIS.'.max'      => 'The purchase price may not exceed 999,999.99.',
+            Product::COL_VK_PREIS.'.max'      => 'The selling price may not exceed 999,999.99.',
+            Product::COL_LAGERPLATZ.'.regex'  => self::LAGERPLATZ_MSG,
         ];
     }
 }

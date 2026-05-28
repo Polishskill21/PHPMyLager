@@ -1,35 +1,45 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Customers;
 
-use App\Models\Supplier;
+use App\Models\Customers\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use App\Http\Controllers\Controller;
 
-class SupplierController extends Controller
+class CustomerController extends Controller
 {
     // ─────────────────────────────────────────────────────────────────────────
     // READ
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * GET /customers
+     */
     public function index(): JsonResponse
     {
-        $suppliers = Supplier::all()->map(fn (Supplier $s) => $this->formatSupplier($s));
+        $customers = Customer::all()->map(fn (Customer $c) => $this->formatCustomer($c));
 
-        return $this->ok($suppliers);
+        return $this->ok($customers);
     }
 
-    public function show(Supplier $supplier): JsonResponse
+    /**
+     * GET /customers/{customer}
+     */
+    public function show(Customer $customer): JsonResponse
     {
-        return $this->ok($this->formatSupplier($supplier));
+        return $this->ok($this->formatCustomer($customer));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // CREATE
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * POST /customers
+     */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate(
@@ -38,9 +48,9 @@ class SupplierController extends Controller
         );
 
         try {
-            $supplier = DB::transaction(fn () => Supplier::create($validated));
+            $customer = DB::transaction(fn () => Customer::create($validated));
 
-            return $this->created($this->formatSupplier($supplier->fresh()), 'Supplier created successfully.');
+            return $this->created($this->formatCustomer($customer->fresh()), 'Customer created successfully.');
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
@@ -51,20 +61,23 @@ class SupplierController extends Controller
     // UPDATE
     // ─────────────────────────────────────────────────────────────────────────
 
-    public function update(Request $request, Supplier $supplier): JsonResponse
+    /**
+     * PUT /customers/{customer}
+     */
+    public function update(Request $request, Customer $customer): JsonResponse
     {
         $validated = $request->validate(
-            $this->updateRules($supplier),
+            $this->updateRules($customer),
             $this->customMessages()
         );
 
         try {
-            $supplier = DB::transaction(function () use ($validated, $supplier): Supplier {
-                $supplier->update($validated);
-                return $supplier->fresh();
+            $customer = DB::transaction(function () use ($validated, $customer): Customer {
+                $customer->update($validated);
+                return $customer->fresh();
             });
 
-            return $this->ok($this->formatSupplier($supplier), 'Supplier updated successfully.');
+            return $this->ok($this->formatCustomer($customer), 'Customer updated successfully.');
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
@@ -75,19 +88,22 @@ class SupplierController extends Controller
     // DELETE
     // ─────────────────────────────────────────────────────────────────────────
 
-    public function destroy(Supplier $supplier): JsonResponse
+    /**
+     * DELETE /customers/{customer}
+     * Soft-deletes the customer record.
+     */
+    public function destroy(Customer $customer): JsonResponse
     {
         try {
-            $id = $supplier->pLiefNr;
-            DB::transaction(fn () => $supplier->delete());
- 
-            return $this->ok(null, "Suppler {$id} deleted successfully.");
+            $id = $customer->{Customer::COL_ID};
+            DB::transaction(fn () => $customer->delete());
+
+            return $this->noContent();
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
         }
     }
-
 
     // ─────────────────────────────────────────────────────────────────────────
     // Validation rule sets
@@ -96,35 +112,32 @@ class SupplierController extends Controller
     private function storeRules(): array
     {
         return [
-            'name'    => 'required|string|max:100',
-            'strasse' => 'nullable|string|max:50',
-            'plz'     => 'nullable|digits:5',
-            'ort'     => 'nullable|string|max:50',
-            'email'   => 'nullable|email|max:50|unique:lieferanten,email',
-            'telefon' => 'nullable|string|max:30',
+            Customer::COL_NAME    => 'required|string|max:50',
+            Customer::COL_STRASSE => 'required|string|max:50',
+            Customer::COL_PLZ     => 'required|digits:5',
+            Customer::COL_ORT     => 'required|string|max:50',
+            Customer::COL_EMAIL   => 'required|email|max:50|unique:' . Customer::TABLE . ',' . Customer::COL_EMAIL,
         ];
     }
 
-    private function updateRules(Supplier $supplier): array
+    private function updateRules(Customer $customer): array
     {
         return [
-            'name'    => 'required|string|max:100',
-            'strasse' => 'nullable|string|max:50',
-            'plz'     => 'nullable|digits:5',
-            'ort'     => 'nullable|string|max:50',
-            'email'   => [
-                'nullable', 'email', 'max:50',
-                Rule::unique('lieferanten', 'email')->ignore($supplier->pLiefNr, 'pLiefNr'),
+            Customer::COL_NAME    => 'required|string|max:50',
+            Customer::COL_STRASSE => 'required|string|max:50',
+            Customer::COL_PLZ     => 'required|digits:5',
+            Customer::COL_ORT     => 'required|string|max:50',
+            Customer::COL_EMAIL   => ['required', 'email', 'max:50',
+            Rule::unique(Customer::TABLE, Customer::COL_EMAIL)->ignore($customer->{Customer::COL_ID}, Customer::COL_ID),
             ],
-            'telefon' => 'nullable|string|max:30',
         ];
     }
 
     private function customMessages(): array
     {
         return [
-            'plz.digits'   => 'The postal code must be exactly 5 digits.',
-            'email.unique' => 'A supplier with this email address already exists.',
+            Customer::COL_PLZ.'.digits'   => 'The postal code must be exactly 5 digits.',
+            Customer::COL_EMAIL.'.unique' => 'A customer with this email address already exists.',
         ];
     }
 
@@ -132,16 +145,15 @@ class SupplierController extends Controller
     // Formatting
     // ─────────────────────────────────────────────────────────────────────────
 
-    private function formatSupplier(Supplier $supplier): array
+    private function formatCustomer(Customer $customer): array
     {
         return [
-            'pLiefNr' => $supplier->pLiefNr,
-            'name'    => $supplier->name,
-            'strasse' => $supplier->strasse,
-            'plz'     => $supplier->plz,
-            'ort'     => $supplier->ort,
-            'email'   => $supplier->email,
-            'telefon' => $supplier->telefon,
+            Customer::COL_ID      => $customer->{Customer::COL_ID},
+            Customer::COL_NAME    => $customer->{Customer::COL_NAME},
+            Customer::COL_STRASSE => $customer->{Customer::COL_STRASSE},
+            Customer::COL_PLZ     => $customer->{Customer::COL_PLZ},
+            Customer::COL_ORT     => $customer->{Customer::COL_ORT},
+            Customer::COL_EMAIL   => $customer->{Customer::COL_EMAIL},
         ];
     }
 }

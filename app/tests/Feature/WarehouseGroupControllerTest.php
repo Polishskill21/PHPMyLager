@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\WarehouseGroup;
-use App\Models\User;
+use App\Models\WarehouseGroups\WarehouseGroup;
+use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -151,9 +151,7 @@ class WarehouseGroupControllerTest extends TestCase
                              'warengruppe' => 'Updated Name',
                          ]);
 
-        $response->assertStatus(200)
-                 ->assertJsonPath('message', 'Warehouse group updated successfully.')
-                 ->assertJsonPath('data.warengruppe', 'Updated Name');
+        $response->assertStatus(204);
 
         $this->assertDatabaseHas('warengruppe', [
             'pWgNr'       => $group->pWgNr,

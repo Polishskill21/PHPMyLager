@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\WarehouseGroups;
 
-use App\Models\WarehouseGroup;
+use App\Models\WarehouseGroups\WarehouseGroup;
+use App\Models\Products\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Product;
+use App\Http\Controllers\Controller;
 
 class WarehouseGroupController extends Controller
 {
@@ -47,7 +48,7 @@ class WarehouseGroupController extends Controller
             return $this->notFound("Warehouse group {$id} not found.");
         }
 
-        $products = Product::where('fWgNr', $id)->get();
+        $products = Product::where(Product::COL_WG_ID, $id)->get();
 
         return $this->ok($products);
     }
@@ -102,7 +103,7 @@ class WarehouseGroupController extends Controller
                 return $group->fresh();
             });
 
-            return $this->ok($group, 'Warehouse group updated successfully.');
+            return $this->noContent();
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
@@ -137,15 +138,15 @@ class WarehouseGroupController extends Controller
     private function rules(): array
     {
         return [
-            'warengruppe' => 'required|string|max:50',
+            WarehouseGroup::COL_NAME => 'required|string|max:50',
         ];
     }
 
     private function customMessages(): array
     {
         return [
-            'warengruppe.required' => 'The warehouse group name is required.',
-            'warengruppe.max'      => 'The warehouse group name may not exceed 50 characters.',
+            WarehouseGroup::COL_NAME.'required' => 'The warehouse group name is required.',
+            WarehouseGroup::COL_NAME.'.max'     => 'The warehouse group name may not exceed 50 characters.',
         ];
     }
 }

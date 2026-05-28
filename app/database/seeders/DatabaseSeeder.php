@@ -24,8 +24,8 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($users as $userData) {
-            if (!\App\Models\User::where('email', $userData['email'])->exists()) {
-                \App\Models\User::factory()->create($userData);
+            if (!\App\Models\Auth\User::where('email', $userData['email'])->exists()) {
+                \App\Models\Auth\User::factory()->create($userData);
             }
         }
 
@@ -119,16 +119,16 @@ class DatabaseSeeder extends Seeder
 
         // 7. Seed Lieferanten
         DB::table('lieferanten')->insertOrIgnore([
-            ['pLiefNr' => 5001, 'name' => 'Remscheid Werkzeuge GmbH', 'strasse' => 'Industriepark Nord 4', 'plz' => 42853, 'ort' => 'Remscheid', 'email' => 'vertrieb@remscheid-tools.de', 'telefon' => '+49 2191 555120', 'created_at' => '2026-01-15 08:00:00', 'updated_at' => '2026-01-15 08:00:00'],
-            ['pLiefNr' => 5002, 'name' => 'Sheffield Steel Co.', 'strasse' => '22 Ironworks Lane', 'plz' => 54321, 'ort' => 'Sheffield', 'email' => 'orders@sheffieldsteel.co.uk', 'telefon' => '+44 114 9620000', 'created_at' => '2026-02-10 09:30:00', 'updated_at' => '2026-02-10 09:30:00'],
-            ['pLiefNr' => 5003, 'name' => 'Alpen Werkzeuge Import S.A.', 'strasse' => 'Rue du Commerce 77', 'plz' => 1005, 'ort' => 'Lausanne', 'email' => 'info@alpenimport.ch', 'telefon' => '+41 21 3456789', 'created_at' => '2026-04-01 14:15:00', 'updated_at' => '2026-04-01 14:15:00']
+            ['pLiefNr' => 5001, 'name' => 'Remscheid Werkzeuge GmbH', 'strasse' => 'Industriepark Nord 4', 'plz' => 42853, 'ort' => 'Remscheid', 'email' => 'vertrieb@remscheid-tools.de'],
+            ['pLiefNr' => 5002, 'name' => 'Sheffield Steel Co.', 'strasse' => '22 Ironworks Lane', 'plz' => 54321, 'ort' => 'Sheffield', 'email' => 'orders@sheffieldsteel.co.uk'],
+            ['pLiefNr' => 5003, 'name' => 'Alpen Werkzeuge Import S.A.', 'strasse' => 'Rue du Commerce 77', 'plz' => 1005, 'ort' => 'Lausanne', 'email' => 'info@alpenimport.ch']
         ]);
 
         // 8. Seed Bestellkoepfe (Purchase Orders placed to Suppliers)
         DB::table('bestellkoepfe')->insertOrIgnore([
-            ['pBestNr' => 80001, 'fLiefNr' => 5001, 'bestDat' => '2026-05-01 10:00:00', 'erwLieferDat' => '2026-05-08 14:00:00', 'status' => 'geliefert', 'created_at' => '2026-05-01 10:00:00', 'updated_at' => '2026-05-08 14:10:00'],
-            ['pBestNr' => 80002, 'fLiefNr' => 5002, 'bestDat' => '2026-05-15 11:30:00', 'erwLieferDat' => '2026-05-22 12:00:00', 'status' => 'bestellt', 'created_at' => '2026-05-15 11:30:00', 'updated_at' => '2026-05-22 09:00:00'],
-            ['pBestNr' => 80003, 'fLiefNr' => 5003, 'bestDat' => '2026-05-21 16:45:00', 'erwLieferDat' => '2026-05-28 16:00:00', 'status' => 'offen', 'created_at' => '2026-05-21 16:45:00', 'updated_at' => '2026-05-21 16:45:00']
+            ['pBestNr' => 80001, 'fLiefNr' => 5001, 'bestDat' => '2026-05-01 10:00:00', 'erwLieferDat' => '2026-05-08 14:00:00', 'status' => 'geliefert'],
+            ['pBestNr' => 80002, 'fLiefNr' => 5002, 'bestDat' => '2026-05-15 11:30:00', 'erwLieferDat' => '2026-05-22 12:00:00', 'status' => 'bestellt'],
+            ['pBestNr' => 80003, 'fLiefNr' => 5003, 'bestDat' => '2026-05-21 16:45:00', 'erwLieferDat' => '2026-05-28 16:00:00', 'status' => 'offen']
         ]);
 
 

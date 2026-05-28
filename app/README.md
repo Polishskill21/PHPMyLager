@@ -79,7 +79,7 @@ All API routes are protected. Access is granted based on the user's assigned rol
 
 
 #### GET `/api/products`
-Returns all active (non-deleted) products.
+Returns all active (non-deleted) products. The "has_stock_history" allows for an api request GET `/api/products/{id}/stock-history` for more detailed stock history change.
 
 ```json
 {
@@ -92,7 +92,8 @@ Returns all active (non-deleted) products.
       "vkPreis": 9,
       "bestand": 1010,
       "meldeBest": 400,
-      "lagerplatz": "D01-12B"
+      "lagerplatz": "D01-12B",
+      "has_stock_history": false
     },
     {
       "pArtikelNr": 10028,
@@ -102,7 +103,8 @@ Returns all active (non-deleted) products.
       "vkPreis": 25,
       "bestand": 680,
       "meldeBest": 210,
-      "lagerplatz": "B04-02C"
+      "lagerplatz": "B04-02C",
+      "has_stock_history": false
     },
     ...
   ],
@@ -121,7 +123,8 @@ Returns all active (non-deleted) products.
     "vkPreis": 299.99,
     "bestand": 50,
     "meldeBest": 10,
-    "lagerplatz": "A12-03B"
+    "lagerplatz": "A12-03B",
+    "has_stock_history": false
   }
 }
 ```
@@ -468,7 +471,6 @@ Returns all active suppliers in the system.
       "plz": 42853,
       "ort": "Remscheid",
       "email": "vertrieb@remscheid-tools.de",
-      "telefon": "+49 2191 555120"
     },
     {
       "pLiefNr": 5002,
@@ -477,7 +479,6 @@ Returns all active suppliers in the system.
       "plz": 54321,
       "ort": "Sheffield",
       "email": "orders@sheffieldsteel.co.uk",
-      "telefon": "+44 114 9620000"
     }
   ]
 }
@@ -494,7 +495,6 @@ Registers a new supplier profile.
   "plz": "10050",
   "ort": "Lausanne",
   "email": "info@alpenimport.ch",
-  "telefon": "+41 21 3456789"
 }
 ```
 
@@ -508,7 +508,6 @@ Registers a new supplier profile.
     "plz": 10050,
     "ort": "Lausanne",
     "email": "info@alpenimport.ch",
-    "telefon": "+41 21 3456789"
   },
   "message": "Supplier created successfully."
 }
@@ -525,7 +524,6 @@ Updates an existing supplier's details.
   "plz": "10050",
   "ort": "Lausanne",
   "email": "new-contact@alpenimport.ch",
-  "telefon": "+41 21 3456789"
 }
 ```
 
@@ -539,7 +537,6 @@ Updates an existing supplier's details.
     "plz": 10050,
     "ort": "Lausanne",
     "email": "new-contact@alpenimport.ch",
-    "telefon": "+41 21 3456789"
   },
   "message": "Supplier updated successfully."
 }

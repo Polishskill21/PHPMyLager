@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\PurchaseOrders;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Products\Product;
 
 /**
  * Represents a row in the bestellpositionen (purchase order line items) table.
@@ -18,26 +19,34 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PurchaseOrderItem extends Model
 {
-    protected $table      = 'bestellpositionen';
-    protected $primaryKey = 'pBestPosNr';
+    const TABLE                  = 'bestellpositionen';
+    const COL_ID                 = 'pBestPosNr';
+    const COL_F_BEST_NR          = 'fBestNr';
+    const COL_F_ARTIKEL_NR       = 'fArtikelNr';
+    const COL_BEST_MENGE         = 'bestMenge';
+    const COL_GELIEFERTE_MENGE   = 'gelieferteMenge';
+    const COL_EK_PREIS           = 'ekPreis';
+
+    protected $table      = self::TABLE;
+    protected $primaryKey = self::COL_ID;
     public    $timestamps = false;
 
     protected $fillable = [
-        'fBestNr',
-        'fArtikelNr',
-        'bestMenge',
-        'gelieferteMenge',
-        'ekPreis',
+        self::COL_F_BEST_NR,
+        self::COL_F_ARTIKEL_NR,
+        self::COL_BEST_MENGE,
+        self::COL_GELIEFERTE_MENGE,
+        self::COL_EK_PREIS,
     ];
 
     public function purchaseOrder(): BelongsTo
     {
-        return $this->belongsTo(PurchaseOrder::class, 'fBestNr', 'pBestNr');
+        return $this->belongsTo(PurchaseOrder::class, self::COL_F_BEST_NR, PurchaseOrder::COL_ID);
     }
 
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class, 'fArtikelNr', 'pArtikelNr')
+        return $this->belongsTo(Product::class, self::COL_F_ARTIKEL_NR, Product::COL_ID)
                     ->withTrashed(); // show even soft-deleted products
     }
 }

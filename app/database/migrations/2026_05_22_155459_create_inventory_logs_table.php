@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // ─── 1. Inventory log if the admin manually changes the stock ─────────────────
         Schema::create('inventory_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedInteger('fArtikelNr');
