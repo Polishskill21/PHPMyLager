@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Concerns;
+namespace Tests\Feature;
 
 use RuntimeException;
 
