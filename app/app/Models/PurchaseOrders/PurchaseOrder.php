@@ -32,7 +32,6 @@ class PurchaseOrder extends Model
     protected $table      = self::TABLE;
     protected $primaryKey = self::COL_ID;
 
-    // bestellkoepfe has no created_at/updated_at columns (matches the other legacy tables).
     public $timestamps = false;
 
     protected $fillable = [
