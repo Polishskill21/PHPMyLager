@@ -3,6 +3,7 @@
 namespace Tests\Feature\PurchaseOrders;
 
 use App\Models\PurchaseOrders\PurchaseOrder;
+use App\Models\Suppliers\Supplier;
 use App\Enums\PurchaseOrderStatus;
 use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,6 +15,7 @@ class PurchaseOrderReadTest extends TestCase
     use RefreshDatabase, ForcesInMemorySqlite;
 
     protected User $viewer;
+    protected Supplier $supplier;
 
     protected function setUp(): void
     {
@@ -21,11 +23,13 @@ class PurchaseOrderReadTest extends TestCase
         $this->forceInMemorySqliteEnvironment();
         parent::setUp();
         $this->viewer = User::factory()->create(['role' => 'viewer']);
+        $this->supplier = Supplier::create([Supplier::COL_NAME => 'Test Supplier']);
     }
 
     public function test_viewer_can_fetch_purchase_orders(): void
     {
         $order = PurchaseOrder::create([
+            PurchaseOrder::COL_F_LIEF_NR => $this->supplier->getKey(),
             PurchaseOrder::COL_BEST_DAT => '2026-05-01',
             PurchaseOrder::COL_STATUS   => PurchaseOrderStatus::Open,
         ]);
@@ -39,6 +43,7 @@ class PurchaseOrderReadTest extends TestCase
     public function test_viewer_can_fetch_single_purchase_order(): void
     {
         $order = PurchaseOrder::create([
+            PurchaseOrder::COL_F_LIEF_NR => $this->supplier->getKey(),
             PurchaseOrder::COL_BEST_DAT => '2026-05-01',
             PurchaseOrder::COL_STATUS   => PurchaseOrderStatus::Open,
         ]);
