@@ -29,8 +29,8 @@ class ProductDeleteTest extends TestCase
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
         DB::table(WarehouseGroup::TABLE)->insert([
-            WarehouseGroup::COL_ID       => 4,
-            WarehouseGroup::COL_NAME => 'Test Group',
+            WarehouseGroup::COL_ID     => 4,
+            WarehouseGroup::COL_NAME   => 'Test Group',
         ]);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
@@ -62,7 +62,7 @@ class ProductDeleteTest extends TestCase
     public function test_writer_cannot_delete_a_product(): void
     {
         $product = Product::create([
-            Product::COL_NAME => 'Protected Product',
+            Product::COL_NAME         => 'Protected Product',
             Product::COL_WG_ID        => 4,
             Product::COL_EK_PREIS     => 10,
             Product::COL_VK_PREIS     => 20,
@@ -79,11 +79,11 @@ class ProductDeleteTest extends TestCase
     public function test_viewer_cannot_delete_a_product(): void
     {
         $product = Product::create([
-            Product::COL_NAME => 'Protected Product',
+            Product::COL_NAME         => 'Protected Product',
             Product::COL_WG_ID        => 4,
             Product::COL_EK_PREIS     => 10,
             Product::COL_VK_PREIS     => 20,
-            Product::COL_BESTAND     => 10,
+            Product::COL_BESTAND      => 10,
             Product::COL_MELDE_BEST   => 5,
         ]);
 
@@ -96,11 +96,11 @@ class ProductDeleteTest extends TestCase
     public function test_delete_commits_and_record_is_gone(): void
     {
         $product = Product::create([
-            Product::COL_NAME => 'To Delete',
+            Product::COL_NAME         => 'To Delete',
             Product::COL_WG_ID        => 4,
             Product::COL_EK_PREIS     => 10,
             Product::COL_VK_PREIS     => 20,
-            Product::COL_BESTAND     => 10,
+            Product::COL_BESTAND      => 10,
             Product::COL_MELDE_BEST   => 5,
         ]);
 
@@ -114,11 +114,11 @@ class ProductDeleteTest extends TestCase
     public function test_transaction_is_atomic_on_delete(): void
     {
         $product = Product::create([
-            Product::COL_NAME => 'To Delete',
+            Product::COL_NAME         => 'To Delete',
             Product::COL_WG_ID        => 4,
             Product::COL_EK_PREIS     => 10,
             Product::COL_VK_PREIS     => 20,
-            Product::COL_BESTAND     => 10,
+            Product::COL_BESTAND      => 10,
             Product::COL_MELDE_BEST   => 5,
         ]);
 

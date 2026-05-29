@@ -41,11 +41,11 @@ class CustomerCreateTest extends TestCase
         $counter++;
 
         return Customer::create(array_merge([
-            'name'    => 'Test Customer ' . $counter,
-            'strasse' => 'Teststrasse ' . $counter,
-            'plz'     => '80331',
-            'ort'     => 'Muenchen',
-            'email'   => "customer{$counter}@example.com",
+            Customer::COL_NAME    => 'Test Customer ' . $counter,
+            Customer::COL_STRASSE => 'Teststrasse ' . $counter,
+            Customer::COL_PLZ     => '80331',
+            Customer::COL_ORT     => 'Muenchen',
+            Customer::COL_EMAIL   => "customer{$counter}@example.com",
         ], $overrides));
     }
 
@@ -55,11 +55,11 @@ class CustomerCreateTest extends TestCase
         $n = self::$payloadCounter;
 
         return array_merge([
-            'name'    => "Customer Payload {$n}",
-            'strasse' => "Payloadstrasse {$n}",
-            'plz'     => '70173',
-            'ort'     => 'Stuttgart',
-            'email'   => "payload{$n}@example.com",
+            Customer::COL_NAME    => "Customer Payload {$n}",
+            Customer::COL_STRASSE => "Payloadstrasse {$n}",
+            Customer::COL_PLZ     => '70173',
+            Customer::COL_ORT     => 'Stuttgart',
+            Customer::COL_EMAIL   => "payload{$n}@example.com",
         ], $overrides);
     }
 
@@ -76,21 +76,21 @@ class CustomerCreateTest extends TestCase
 
         foreach ($users as $role => $user) {
             $payload = $this->validPayload([
-                'email' => "{$role}.create@example.com",
-                'name'  => ucfirst($role) . ' Create',
+                Customer::COL_EMAIL => "{$role}.create@example.com",
+                Customer::COL_NAME  => ucfirst($role) . ' Create',
             ]);
 
             $response = $this->actingAs($user)->postJson('/api/customers', $payload);
 
             $response->assertStatus(201)
-                     ->assertJsonPath('data.name', $payload['name'])
-                     ->assertJsonPath('data.email', $payload['email']);
+                     ->assertJsonPath('data.' .Customer::COL_NAME, $payload[Customer::COL_NAME])
+                     ->assertJsonPath('data.' .Customer::COL_EMAIL, $payload[Customer::COL_EMAIL]);
 
             $this->assertArrayNotHasKey('orders', $response->json());
 
-            $this->assertDatabaseHas('kunden', [
-                'name'  => $payload['name'],
-                'email' => $payload['email'],
+            $this->assertDatabaseHas(Customer::TABLE, [
+                Customer::COL_NAME  => $payload[Customer::COL_NAME],
+                Customer::COL_EMAIL => $payload[Customer::COL_EMAIL],
             ]);
         }
     }
@@ -107,30 +107,30 @@ class CustomerCreateTest extends TestCase
         $response = $this->actingAs($this->writer)->postJson('/api/customers', []);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['name', 'strasse', 'plz', 'ort', 'email']);
+                 ->assertJsonValidationErrors([Customer::COL_NAME, Customer::COL_STRASSE, Customer::COL_PLZ, Customer::COL_ORT, Customer::COL_EMAIL]);
     }
 
     public function test_store_validates_plz_and_email_format(): void
     {
         $payload = $this->validPayload([
-            'plz'   => '1234',        // must be 5 digits
-            'email' => 'not-an-email',
+            Customer::COL_PLZ   => '1234',        // must be 5 digits
+            Customer::COL_EMAIL => 'not-an-email',
         ]);
 
         $response = $this->actingAs($this->writer)->postJson('/api/customers', $payload);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['plz', 'email']);
+                 ->assertJsonValidationErrors([Customer::COL_PLZ, Customer::COL_EMAIL]);
     }
 
     public function test_store_rejects_duplicate_email(): void
     {
-        $existing = $this->createCustomer(['email' => 'already@used.com']);
+        $existing = $this->createCustomer([Customer::COL_EMAIL => 'already@used.com']);
 
-        $payload = $this->validPayload(['email' => $existing->email]);
+        $payload = $this->validPayload([Customer::COL_EMAIL => $existing->email]);
 
         $response = $this->actingAs($this->writer)->postJson('/api/customers', $payload);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['email']);
+        $response->assertStatus(422)->assertJsonValidationErrors([Customer::COL_EMAIL]);
     }
 }

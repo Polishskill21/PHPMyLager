@@ -4,6 +4,7 @@ namespace Tests\Feature\Customers;
 
 use App\Models\Customers\Customer;
 use App\Models\Auth\User;
+use App\Models\Orders\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\ForcesInMemorySqlite;
@@ -34,28 +35,28 @@ class CustomerReadTest extends TestCase
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static int $customerCounter = 0;
+    private static int $customer = 0;
 
     private function createCustomer(array $overrides = []): Customer
     {
-        self::$customerCounter++;
+        self::$customer++;
 
         return Customer::create(array_merge([
-            'name'    => 'Test Customer ' . self::$customerCounter,
-            'strasse' => 'Teststrasse ' . self::$customerCounter,
-            'plz'     => '80331',
-            'ort'     => 'Muenchen',
-            'email'   => 'customer' . self::$customerCounter . '@example.com',
+            Customer::COL_NAME    => 'Test Customer ' . self::$customer,
+            Customer::COL_STRASSE => 'Teststrasse ' . self::$customer,
+            Customer::COL_PLZ     => '80331',
+            Customer::COL_ORT     => 'Muenchen',
+            Customer::COL_EMAIL   => 'customer' . self::$customer . '@example.com',
         ], $overrides));
     }
 
     private function createOrderForCustomer(int $customerId, array $overrides = []): int
     {
-        return DB::table('auftragskoepfe')->insertGetId(array_merge([
-            'aufDat'     => '2026-01-10 08:00:00',
-            'fKdNr'      => $customerId,
-            'aufTermin'  => '2026-01-20 00:00:00',
-        ], $overrides), 'pAufNr');
+        return DB::table(Order::TABLE)->insertGetId(array_merge([
+            Order::COL_AUF_DAT      => '2026-01-10 08:00:00',
+            Order::COL_F_KD_NR      => $customerId,
+            Order::COL_AUF_TERMIN   => '2026-01-20 00:00:00',
+        ], $overrides), Order::COL_ID);
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────────
@@ -70,31 +71,31 @@ class CustomerReadTest extends TestCase
 
     public function test_viewer_can_fetch_all_customers(): void
     {
-        $customerWithOrder    = $this->createCustomer(['email' => 'withorder@example.com']);
-        $customerWithoutOrder = $this->createCustomer(['email' => 'withoutorder@example.com']);
+        $customerWithOrder    = $this->createCustomer([Customer::COL_EMAIL => 'withorder@example.com']);
+        $customerWithoutOrder = $this->createCustomer([Customer::COL_EMAIL => 'withoutorder@example.com']);
         $orderId = $this->createOrderForCustomer($customerWithOrder->pKdNr);
 
         $response = $this->actingAs($this->viewer)->getJson('/api/customers');
 
         $response->assertStatus(200)->assertJsonStructure([
             'data' => [
-                '*' => ['pKdNr', 'name', 'strasse', 'plz', 'ort', 'email'],
+                '*' => [Customer::COL_ID, Customer::COL_NAME, Customer::COL_STRASSE, Customer::COL_PLZ, Customer::COL_ORT, Customer::COL_EMAIL],
             ],
         ]);
 
         $data = collect($response->json('data'));
 
-        $withOrder    = $data->firstWhere('pKdNr', $customerWithOrder->pKdNr);
-        $withoutOrder = $data->firstWhere('pKdNr', $customerWithoutOrder->pKdNr);
+        $withOrder    = $data->firstWhere(Customer::COL_ID, $customerWithOrder->pKdNr);
+        $withoutOrder = $data->firstWhere(Customer::COL_ID, $customerWithoutOrder->pKdNr);
 
         $this->assertNotNull($withOrder);
         $this->assertNotNull($withoutOrder);
         $this->assertArrayNotHasKey('orders', $withOrder);
         $this->assertArrayNotHasKey('orders', $withoutOrder);
 
-        $this->assertDatabaseHas('auftragskoepfe', [
-            'pAufNr' => $orderId,
-            'fKdNr'  => $customerWithOrder->pKdNr,
+        $this->assertDatabaseHas(Order::TABLE, [
+            Order::COL_ID => $orderId,
+            Order::COL_F_KD_NR  => $customerWithOrder->pKdNr,
         ]);
     }
 
@@ -107,7 +108,7 @@ class CustomerReadTest extends TestCase
                          ->getJson("/api/customers/{$customer->pKdNr}");
 
         $response->assertStatus(200)
-                 ->assertJsonPath('data.pKdNr', $customer->pKdNr);
+                 ->assertJsonPath('data.' .Customer::COL_ID, $customer->pKdNr);
 
         $this->assertArrayNotHasKey('orders', $response->json());
     }

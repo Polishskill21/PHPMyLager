@@ -40,11 +40,11 @@ class CustomerUpdateTest extends TestCase
         self::$counter++;
 
         return Customer::create(array_merge([
-            'name'    => 'Test Customer ' . self::$counter,
-            'strasse' => 'Teststrasse ' . self::$counter,
-            'plz'     => '80331',
-            'ort'     => 'Muenchen',
-            'email'   => 'customer' . self::$counter . '@example.com',
+            Customer::COL_NAME    => 'Test Customer ' . self::$counter,
+            Customer::COL_STRASSE => 'Teststrasse ' . self::$counter,
+            Customer::COL_PLZ     => '80331',
+            Customer::COL_ORT     => 'Muenchen',
+            Customer::COL_EMAIL   => 'customer' . self::$counter . '@example.com',
         ], $overrides));
     }
 
@@ -53,11 +53,11 @@ class CustomerUpdateTest extends TestCase
         self::$counter++;
 
         return array_merge([
-            'name'    => 'Customer Payload ' . self::$counter,
-            'strasse' => 'Payloadstrasse ' . self::$counter,
-            'plz'     => '70173',
-            'ort'     => 'Stuttgart',
-            'email'   => 'payload' . self::$counter . '@example.com',
+            Customer::COL_NAME    => 'Customer Payload ' . self::$counter,
+            Customer::COL_STRASSE => 'Payloadstrasse ' . self::$counter,
+            Customer::COL_PLZ     => '70173',
+            Customer::COL_ORT     => 'Stuttgart',
+            Customer::COL_EMAIL   => 'payload' . self::$counter . '@example.com',
         ], $overrides);
     }
 
@@ -74,31 +74,31 @@ class CustomerUpdateTest extends TestCase
         $users = ['admin' => $this->admin, 'writer' => $this->writer];
 
         foreach ($users as $role => $user) {
-            $customer = $this->createCustomer(['email' => "{$role}.update.before@example.com"]);
+            $customer = $this->createCustomer([Customer::COL_EMAIL => "{$role}.update.before@example.com"]);
 
             $payload = $this->validPayload([
-                'name'    => ucfirst($role) . ' Updated',
-                'strasse' => 'Updated Street 12',
-                'plz'     => '80333',
-                'ort'     => 'Augsburg',
-                'email'   => "{$role}.update.after@example.com",
+                Customer::COL_NAME    => ucfirst($role) . ' Updated',
+                Customer::COL_STRASSE => 'Updated Street 12',
+                Customer::COL_PLZ     => '80333',
+                Customer::COL_ORT     => 'Augsburg',
+                Customer::COL_EMAIL   => "{$role}.update.after@example.com",
             ]);
 
             $response = $this->actingAs($user)
                              ->putJson("/api/customers/{$customer->pKdNr}", $payload);
 
             $response->assertStatus(200)
-                     ->assertJsonPath('data.pKdNr', $customer->pKdNr)
-                     ->assertJsonPath('data.name', $payload['name'])
-                     ->assertJsonPath('data.email', $payload['email']);
+                     ->assertJsonPath('data.' .Customer::COL_ID, $customer->pKdNr)
+                     ->assertJsonPath('data.' .Customer::COL_NAME, $payload[Customer::COL_NAME])
+                     ->assertJsonPath('data.' .Customer::COL_EMAIL, $payload[Customer::COL_EMAIL]);
 
-            $this->assertDatabaseHas('kunden', [
-                'pKdNr'   => $customer->pKdNr,
-                'name'    => $payload['name'],
-                'strasse' => $payload['strasse'],
-                'plz'     => (int) $payload['plz'],
-                'ort'     => $payload['ort'],
-                'email'   => $payload['email'],
+            $this->assertDatabaseHas(Customer::TABLE, [
+                Customer::COL_ID   => $customer->pKdNr,
+                Customer::COL_NAME    => $payload[Customer::COL_NAME],
+                Customer::COL_STRASSE => $payload[Customer::COL_STRASSE],
+                Customer::COL_PLZ     => (int) $payload[Customer::COL_PLZ],
+                Customer::COL_ORT     => $payload[Customer::COL_ORT],
+                Customer::COL_EMAIL   => $payload[Customer::COL_EMAIL],
             ]);
         }
     }
@@ -109,18 +109,18 @@ class CustomerUpdateTest extends TestCase
 
         $this->actingAs($this->viewer)
              ->putJson("/api/customers/{$customer->pKdNr}", $this->validPayload([
-                 'email' => 'viewer.update@example.com',
+                 Customer::COL_EMAIL => 'viewer.update@example.com',
              ]))
              ->assertStatus(403);
     }
 
     public function test_update_allows_same_email_for_the_same_customer(): void
     {
-        $customer = $this->createCustomer(['email' => 'same@email.com']);
+        $customer = $this->createCustomer([Customer::COL_EMAIL => 'same@email.com']);
 
         $payload = $this->validPayload([
-            'name'  => 'Same Email Still Valid',
-            'email' => 'same@email.com',
+            Customer::COL_NAME  => 'Same Email Still Valid',
+            Customer::COL_EMAIL => 'same@email.com',
         ]);
 
         $response = $this->actingAs($this->writer)
@@ -128,30 +128,30 @@ class CustomerUpdateTest extends TestCase
 
         $response->assertStatus(200)->assertJsonPath('data.email', 'same@email.com');
 
-        $this->assertDatabaseHas('kunden', [
-            'pKdNr' => $customer->pKdNr,
-            'name'  => 'Same Email Still Valid',
-            'email' => 'same@email.com',
+        $this->assertDatabaseHas(Customer::TABLE, [
+            Customer::COL_ID => $customer->pKdNr,
+            Customer::COL_NAME  => 'Same Email Still Valid',
+            Customer::COL_EMAIL => 'same@email.com',
         ]);
     }
 
     public function test_update_rejects_email_used_by_another_customer(): void
     {
-        $customerA = $this->createCustomer(['email' => 'customer.a@example.com']);
-        $customerB = $this->createCustomer(['email' => 'customer.b@example.com']);
+        $customerA = $this->createCustomer([Customer::COL_EMAIL => 'customer.a@example.com']);
+        $customerB = $this->createCustomer([Customer::COL_EMAIL => 'customer.b@example.com']);
 
         $payload = $this->validPayload([
-            'name'    => $customerA->name,
-            'strasse' => $customerA->strasse,
-            'plz'     => (string) $customerA->plz,
-            'ort'     => $customerA->ort,
-            'email'   => $customerB->email,
+            Customer::COL_NAME    => $customerA->name,
+            Customer::COL_STRASSE => $customerA->strasse,
+            Customer::COL_PLZ     => (string) $customerA->plz,
+            Customer::COL_ORT     => $customerA->ort,
+            Customer::COL_EMAIL   => $customerB->email,
         ]);
 
         $response = $this->actingAs($this->writer)
                          ->putJson("/api/customers/{$customerA->pKdNr}", $payload);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['email']);
+        $response->assertStatus(422)->assertJsonValidationErrors([Customer::COL_EMAIL]);
     }
 
     public function test_update_validates_required_fields_and_plz_format(): void
@@ -159,14 +159,14 @@ class CustomerUpdateTest extends TestCase
         $customer = $this->createCustomer();
 
         $payload = $this->validPayload([
-            'name' => '',
-            'plz'  => '12',
+            Customer::COL_NAME => '',
+            Customer::COL_PLZ  => '12',
         ]);
 
         $response = $this->actingAs($this->writer)
                          ->putJson("/api/customers/{$customer->pKdNr}", $payload);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['name', 'plz']);
+        $response->assertStatus(422)->assertJsonValidationErrors([Customer::COL_NAME, Customer::COL_PLZ]);
     }
 
     public function test_updating_non_existent_customer_returns_404(): void

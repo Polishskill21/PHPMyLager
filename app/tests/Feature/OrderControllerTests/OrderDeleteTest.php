@@ -3,8 +3,11 @@
 namespace Tests\Feature\Orders;
 
 use App\Models\Products\Product;
+use App\Models\Orders\Order;
+use App\Models\Orders\OrderItem;
 use App\Models\WarehouseGroups\WarehouseGroup;
 use App\Models\Auth\User;
+use App\Models\Customers\Customer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\ForcesInMemorySqlite;
@@ -28,7 +31,7 @@ class OrderDeleteTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert([WarehouseGroup::COL_ID => 1, 'warengruppe' => 'Test Group']);
+        DB::table(WarehouseGroup::TABLE)->insert([WarehouseGroup::COL_ID => 1, WarehouseGroup::COL_NAME => 'Test Group']);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
         $this->writer = User::factory()->create(['role' => 'writer']);
@@ -51,13 +54,13 @@ class OrderDeleteTest extends TestCase
 
     private function createCustomer(array $overrides = []): int
     {
-        return DB::table('kunden')->insertGetId(array_merge([
-            'name'    => 'Test Customer',
-            'strasse' => 'Teststraße 1',
-            'plz'     => 70000,
-            'ort'     => 'Stuttgart',
-            'email'   => 'test@example.com',
-        ], $overrides), 'pKdNr');
+        return DB::table(Customer::TABLE)->insertGetId(array_merge([
+            Customer::COL_NAME    => 'Test Customer',
+            Customer::COL_STRASSE => 'Teststraße 1',
+            Customer::COL_PLZ     => 70000,
+            Customer::COL_ORT     => 'Stuttgart',
+            Customer::COL_EMAIL   => 'test@example.com',
+        ], $overrides), Customer::COL_ID);
     }
 
     private function createOrderViaApi(array $overrides = []): array
@@ -66,11 +69,11 @@ class OrderDeleteTest extends TestCase
         $product = $this->createProduct();
 
         $payload = array_merge([
-            'aufDat'    => '2024-01-15 09:00:00',
-            'fKdNr'     => $kdNr,
-            'aufTermin' => '2024-02-01 00:00:00',
+            Order::COL_AUF_DAT     => '2024-01-15 09:00:00',
+            Order::COL_F_KD_NR     => $kdNr,
+            Order::COL_AUF_TERMIN  => '2024-02-01 00:00:00',
             'items'     => [
-                ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 5],
+                [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 5],
             ],
         ], $overrides);
 
@@ -84,20 +87,20 @@ class OrderDeleteTest extends TestCase
     public function test_admin_can_delete_an_order(): void
     {
         $data  = $this->createOrderViaApi();
-        $aufNr = $data['order_info']['pAufNr'];
+        $aufNr = $data['order_info'][Order::COL_ID];
 
         $this->actingAs($this->admin)
              ->deleteJson("/api/orders/{$aufNr}")
              ->assertStatus(204);
 
-        $this->assertDatabaseMissing('auftragskoepfe',     ['pAufNr' => $aufNr]);
-        $this->assertDatabaseMissing('auftragspositionen', ['fAufNr' => $aufNr]);
+        $this->assertDatabaseMissing(Order::TABLE,     [Order::COL_ID => $aufNr]);
+        $this->assertDatabaseMissing(OrderItem::TABLE, [OrderItem::COL_F_ARTIKEL_NR => $aufNr]);
     }
 
     public function test_writer_cannot_delete_an_order(): void
     {
         $data  = $this->createOrderViaApi();
-        $aufNr = $data['order_info']['pAufNr'];
+        $aufNr = $data['order_info'][Order::COL_ID];
 
         $this->actingAs($this->writer)
              ->deleteJson("/api/orders/{$aufNr}")
@@ -107,7 +110,7 @@ class OrderDeleteTest extends TestCase
     public function test_viewer_cannot_delete_an_order(): void
     {
         $data  = $this->createOrderViaApi();
-        $aufNr = $data['order_info']['pAufNr'];
+        $aufNr = $data['order_info'][Order::COL_ID];
 
         $this->actingAs($this->viewer)
              ->deleteJson("/api/orders/{$aufNr}")
@@ -131,22 +134,22 @@ class OrderDeleteTest extends TestCase
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
-                               'aufDat'    => '2024-03-01 08:00:00',
-                               'fKdNr'     => $kdNr,
-                               'aufTermin' => '2024-03-15 00:00:00',
+                               Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                               Order::COL_F_KD_NR     => $kdNr,
+                               Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                                'items'     => [
-                                   ['fArtikelNr' => $productA->pArtikelNr, 'aufMenge' => 20],
-                                   ['fArtikelNr' => $productB->pArtikelNr, 'aufMenge' => 30],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $productA->pArtikelNr, OrderItem::COL_AUF_MENGE => 20],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $productB->pArtikelNr, OrderItem::COL_AUF_MENGE => 30],
                                ],
                            ]);
 
-        $aufNr = $createResp->json('data.order_info.pAufNr');
+        $aufNr = $createResp->json('data.order_info.' .Order::COL_ID);
 
         $this->actingAs($this->admin)
              ->deleteJson("/api/orders/{$aufNr}")
              ->assertStatus(204);
 
-        $this->assertDatabaseHas('artikel', [Product::COL_ID => $productA->pArtikelNr, Product::COL_BESTAND => 50]);
-        $this->assertDatabaseHas('artikel', [Product::COL_ID => $productB->pArtikelNr, Product::COL_BESTAND => 80]);
+        $this->assertDatabaseHas(Product::TABLE, [Product::COL_ID => $productA->pArtikelNr, Product::COL_BESTAND => 50]);
+        $this->assertDatabaseHas(Product::TABLE, [Product::COL_ID => $productB->pArtikelNr, Product::COL_BESTAND => 80]);
     }
 }

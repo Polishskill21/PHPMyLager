@@ -4,6 +4,8 @@ namespace Tests\Feature\Customers;
 
 use App\Models\Customers\Customer;
 use App\Models\Auth\User;
+use App\Models\Orders\Order;
+use App\Models\Orders\OrderItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\ForcesInMemorySqlite;
@@ -41,21 +43,21 @@ class CustomerDeleteTest extends TestCase
         self::$counter++;
 
         return Customer::create(array_merge([
-            'name'    => 'Test Customer ' . self::$counter,
-            'strasse' => 'Teststrasse ' . self::$counter,
-            'plz'     => '80331',
-            'ort'     => 'Muenchen',
-            'email'   => 'customer' . self::$counter . '@example.com',
+            Customer::COL_NAME    => 'Test Customer ' . self::$counter,
+            Customer::COL_STRASSE => 'Teststrasse ' . self::$counter,
+            Customer::COL_PLZ     => '80331',
+            Customer::COL_ORT     => 'Muenchen',
+            Customer::COL_EMAIL   => 'customer' . self::$counter . '@example.com',
         ], $overrides));
     }
 
     private function createOrderForCustomer(int $customerId, array $overrides = []): int
     {
-        return DB::table('auftragskoepfe')->insertGetId(array_merge([
-            'aufDat'    => '2026-01-10 08:00:00',
-            'fKdNr'     => $customerId,
-            'aufTermin' => '2026-01-20 00:00:00',
-        ], $overrides), 'pAufNr');
+        return DB::table(Order::TABLE)->insertGetId(array_merge([
+            Order::COL_AUF_DAT     => '2026-01-10 08:00:00',
+            Order::COL_F_KD_NR     => $customerId,
+            Order::COL_AUF_TERMIN  => '2026-01-20 00:00:00',
+        ], $overrides), Order::COL_ID);
     }
 
     private function validPayload(array $overrides = []): array
@@ -63,11 +65,11 @@ class CustomerDeleteTest extends TestCase
         self::$counter++;
 
         return array_merge([
-            'name'    => 'Customer Payload ' . self::$counter,
-            'strasse' => 'Payloadstrasse ' . self::$counter,
-            'plz'     => '70173',
-            'ort'     => 'Stuttgart',
-            'email'   => 'payload' . self::$counter . '@example.com',
+            Customer::COL_NAME    => 'Customer Payload ' . self::$counter,
+            Customer::COL_STRASSE => 'Payloadstrasse ' . self::$counter,
+            Customer::COL_PLZ     => '70173',
+            Customer::COL_ORT     => 'Stuttgart',
+            Customer::COL_EMAIL   => 'payload' . self::$counter . '@example.com',
         ], $overrides);
     }
 
@@ -81,18 +83,18 @@ class CustomerDeleteTest extends TestCase
 
     public function test_admin_can_soft_delete_customer(): void
     {
-        $customer = $this->createCustomer(['email' => 'admin.delete@example.com']);
+        $customer = $this->createCustomer([Customer::COL_EMAIL => 'admin.delete@example.com']);
 
         $response = $this->actingAs($this->admin)
                          ->deleteJson("/api/customers/{$customer->pKdNr}");
 
         $response->assertStatus(204);
-        $this->assertSoftDeleted('kunden', ['pKdNr' => $customer->pKdNr]);
+        $this->assertSoftDeleted(Customer::TABLE, [Customer::COL_ID => $customer->pKdNr]);
     }
 
     public function test_writer_cannot_soft_delete_customer(): void
     {
-        $customer = $this->createCustomer(['email' => 'writer.delete@example.com']);
+        $customer = $this->createCustomer([Customer::COL_EMAIL => 'writer.delete@example.com']);
 
         $this->actingAs($this->writer)
              ->deleteJson("/api/customers/{$customer->pKdNr}")
@@ -101,7 +103,7 @@ class CustomerDeleteTest extends TestCase
 
     public function test_viewer_cannot_soft_delete_customer(): void
     {
-        $customer = $this->createCustomer(['email' => 'viewer.delete@example.com']);
+        $customer = $this->createCustomer([Customer::COL_EMAIL => 'viewer.delete@example.com']);
 
         $this->actingAs($this->viewer)
              ->deleteJson("/api/customers/{$customer->pKdNr}")
@@ -117,26 +119,26 @@ class CustomerDeleteTest extends TestCase
 
     public function test_soft_deleted_customer_is_hidden_but_orders_remain_intact(): void
     {
-        $customer = $this->createCustomer(['email' => 'deleted.customer@example.com']);
+        $customer = $this->createCustomer([Customer::COL_EMAIL => 'deleted.customer@example.com']);
         $orderId  = $this->createOrderForCustomer($customer->pKdNr);
 
         $this->actingAs($this->admin)
              ->deleteJson("/api/customers/{$customer->pKdNr}")
              ->assertStatus(204);
 
-        $this->assertSoftDeleted('kunden', ['pKdNr' => $customer->pKdNr]);
+        $this->assertSoftDeleted(Customer::TABLE, [Customer::COL_ID => $customer->pKdNr]);
 
         // Related orders must survive the soft-delete
-        $this->assertDatabaseHas('auftragskoepfe', [
-            'pAufNr' => $orderId,
-            'fKdNr'  => $customer->pKdNr,
+        $this->assertDatabaseHas(Order::TABLE, [
+            Order::COL_ID       => $orderId,
+            Order::COL_F_KD_NR  => $customer->pKdNr,
         ]);
 
         // Deleted customer must not appear in index
         $indexResponse = $this->actingAs($this->viewer)->getJson('/api/customers');
         $indexResponse->assertStatus(200);
 
-        $ids = collect($indexResponse->json('data'))->pluck('pKdNr');
+        $ids = collect($indexResponse->json('data'))->pluck(Customer::COL_ID);
         $this->assertFalse($ids->contains($customer->pKdNr));
 
         // Nor should it be retrievable by ID
@@ -153,7 +155,7 @@ class CustomerDeleteTest extends TestCase
              ->deleteJson("/api/customers/{$customer->pKdNr}")
              ->assertStatus(204);
 
-        $payload = $this->validPayload(['email' => 'after.delete@example.com']);
+        $payload = $this->validPayload([Customer::COL_EMAIL => 'after.delete@example.com']);
 
         $this->actingAs($this->admin)
              ->putJson("/api/customers/{$customer->pKdNr}", $payload)

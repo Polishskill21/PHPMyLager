@@ -3,8 +3,11 @@
 namespace Tests\Feature\Orders;
 
 use App\Models\Products\Product;
+use App\Models\Customers\Customer;
+use App\Models\Orders\Order;
 use App\Models\WarehouseGroups\WarehouseGroup;
 use App\Models\Auth\User;
+use App\Models\Orders\OrderItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\ForcesInMemorySqlite;
@@ -28,7 +31,7 @@ class OrderUpdateTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert([WarehouseGroup::COL_ID => 1, 'warengruppe' => 'Test Group']);
+        DB::table(WarehouseGroup::TABLE)->insert([WarehouseGroup::COL_ID => 1, WarehouseGroup::COL_NAME => 'Test Group']);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
         $this->writer = User::factory()->create(['role' => 'writer']);
@@ -51,13 +54,13 @@ class OrderUpdateTest extends TestCase
 
     private function createCustomer(array $overrides = []): int
     {
-        return DB::table('kunden')->insertGetId(array_merge([
-            'name'    => 'Test Customer',
-            'strasse' => 'Teststraße 1',
-            'plz'     => 70000,
-            'ort'     => 'Stuttgart',
-            'email'   => 'test@example.com',
-        ], $overrides), 'pKdNr');
+        return DB::table(Customer::TABLE)->insertGetId(array_merge([
+            Customer::COL_NAME    => 'Test Customer',
+            Customer::COL_STRASSE => 'Teststraße 1',
+            Customer::COL_PLZ     => 70000,
+            Customer::COL_ORT     => 'Stuttgart',
+            Customer::COL_EMAIL   => 'test@example.com',
+        ], $overrides), Customer::COL_ID);
     }
 
     private function createOrderViaApi(array $overrides = []): array
@@ -66,11 +69,11 @@ class OrderUpdateTest extends TestCase
         $product = $this->createProduct();
 
         $payload = array_merge([
-            'aufDat'    => '2024-01-15 09:00:00',
-            'fKdNr'     => $kdNr,
-            'aufTermin' => '2024-02-01 00:00:00',
+            Order::COL_AUF_DAT     => '2024-01-15 09:00:00',
+            Order::COL_F_KD_NR     => $kdNr,
+            Order::COL_AUF_TERMIN  => '2024-02-01 00:00:00',
             'items'     => [
-                ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 5],
+                [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 5],
             ],
         ], $overrides);
 
@@ -84,40 +87,40 @@ class OrderUpdateTest extends TestCase
     public function test_admin_can_update_an_order(): void
     {
         $data    = $this->createOrderViaApi();
-        $aufNr   = $data['order_info']['pAufNr'];
-        $posNr   = $data['items'][0]['pAufPosNr'];
-        $artNr   = $data['items'][0]['fArtikelNr'];
-        $newKdNr = $this->createCustomer(['email' => 'other@example.com']);
+        $aufNr   = $data['order_info'][Order::COL_ID ];
+        $posNr   = $data['items'][0][OrderItem::COL_ID];
+        $artNr   = $data['items'][0][OrderItem::COL_F_ARTIKEL_NR];
+        $newKdNr = $this->createCustomer([Customer::COL_EMAIL => 'other@example.com']);
 
         $response = $this->actingAs($this->admin)
                          ->putJson("/api/orders/{$aufNr}", [
-                             'aufDat'    => '2024-04-01 09:00:00',
-                             'fKdNr'     => $newKdNr,
-                             'aufTermin' => '2024-04-15 00:00:00',
+                             Order::COL_AUF_DAT     => '2024-04-01 09:00:00',
+                             Order::COL_F_KD_NR     => $newKdNr,
+                             Order::COL_AUF_TERMIN  => '2024-04-15 00:00:00',
                              'items'     => [
-                                 ['pAufPosNr' => $posNr, 'fArtikelNr' => $artNr, 'aufMenge' => 5],
+                                 [OrderItem::COL_ID => $posNr, OrderItem::COL_F_ARTIKEL_NR => $artNr, OrderItem::COL_AUF_MENGE => 5],
                              ],
                          ]);
 
         $response->assertStatus(200)
-                 ->assertJsonPath('data.order_info.fKdNr', $newKdNr);
+                 ->assertJsonPath('data.order_info.' .Order::COL_F_KD_NR, $newKdNr);
     }
 
     public function test_writer_can_update_an_order(): void
     {
         $data  = $this->createOrderViaApi();
-        $aufNr = $data['order_info']['pAufNr'];
-        $posNr = $data['items'][0]['pAufPosNr'];
-        $artNr = $data['items'][0]['fArtikelNr'];
-        $kdNr  = $data['order_info']['fKdNr'];
+        $aufNr = $data['order_info'][Order::COL_ID ];
+        $posNr = $data['items'][0][OrderItem::COL_ID];
+        $artNr = $data['items'][0][OrderItem::COL_F_ARTIKEL_NR];
+        $kdNr  = $data['order_info'][Order::COL_F_KD_NR];
 
         $this->actingAs($this->writer)
              ->putJson("/api/orders/{$aufNr}", [
-                 'aufDat'    => '2024-04-01 09:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-04-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-04-01 09:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-04-15 00:00:00',
                  'items'     => [
-                     ['pAufPosNr' => $posNr, 'fArtikelNr' => $artNr, 'aufMenge' => 5],
+                     [OrderItem::COL_ID => $posNr, OrderItem::COL_F_ARTIKEL_NR => $artNr, OrderItem::COL_AUF_MENGE => 5],
                  ],
              ])
              ->assertStatus(200);
@@ -126,13 +129,13 @@ class OrderUpdateTest extends TestCase
     public function test_viewer_cannot_update_an_order(): void
     {
         $data  = $this->createOrderViaApi();
-        $aufNr = $data['order_info']['pAufNr'];
+        $aufNr = $data['order_info'][Order::COL_ID ];
 
         $this->actingAs($this->viewer)
              ->putJson("/api/orders/{$aufNr}", [
-                 'aufDat'    => '2024-04-01 09:00:00',
-                 'fKdNr'     => $data['order_info']['fKdNr'],
-                 'aufTermin' => '2024-04-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-04-01 09:00:00',
+                 Order::COL_F_KD_NR     => $data['order_info'][Order::COL_F_KD_NR],
+                 Order::COL_AUF_TERMIN  => '2024-04-15 00:00:00',
                  'items'     => [],
              ])
              ->assertStatus(403);
@@ -147,33 +150,33 @@ class OrderUpdateTest extends TestCase
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
-                               'aufDat'    => '2024-03-01 08:00:00',
-                               'fKdNr'     => $kdNr,
-                               'aufTermin' => '2024-03-15 00:00:00',
+                               Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                               Order::COL_F_KD_NR     => $kdNr,
+                               Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                                'items'     => [
-                                   ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 10],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 10],
                                ],
                            ]);
 
-        $aufNr = $createResp->json('data.order_info.pAufNr');
-        $posNr = $createResp->json('data.items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.' .Order::COL_ID);
+        $posNr = $createResp->json('data.items.0.' .OrderItem::COL_ID);
 
         // Increase from 10 → 25; diff = +15 should be deducted
         $this->actingAs($this->admin)
              ->putJson("/api/orders/{$aufNr}", [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['pAufPosNr' => $posNr, 'fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 25],
+                     [OrderItem::COL_ID => $posNr, OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 25],
                  ],
              ])
              ->assertStatus(200)
              ->assertJsonPath('data.order_total', 25);
 
-        $this->assertDatabaseHas('artikel', [
-            Product::COL_ID => $product->pArtikelNr,
-            Product::COL_BESTAND    => 75, // 100 − 10 (create) − 15 (update diff)
+        $this->assertDatabaseHas(Product::TABLE, [
+            Product::COL_ID        => $product->pArtikelNr,
+            Product::COL_BESTAND   => 75, // 100 − 10 (create) − 15 (update diff)
         ]);
     }
 
@@ -186,32 +189,32 @@ class OrderUpdateTest extends TestCase
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
-                               'aufDat'    => '2024-03-01 08:00:00',
-                               'fKdNr'     => $kdNr,
-                               'aufTermin' => '2024-03-15 00:00:00',
+                               Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                               Order::COL_F_KD_NR     => $kdNr,
+                               Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                                'items'     => [
-                                   ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 20],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 20],
                                ],
                            ]);
 
-        $aufNr = $createResp->json('data.order_info.pAufNr');
-        $posNr = $createResp->json('data.items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.' .Order::COL_ID);
+        $posNr = $createResp->json('data.items.0.' .OrderItem::COL_ID);
 
         // Decrease from 20 → 8; diff = −12 should be returned
         $this->actingAs($this->admin)
              ->putJson("/api/orders/{$aufNr}", [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['pAufPosNr' => $posNr, 'fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 8],
+                     [OrderItem::COL_ID => $posNr, OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 8],
                  ],
              ])
              ->assertStatus(200);
 
-        $this->assertDatabaseHas('artikel', [
-            Product::COL_ID => $product->pArtikelNr,
-            Product::COL_BESTAND    => 92, // 100 − 20 + 12
+        $this->assertDatabaseHas(Product::TABLE, [
+            Product::COL_ID        => $product->pArtikelNr,
+            Product::COL_BESTAND   => 92, // 100 − 20 + 12
         ]);
     }
 
@@ -225,39 +228,39 @@ class OrderUpdateTest extends TestCase
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
-                               'aufDat'    => '2024-03-01 08:00:00',
-                               'fKdNr'     => $kdNr,
-                               'aufTermin' => '2024-03-15 00:00:00',
+                               Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                               Order::COL_F_KD_NR     => $kdNr,
+                               Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                                'items'     => [
-                                   ['fArtikelNr' => $productA->pArtikelNr, 'aufMenge' => 5],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $productA->pArtikelNr, OrderItem::COL_AUF_MENGE => 5],
                                ],
                            ]);
 
-        $aufNr = $createResp->json('data.order_info.pAufNr');
-        $posNr = $createResp->json('data.items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.' .Order::COL_ID);
+        $posNr = $createResp->json('data.items.0.' .OrderItem::COL_ID);
 
         $updateResp = $this->actingAs($this->admin)
                            ->putJson("/api/orders/{$aufNr}", [
-                               'aufDat'    => '2024-03-01 08:00:00',
-                               'fKdNr'     => $kdNr,
-                               'aufTermin' => '2024-03-15 00:00:00',
+                               Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                               Order::COL_F_KD_NR     => $kdNr,
+                               Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                                'items'     => [
-                                   ['pAufPosNr' => $posNr, 'fArtikelNr' => $productA->pArtikelNr, 'aufMenge' => 5],
+                                   [OrderItem::COL_ID => $posNr, OrderItem::COL_F_ARTIKEL_NR => $productA->pArtikelNr, OrderItem::COL_AUF_MENGE => 5],
                                    // New item — no pAufPosNr
-                                   ['fArtikelNr' => $productB->pArtikelNr, 'aufMenge' => 4],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $productB->pArtikelNr, OrderItem::COL_AUF_MENGE => 4],
                                ],
                            ]);
 
         $updateResp->assertStatus(200)->assertJsonCount(2, 'data.items');
 
         $newItem = collect($updateResp->json('data.items'))
-            ->firstWhere('fArtikelNr', $productB->pArtikelNr);
+            ->firstWhere(OrderItem::COL_F_ARTIKEL_NR, $productB->pArtikelNr);
 
-        $this->assertEquals(20.00, $newItem['kaufPreis']);
+        $this->assertEquals(20.00, $newItem[OrderItem::COL_KAUF_PREIS]);
 
-        $this->assertDatabaseHas('artikel', [
-            Product::COL_ID => $productB->pArtikelNr,
-            Product::COL_BESTAND    => 46, // 50 − 4
+        $this->assertDatabaseHas(Product::TABLE, [
+            Product::COL_ID        => $productB->pArtikelNr,
+            Product::COL_BESTAND   => 46, // 50 − 4
         ]);
     }
 
@@ -271,42 +274,42 @@ class OrderUpdateTest extends TestCase
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
-                               'aufDat'    => '2024-03-01 08:00:00',
-                               'fKdNr'     => $kdNr,
-                               'aufTermin' => '2024-03-15 00:00:00',
+                               Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                               Order::COL_F_KD_NR     => $kdNr,
+                               Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                                'items'     => [
-                                   ['fArtikelNr' => $productA->pArtikelNr, 'aufMenge' => 10],
-                                   ['fArtikelNr' => $productB->pArtikelNr, 'aufMenge' => 15],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $productA->pArtikelNr, OrderItem::COL_AUF_MENGE => 10],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $productB->pArtikelNr, OrderItem::COL_AUF_MENGE => 15],
                                ],
                            ]);
 
-        $aufNr  = $createResp->json('data.order_info.pAufNr');
+        $aufNr  = $createResp->json('data.order_info.' .Order::COL_ID);
         $posNrA = collect($createResp->json('data.items'))
-            ->firstWhere('fArtikelNr', $productA->pArtikelNr)['pAufPosNr'];
+            ->firstWhere(OrderItem::COL_F_ARTIKEL_NR, $productA->pArtikelNr)[OrderItem::COL_ID];
 
         // Send only product A — product B is intentionally omitted
         $updateResp = $this->actingAs($this->admin)
                            ->putJson("/api/orders/{$aufNr}", [
-                               'aufDat'    => '2024-03-01 08:00:00',
-                               'fKdNr'     => $kdNr,
-                               'aufTermin' => '2024-03-15 00:00:00',
+                               Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                               Order::COL_F_KD_NR     => $kdNr,
+                               Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                                'items'     => [
-                                   ['pAufPosNr' => $posNrA, 'fArtikelNr' => $productA->pArtikelNr, 'aufMenge' => 10],
+                                   [OrderItem::COL_ID => $posNrA, OrderItem::COL_F_ARTIKEL_NR => $productA->pArtikelNr, OrderItem::COL_AUF_MENGE => 10],
                                ],
                            ]);
 
         $updateResp->assertStatus(200)->assertJsonCount(1, 'data.items');
 
         // Product B stock fully restored (15 returned)
-        $this->assertDatabaseHas('artikel', [
-            Product::COL_ID => $productB->pArtikelNr,
-            Product::COL_BESTAND    => 50,
+        $this->assertDatabaseHas(Product::TABLE, [
+            Product::COL_ID        => $productB->pArtikelNr,
+            Product::COL_BESTAND   => 50,
         ]);
 
         // The position row for B must no longer exist
-        $this->assertDatabaseMissing('auftragspositionen', [
-            'fAufNr'     => $aufNr,
-            'fArtikelNr' => $productB->pArtikelNr,
+        $this->assertDatabaseMissing(OrderItem::TABLE, [
+            OrderItem::COL_F_AUF_NR     => $aufNr,
+            OrderItem::COL_F_ARTIKEL_NR => $productB->pArtikelNr,
         ]);
     }
 
@@ -320,25 +323,25 @@ class OrderUpdateTest extends TestCase
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
-                               'aufDat'    => '2024-03-01 08:00:00',
-                               'fKdNr'     => $kdNr,
-                               'aufTermin' => '2024-03-15 00:00:00',
+                               Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                               Order::COL_F_KD_NR     => $kdNr,
+                               Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                                'items'     => [
-                                   ['fArtikelNr' => $productA->pArtikelNr, 'aufMenge' => 5],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $productA->pArtikelNr, OrderItem::COL_AUF_MENGE => 5],
                                ],
                            ]);
 
-        $aufNr = $createResp->json('data.order_info.pAufNr');
-        $posNr = $createResp->json('data.items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.' .Order::COL_ID);
+        $posNr = $createResp->json('data.items.0.' .OrderItem::COL_ID);
 
         // Try to silently swap product A → B on the same position
         $this->actingAs($this->admin)
              ->putJson("/api/orders/{$aufNr}", [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['pAufPosNr' => $posNr, 'fArtikelNr' => $productB->pArtikelNr, 'aufMenge' => 5],
+                     [OrderItem::COL_ID => $posNr, OrderItem::COL_F_ARTIKEL_NR => $productB->pArtikelNr, OrderItem::COL_AUF_MENGE => 5],
                  ],
              ])
              ->assertStatus(422)
@@ -354,32 +357,32 @@ class OrderUpdateTest extends TestCase
 
         $createResp = $this->actingAs($this->admin)
                            ->postJson('/api/orders', [
-                               'aufDat'    => '2024-03-01 08:00:00',
-                               'fKdNr'     => $kdNr,
-                               'aufTermin' => '2024-03-15 00:00:00',
+                               Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                               Order::COL_F_KD_NR     => $kdNr,
+                               Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                                'items'     => [
-                                   ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 5],
+                                   [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 5],
                                ],
                            ]);
 
-        $aufNr = $createResp->json('data.order_info.pAufNr');
-        $posNr = $createResp->json('data.items.0.pAufPosNr');
+        $aufNr = $createResp->json('data.order_info.' .Order::COL_ID);
+        $posNr = $createResp->json('data.items.0.' .OrderItem::COL_ID);
 
         // bestand is now 5; requesting 50 (diff = +45) must fail
         $this->actingAs($this->admin)
              ->putJson("/api/orders/{$aufNr}", [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['pAufPosNr' => $posNr, 'fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 50],
+                     [OrderItem::COL_ID => $posNr, OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 50],
                  ],
              ])
              ->assertStatus(422)
              ->assertJsonValidationErrors(['items']);
 
         // Stock must remain unchanged after the failed transaction
-        $this->assertDatabaseHas('artikel', [
+        $this->assertDatabaseHas(Product::TABLE, [
             Product::COL_ID        => $product->pArtikelNr,
             Product::COL_BESTAND   => 5,
         ]);

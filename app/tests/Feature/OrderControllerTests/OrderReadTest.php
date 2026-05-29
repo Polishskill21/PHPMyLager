@@ -4,7 +4,10 @@ namespace Tests\Feature\Orders;
 
 use App\Models\Products\Product;
 use App\Models\WarehouseGroups\WarehouseGroup;
+use App\Models\Orders\OrderItem;
 use App\Models\Auth\User;
+use App\Models\Orders\Order;
+use App\Models\Customers\Customer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\ForcesInMemorySqlite;
@@ -28,7 +31,7 @@ class OrderReadTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert([WarehouseGroup::COL_ID => 1, 'warengruppe' => 'Test Group']);
+       DB::table(WarehouseGroup::TABLE)->insert([WarehouseGroup::COL_ID => 1, WarehouseGroup::COL_NAME => 'Test Group']);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
         $this->writer = User::factory()->create(['role' => 'writer']);
@@ -40,24 +43,24 @@ class OrderReadTest extends TestCase
     private function createProduct(array $overrides = []): Product
     {
         return Product::create(array_merge([
-            Product::COL_NAME => 'Test Product',
+            Product::COL_NAME         => 'Test Product',
             Product::COL_WG_ID        => 1,
             Product::COL_EK_PREIS     => 5.00,
             Product::COL_VK_PREIS     => 10.00,
-            Product::COL_BESTAND     => 100,
+            Product::COL_BESTAND      => 100,
             Product::COL_MELDE_BEST   => 20,
         ], $overrides));
     }
 
     private function createCustomer(array $overrides = []): int
     {
-        return DB::table('kunden')->insertGetId(array_merge([
-            'name'    => 'Test Customer',
-            'strasse' => 'Teststraße 1',
-            'plz'     => 70000,
-            'ort'     => 'Stuttgart',
-            'email'   => 'test@example.com',
-        ], $overrides), 'pKdNr');
+        return DB::table(Customer::TABLE)->insertGetId(array_merge([
+            Customer::COL_NAME    => 'Test Customer',
+            Customer::COL_STRASSE => 'Teststraße 1',
+            Customer::COL_PLZ     => 70000,
+            Customer::COL_ORT     => 'Stuttgart',
+            Customer::COL_EMAIL   => 'test@example.com',
+        ], $overrides), Customer::COL_ID);
     }
 
     private function createOrderViaApi(array $overrides = []): array
@@ -66,11 +69,11 @@ class OrderReadTest extends TestCase
         $product = $this->createProduct();
 
         $payload = array_merge([
-            'aufDat'    => '2024-01-15 09:00:00',
-            'fKdNr'     => $kdNr,
-            'aufTermin' => '2024-02-01 00:00:00',
+            Order::COL_AUF_DAT    => '2024-01-15 09:00:00',
+            Order::COL_F_KD_NR     => $kdNr,
+            Order::COL_AUF_TERMIN => '2024-02-01 00:00:00',
             'items'     => [
-                ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 5],
+                [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 5],
             ],
         ], $overrides);
 
@@ -91,7 +94,7 @@ class OrderReadTest extends TestCase
                  ->assertJsonStructure([
                      'data' => [
                          '*' => [
-                             'order_info'  => ['pAufNr', 'aufDat', 'aufTermin', 'fKdNr'],
+                             'order_info'  => [Order::COL_ID, Order::COL_AUF_DAT, Order::COL_AUF_TERMIN, Order::COL_F_KD_NR],
                              'items',
                              'order_total',
                              'preis_total',
@@ -108,23 +111,23 @@ class OrderReadTest extends TestCase
     public function test_viewer_can_fetch_a_single_order(): void
     {
         $data  = $this->createOrderViaApi();
-        $aufNr = $data['order_info']['pAufNr'];
+        $aufNr = $data['order_info'][Order::COL_ID];
 
         $response = $this->actingAs($this->viewer)
                          ->getJson("/api/orders/{$aufNr}");
 
         $response->assertStatus(200)
-                 ->assertJsonPath('data.order_info.pAufNr', $aufNr)
+                 ->assertJsonPath('data.order_info.'.Order::COL_ID, $aufNr)
                  ->assertJsonStructure([
                      'data' => [
                          'order_info',
                          'items' => [
                              '*' => [
-                                 'pAufPosNr',
-                                 'fArtikelNr',
+                                 OrderItem::COL_ID,
+                                 OrderItem::COL_F_ARTIKEL_NR,
                                  Product::COL_NAME,
-                                 'aufMenge',
-                                 'kaufPreis',
+                                 OrderItem::COL_AUF_MENGE,
+                                 OrderItem::COL_KAUF_PREIS,
                                  'line_total',
                                  'is_discontinued',
                              ],

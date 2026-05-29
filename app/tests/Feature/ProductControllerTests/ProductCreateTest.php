@@ -52,10 +52,10 @@ class ProductCreateTest extends TestCase
 
         $response->assertStatus(201)
                  ->assertJsonPath('message', 'Product created successfully.')
-                 ->assertJsonPath('data.bezeichnung', 'New Product 100mm');
+                 ->assertJsonPath('data.' .Product::COL_NAME, 'New Product 100mm');
 
         $this->assertDatabaseHas(Product::TABLE, [
-            Product::COL_NAME => 'New Product 100mm',
+            Product::COL_NAME        => 'New Product 100mm',
             Product::COL_BESTAND     => 50,
         ]);
     }
@@ -110,11 +110,11 @@ class ProductCreateTest extends TestCase
     {
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/products', [
-                             Product::COL_NAME => 'Atomic Product',
+                             Product::COL_NAME         => 'Atomic Product',
                              Product::COL_WG_ID        => 4,
                              Product::COL_EK_PREIS     => 5.00,
                              Product::COL_VK_PREIS     => 15.00,
-                             Product::COL_BESTAND     => 50,
+                             Product::COL_BESTAND      => 50,
                              Product::COL_MELDE_BEST   => 10,
                          ]);
 

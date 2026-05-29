@@ -4,7 +4,10 @@ namespace Tests\Feature\Orders;
 
 use App\Models\Products\Product;
 use App\Models\WarehouseGroups\WarehouseGroup;
+use App\Models\Orders\Order;
+use App\Models\Orders\OrderItem;
 use App\Models\Auth\User;
+use App\Models\Customers\Customer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\ForcesInMemorySqlite;
@@ -28,7 +31,7 @@ class OrderCreateTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
 
-        DB::table('warengruppe')->insert([WarehouseGroup::COL_ID => 1, 'warengruppe' => 'Test Group']);
+        DB::table(WarehouseGroup::TABLE)->insert([WarehouseGroup::COL_ID => 1, WarehouseGroup::COL_NAME => 'Test Group']);
 
         $this->admin  = User::factory()->create(['role' => 'admin']);
         $this->writer = User::factory()->create(['role' => 'writer']);
@@ -40,24 +43,24 @@ class OrderCreateTest extends TestCase
     private function createProduct(array $overrides = []): Product
     {
         return Product::create(array_merge([
-            Product::COL_NAME => 'Test Product',
+            Product::COL_NAME         => 'Test Product',
             Product::COL_WG_ID        => 1,
             Product::COL_EK_PREIS     => 5.00,
             Product::COL_VK_PREIS     => 10.00,
-            Product::COL_BESTAND     => 100,
+            Product::COL_BESTAND      => 100,
             Product::COL_MELDE_BEST   => 20,
         ], $overrides));
     }
 
     private function createCustomer(array $overrides = []): int
     {
-        return DB::table('kunden')->insertGetId(array_merge([
-            'name'    => 'Test Customer',
-            'strasse' => 'Teststraße 1',
-            'plz'     => 70000,
-            'ort'     => 'Stuttgart',
-            'email'   => 'test@example.com',
-        ], $overrides), 'pKdNr');
+        return DB::table(Customer::TABLE)->insertGetId(array_merge([
+            Customer::COL_NAME    => 'Test Customer',
+            Customer::COL_STRASSE => 'Teststraße 1',
+            Customer::COL_PLZ     => 70000,
+            Customer::COL_ORT     => 'Stuttgart',
+            Customer::COL_EMAIL   => 'test@example.com',
+        ], $overrides), Customer::COL_ID);
     }
 
     // ── Role-based access ─────────────────────────────────────────────────────
@@ -69,16 +72,16 @@ class OrderCreateTest extends TestCase
 
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/orders', [
-                             'aufDat'    => '2024-03-01 08:00:00',
-                             'fKdNr'     => $kdNr,
-                             'aufTermin' => '2024-03-15 00:00:00',
+                             Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                             Order::COL_F_KD_NR     => $kdNr,
+                             Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                              'items'     => [
-                                 ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 10],
+                                 [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 10],
                              ],
                          ]);
 
         $response->assertStatus(201)
-                 ->assertJsonPath('data.order_info.fKdNr', $kdNr)
+                 ->assertJsonPath('data.order_info.' .Order::COL_F_KD_NR, $kdNr)
                  ->assertJsonPath('data.order_total', 10)
                  ->assertJsonPath('data.preis_total', 100.5); // 10.05 × 10
     }
@@ -90,11 +93,11 @@ class OrderCreateTest extends TestCase
 
         $response = $this->actingAs($this->writer)
                          ->postJson('/api/orders', [
-                             'aufDat'    => '2024-03-01 08:00:00',
-                             'fKdNr'     => $kdNr,
-                             'aufTermin' => '2024-03-15 00:00:00',
+                             Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                             Order::COL_F_KD_NR     => $kdNr,
+                             Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                              'items'     => [
-                                 ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 1],
+                                 [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 1],
                              ],
                          ]);
 
@@ -108,11 +111,11 @@ class OrderCreateTest extends TestCase
 
         $this->actingAs($this->viewer)
              ->postJson('/api/orders', [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 1],
+                     [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 1],
                  ],
              ])
              ->assertStatus(403);
@@ -127,25 +130,25 @@ class OrderCreateTest extends TestCase
 
         $response = $this->actingAs($this->admin)
                          ->postJson('/api/orders', [
-                             'aufDat'    => '2024-03-01 08:00:00',
-                             'fKdNr'     => $kdNr,
-                             'aufTermin' => '2024-03-15 00:00:00',
+                             Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                             Order::COL_F_KD_NR     => $kdNr,
+                             Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                              'items'     => [
-                                 ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 3],
+                                 [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 3],
                              ],
                          ]);
 
         $response->assertStatus(201);
-        $this->assertEquals(25.25, $response->json('data.items.0.kaufPreis'));
+        $this->assertEquals(25.25, $response->json('data.items.0.' .OrderItem::COL_KAUF_PREIS));
         $this->assertEquals(75.75, $response->json('data.preis_total')); // 3 × 25.25
 
         // Changing the price must not affect the saved snapshot
         $product->update([Product::COL_VK_PREIS => 99.00]);
 
-        $aufNr = $response->json('data.order_info.pAufNr');
+        $aufNr = $response->json('data.order_info.' .Order::COL_ID);
         $this->actingAs($this->viewer)
              ->getJson("/api/orders/{$aufNr}")
-             ->assertJsonPath('data.items.0.kaufPreis', 25.25)
+             ->assertJsonPath('data.items.0.' .OrderItem::COL_KAUF_PREIS, 25.25)
              ->assertJsonPath('data.preis_total', 75.75);
     }
 
@@ -156,18 +159,18 @@ class OrderCreateTest extends TestCase
 
         $this->actingAs($this->admin)
              ->postJson('/api/orders', [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 30],
+                     [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 30],
                  ],
              ])
              ->assertStatus(201);
 
-        $this->assertDatabaseHas('artikel', [
-            Product::COL_ID => $product->pArtikelNr,
-            Product::COL_BESTAND    => 70, // 100 − 30
+        $this->assertDatabaseHas(Product::TABLE, [
+            Product::COL_ID        => $product->pArtikelNr,
+            Product::COL_BESTAND   => 70, // 100 − 30
         ]);
     }
 
@@ -180,17 +183,17 @@ class OrderCreateTest extends TestCase
 
         $this->actingAs($this->admin)
              ->postJson('/api/orders', [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 99],
+                     [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 99],
                  ],
              ])
              ->assertStatus(422)
              ->assertJsonValidationErrors(['items']);
 
-        $this->assertDatabaseHas('artikel', [
+        $this->assertDatabaseHas(Product::TABLE, [
             Product::COL_ID => $product->pArtikelNr,
             Product::COL_BESTAND    => 5,
         ]);
@@ -204,23 +207,23 @@ class OrderCreateTest extends TestCase
 
         $this->actingAs($this->admin)
              ->postJson('/api/orders', [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['fArtikelNr' => $productA->pArtikelNr, 'aufMenge' => 10],
-                     ['fArtikelNr' => $productB->pArtikelNr, 'aufMenge' => 99],
+                     [OrderItem::COL_F_ARTIKEL_NR => $productA->pArtikelNr, OrderItem::COL_AUF_MENGE => 10],
+                     [OrderItem::COL_F_ARTIKEL_NR => $productB->pArtikelNr, OrderItem::COL_AUF_MENGE => 99],
                  ],
              ])
              ->assertStatus(422);
 
         // Product A stock must be rolled back despite passing individually
-        $this->assertDatabaseHas('artikel', [
-            Product::COL_ID => $productA->pArtikelNr,
-            Product::COL_BESTAND    => 50,
+        $this->assertDatabaseHas(Product::TABLE, [
+            Product::COL_ID        => $productA->pArtikelNr,
+            Product::COL_BESTAND   => 50,
         ]);
 
-        $this->assertDatabaseCount('auftragskoepfe', 0);
+        $this->assertDatabaseCount(Order::TABLE, 0);
     }
 
     public function test_order_creation_fails_with_non_existent_customer(): void
@@ -229,15 +232,15 @@ class OrderCreateTest extends TestCase
 
         $this->actingAs($this->admin)
              ->postJson('/api/orders', [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => 99999,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => 99999,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 1],
+                     [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 1],
                  ],
              ])
              ->assertStatus(422)
-             ->assertJsonValidationErrors(['fKdNr']);
+             ->assertJsonValidationErrors([Order::COL_F_KD_NR]);
     }
 
     public function test_order_creation_fails_with_empty_items_array(): void
@@ -246,9 +249,9 @@ class OrderCreateTest extends TestCase
 
         $this->actingAs($this->admin)
              ->postJson('/api/orders', [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [],
              ])
              ->assertStatus(422)
@@ -262,14 +265,14 @@ class OrderCreateTest extends TestCase
 
         $this->actingAs($this->admin)
              ->postJson('/api/orders', [
-                 'aufDat'    => '2024-03-01 08:00:00',
-                 'fKdNr'     => $kdNr,
-                 'aufTermin' => '2024-03-15 00:00:00',
+                 Order::COL_AUF_DAT     => '2024-03-01 08:00:00',
+                 Order::COL_F_KD_NR     => $kdNr,
+                 Order::COL_AUF_TERMIN  => '2024-03-15 00:00:00',
                  'items'     => [
-                     ['fArtikelNr' => $product->pArtikelNr, 'aufMenge' => 0],
+                     [OrderItem::COL_F_ARTIKEL_NR => $product->pArtikelNr, OrderItem::COL_AUF_MENGE => 0],
                  ],
              ])
              ->assertStatus(422)
-             ->assertJsonValidationErrors(['items.0.aufMenge']);
+             ->assertJsonValidationErrors(['items.0' .OrderItem::COL_AUF_MENGE]);
     }
 }
