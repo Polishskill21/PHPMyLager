@@ -40,6 +40,7 @@ class PurchaseOrderReceiveTest extends TestCase
         $product = Product::create([Product::COL_NAME => 'Test', Product::COL_BESTAND => 10, Product::COL_WG_ID => 1]);
         
         $order = PurchaseOrder::create([
+            PurchaseOrder::COL_F_LIEF_NR => $this->supplier->getKey(),
             PurchaseOrder::COL_BEST_DAT => '2026-05-01',
             PurchaseOrder::COL_STATUS   => PurchaseOrderStatus::Ordered,
         ]);
@@ -78,6 +79,7 @@ class PurchaseOrderReceiveTest extends TestCase
         $product = Product::create([Product::COL_NAME => 'Test', Product::COL_BESTAND => 0, Product::COL_WG_ID => 1]);
         
         $order = PurchaseOrder::create([
+            PurchaseOrder::COL_F_LIEF_NR => $this->supplier->getKey(),
             PurchaseOrder::COL_BEST_DAT => '2026-05-01',
             PurchaseOrder::COL_STATUS   => PurchaseOrderStatus::Ordered,
         ]);

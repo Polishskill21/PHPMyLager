@@ -54,6 +54,7 @@ class PurchaseOrderUpdateTest extends TestCase
 
         $payload = [
             PurchaseOrder::COL_BEST_DAT => '2026-05-02',
+            PurchaseOrder::COL_F_LIEF_NR => $this->supplier->getKey(),
             'items' => [
                 [
                     PurchaseOrderItem::COL_ID           => $item->getKey(),
@@ -81,6 +82,7 @@ class PurchaseOrderUpdateTest extends TestCase
         ]);
 
         $this->actingAs($this->writer)->putJson("/api/purchase-orders/{$order->getKey()}", [
+            PurchaseOrder::COL_F_LIEF_NR => $this->supplier->getKey(),
             PurchaseOrder::COL_BEST_DAT => '2026-05-02',
             'items' => [['dummy' => 'data']]
         ])->assertStatus(422);
