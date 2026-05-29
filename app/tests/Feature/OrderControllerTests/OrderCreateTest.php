@@ -273,6 +273,6 @@ class OrderCreateTest extends TestCase
                  ],
              ])
              ->assertStatus(422)
-             ->assertJsonValidationErrors(['items.0' .OrderItem::COL_AUF_MENGE]);
+             ->assertJsonValidationErrors(['items.0.' .OrderItem::COL_AUF_MENGE]);
     }
 }
