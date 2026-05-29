@@ -25,7 +25,7 @@ class PurchaseOrderUpdateTest extends TestCase
         parent::setUp();
 
         $this->writer = User::factory()->create(['role' => 'writer']);
-        $this->product = Product::create([Product::COL_NAME => 'Product A', Product::COL_BESTAND => 0]);
+        $this->product = Product::create([Product::COL_NAME => 'Product A', Product::COL_BESTAND => 0, Product::COL_WG_ID => 1]);
     }
 
     public function test_can_update_open_order_and_add_lines(): void

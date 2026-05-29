@@ -29,7 +29,7 @@ class PurchaseOrderCreateTest extends TestCase
         $this->writer = User::factory()->create(['role' => 'writer']);
         
         $this->supplier = Supplier::create([Supplier::COL_NAME => 'Test Supplier']);
-        $this->product = Product::create([Product::COL_NAME => 'Test Product', Product::COL_BESTAND => 0]);
+        $this->product = Product::create([Product::COL_NAME => 'Test Product', Product::COL_BESTAND => 0, Product::COL_WG_ID => 1]);
     }
 
     public function test_writer_can_create_purchase_order_with_items(): void

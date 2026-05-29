@@ -33,7 +33,7 @@ class PurchaseOrderReadTest extends TestCase
         $response = $this->actingAs($this->viewer)->getJson('/api/purchase-orders');
 
         $response->assertStatus(200)
-                 ->assertJsonPath('0.order_info.' . PurchaseOrder::COL_ID, $order->getKey());
+                 ->assertJsonPath('0.order_info.' . PurchaseOrder::COL_ID, $order->pAufNr);
     }
 
     public function test_viewer_can_fetch_single_purchase_order(): void
@@ -43,9 +43,9 @@ class PurchaseOrderReadTest extends TestCase
             PurchaseOrder::COL_STATUS   => PurchaseOrderStatus::Open,
         ]);
 
-        $response = $this->actingAs($this->viewer)->getJson("/api/purchase-orders/{$order->getKey()}");
+        $response = $this->actingAs($this->viewer)->getJson("/api/purchase-orders/{$order->pAufNr}");
 
         $response->assertStatus(200)
-                 ->assertJsonPath('order_info.' . PurchaseOrder::COL_ID, $order->getKey());
+                 ->assertJsonPath('order_info.' . PurchaseOrder::COL_ID, $order->pAufNr);
     }
 }

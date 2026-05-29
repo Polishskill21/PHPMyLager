@@ -27,7 +27,7 @@ class PurchaseOrderReceiveTest extends TestCase
 
     public function test_receiving_delivery_updates_stock_and_status(): void
     {
-        $product = Product::create([Product::COL_NAME => 'Test', Product::COL_BESTAND => 10]);
+        $product = Product::create([Product::COL_NAME => 'Test', Product::COL_BESTAND => 10, Product::COL_WG_ID => 1]);
         
         $order = PurchaseOrder::create([
             PurchaseOrder::COL_BEST_DAT => '2026-05-01',
