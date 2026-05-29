@@ -7,6 +7,7 @@ use App\Models\PurchaseOrders\PurchaseOrderItem;
 use App\Models\WarehouseGroups\WarehouseGroup;
 use Illuminate\Support\Facades\DB;
 use App\Models\Products\Product;
+use App\Models\Suppliers\Supplier;
 use App\Models\Auth\User;
 use App\Enums\PurchaseOrderStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,6 +19,7 @@ class PurchaseOrderReceiveTest extends TestCase
     use RefreshDatabase, ForcesInMemorySqlite;
 
     protected User $writer;
+    protected Supplier $supplier;
 
     protected function setUp(): void
     {
@@ -25,15 +27,16 @@ class PurchaseOrderReceiveTest extends TestCase
         $this->forceInMemorySqliteEnvironment();
         parent::setUp();
         $this->writer = User::factory()->create(['role' => 'writer']);
-    }
+        $this->supplier = Supplier::create([Supplier::COL_NAME => 'Test Supplier']);
 
-    public function test_receiving_delivery_updates_stock_and_status(): void
-    {
         DB::table(WarehouseGroup::TABLE)->insert([
             WarehouseGroup::COL_ID     => 1,
             WarehouseGroup::COL_NAME   => 'Test Group',
         ]);
+    }
 
+    public function test_receiving_delivery_updates_stock_and_status(): void
+    {
         $product = Product::create([Product::COL_NAME => 'Test', Product::COL_BESTAND => 10, Product::COL_WG_ID => 1]);
         
         $order = PurchaseOrder::create([
@@ -72,7 +75,7 @@ class PurchaseOrderReceiveTest extends TestCase
 
     public function test_cannot_receive_more_than_remaining(): void
     {
-        $product = Product::create([Product::COL_NAME => 'Test', Product::COL_BESTAND => 0]);
+        $product = Product::create([Product::COL_NAME => 'Test', Product::COL_BESTAND => 0, Product::COL_WG_ID => 1]);
         
         $order = PurchaseOrder::create([
             PurchaseOrder::COL_BEST_DAT => '2026-05-01',

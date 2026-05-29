@@ -6,6 +6,7 @@ use App\Models\PurchaseOrders\PurchaseOrder;
 use App\Models\PurchaseOrders\PurchaseOrderItem;
 use App\Models\WarehouseGroups\WarehouseGroup;
 use Illuminate\Support\Facades\DB;
+use App\Models\Suppliers\Supplier;
 use App\Models\Products\Product;
 use App\Models\Auth\User;
 use App\Enums\PurchaseOrderStatus;
@@ -19,6 +20,7 @@ class PurchaseOrderUpdateTest extends TestCase
 
     protected User $writer;
     protected Product $product;
+    protected Supplier $supplier;
 
     protected function setUp(): void
     {
@@ -27,6 +29,8 @@ class PurchaseOrderUpdateTest extends TestCase
         parent::setUp();
 
         $this->writer = User::factory()->create(['role' => 'writer']);
+        $this->supplier = Supplier::create([Supplier::COL_NAME => 'Test Supplier']);
+
         DB::table(WarehouseGroup::TABLE)->insert([
             WarehouseGroup::COL_ID     => 1,
             WarehouseGroup::COL_NAME   => 'Test Group',
@@ -37,6 +41,7 @@ class PurchaseOrderUpdateTest extends TestCase
     public function test_can_update_open_order_and_add_lines(): void
     {
         $order = PurchaseOrder::create([
+            PurchaseOrder::COL_F_LIEF_NR => $this->supplier->getKey(),
             PurchaseOrder::COL_BEST_DAT => '2026-05-01',
             PurchaseOrder::COL_STATUS   => PurchaseOrderStatus::Open,
         ]);
@@ -70,6 +75,7 @@ class PurchaseOrderUpdateTest extends TestCase
     public function test_cannot_update_delivered_or_cancelled_orders(): void
     {
         $order = PurchaseOrder::create([
+            PurchaseOrder::COL_F_LIEF_NR => $this->supplier->getKey(),
             PurchaseOrder::COL_BEST_DAT => '2026-05-01',
             PurchaseOrder::COL_STATUS   => PurchaseOrderStatus::Delivered,
         ]);
