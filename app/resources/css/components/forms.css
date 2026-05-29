@@ -1,0 +1,317 @@
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .85rem;
+}
+
+.form-full { grid-column: 1 / -1; }
+.form-group { display: flex; flex-direction: column; gap: .35rem; }
+
+.form-label {
+    color: var(--color-text-muted);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    height: var(--control-height);
+    min-height: var(--control-height);
+    padding: .58rem .72rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: .86rem;
+    line-height: 1.2;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.form-input::placeholder {
+    color: var(--color-text-faint);
+}
+
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 1px var(--color-focus-ring);
+}
+
+.form-input.invalid,
+.form-select.invalid {
+    border-color: var(--color-danger);
+}
+
+.form-error {
+    min-height: 1em;
+    color: var(--color-danger);
+    font-size: .72rem;
+}
+
+.required-marker {
+    color: var(--color-danger);
+    font-style: italic;
+}
+
+.date-input-wrap,
+.select-wrap,
+.quantity-wrap {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+.date-input-wrap .form-input,
+.select-wrap .form-select,
+.quantity-wrap .form-input {
+    width: 100%;
+}
+
+.select-wrap .form-select {
+    appearance: none;
+    padding-right: 2.35rem;
+}
+
+.date-field {
+    caret-color: transparent;
+    cursor: pointer;
+    padding-right: 2.35rem;
+}
+
+.date-field::selection {
+    background: transparent;
+}
+
+.date-input-wrap > .modal-control-icon,
+.date-input-wrap > .form-control-icon,
+.select-wrap > .modal-control-icon,
+.select-wrap > .form-control-icon {
+    position: absolute;
+    right: .72rem;
+    top: 50%;
+    color: var(--color-text-faint);
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.date-picker {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 6px);
+    z-index: 35;
+    width: 100%;
+    box-sizing: border-box;
+    padding: .5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    box-shadow: var(--shadow-popover);
+}
+
+.date-picker[hidden] {
+    display: none;
+}
+
+.date-picker-head {
+    margin-bottom: .45rem;
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) 26px;
+    gap: .25rem;
+    align-items: center;
+}
+
+.date-picker-title {
+    color: var(--color-text-strong);
+    font-size: .75rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.date-picker-nav,
+.date-picker-day {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-text-soft);
+    cursor: pointer;
+    font: inherit;
+}
+
+.date-picker-nav {
+    height: 26px;
+    border-color: var(--color-border);
+    border-radius: var(--radius-xs);
+}
+
+.date-picker-nav:hover,
+.date-picker-day:hover {
+    background: var(--color-badge-bg);
+    color: var(--color-text-strong);
+}
+
+.date-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 2px;
+}
+
+.date-picker-weekday {
+    padding: .25rem 0;
+    color: var(--color-text-faint);
+    font-size: .58rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    line-height: 1;
+    text-align: center;
+}
+
+.date-picker-day {
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-xs);
+    font-size: .72rem;
+    padding: 0;
+}
+
+.date-picker-day.is-today {
+    border-color: var(--color-border-focus);
+}
+
+.date-picker-day.is-selected {
+    border-color: var(--color-primary-bg);
+    background: var(--color-primary-bg);
+    color: var(--color-primary-text);
+    font-weight: 700;
+}
+
+.date-picker-empty {
+    aspect-ratio: 1 / 1;
+}
+
+.number-input-wrap {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+.number-input-wrap .form-input {
+    padding-right: 2rem;
+}
+
+.form-input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.form-input[type="number"]::-webkit-inner-spin-button,
+.form-input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+.form-control-icon,
+.modal-control-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    flex-shrink: 0;
+    background: currentColor;
+    -webkit-mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: contain;
+}
+
+.icon-chevron-down {
+    -webkit-mask-image: url('/icons/order-form/chevron-down.png');
+    mask-image: url('/icons/order-form/chevron-down.png');
+}
+
+.icon-chevron-up {
+    -webkit-mask-image: url('/icons/order-form/chevron-up.png');
+    mask-image: url('/icons/order-form/chevron-up.png');
+}
+
+.icon-plus {
+    -webkit-mask-image: url('/icons/lucide/plus.png');
+    mask-image: url('/icons/lucide/plus.png');
+}
+
+.icon-trash {
+    -webkit-mask-image: url('/icons/lucide/trash-2.png');
+    mask-image: url('/icons/lucide/trash-2.png');
+}
+
+.icon-calendar {
+    -webkit-mask-image: url('/icons/order-form/calendar-days.png');
+    mask-image: url('/icons/order-form/calendar-days.png');
+}
+
+.number-stepper-controls {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    bottom: 5px;
+    width: 19px;
+    padding-left: 4px;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    border-left: 1px solid var(--color-border);
+}
+
+.number-stepper-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-faint);
+    cursor: pointer;
+}
+
+.number-stepper-button:hover {
+    color: var(--color-text-strong);
+}
+
+.number-stepper-button .modal-control-icon,
+.number-stepper-button .form-control-icon {
+    width: 10px;
+    height: 10px;
+}
+
+.form-row-remove {
+    width: var(--form-row-remove-size, var(--control-height));
+    height: var(--form-row-remove-size, var(--control-height));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-raised);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.form-row-remove:hover {
+    border-color: var(--color-danger);
+    background: var(--color-danger-soft);
+    color: var(--color-danger-hover);
+}
+
+.form-row-remove .modal-control-icon,
+.form-row-remove .form-control-icon {
+    width: 14px;
+    height: 14px;
+}

@@ -2,8 +2,10 @@
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 const CAN_WRITE = document.querySelector('meta[name="can-write"]')?.content === 'true';
 const CAN_DELETE = document.querySelector('meta[name="can-delete"]')?.content === 'true';
-const ROW_H = 56;
-const OVER = 8;
+const ICONS = {
+    edit: '/icons/lucide/pencil.png',
+    del: '/icons/lucide/trash-2.png',
+};
 
 // ── STATE ─────────────────────────────────────────────────────────────
 let allOrders = [];
@@ -30,8 +32,27 @@ async function api(method, path, body = null) {
     if (body) opts.body = JSON.stringify(body);
 
     const res = await fetch('/api' + path, opts);
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, data };
+    const payload = res.status === 204 ? null : await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        const errorPayload = payload && typeof payload === 'object' ? payload : {};
+        return {
+            ok: false,
+            status: res.status,
+            data: errorPayload,
+            message: errorPayload.message || 'Request failed.',
+            errors: errorPayload.errors || {},
+        };
+    }
+
+    const hasEnvelope = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(payload, 'data');
+    return {
+        ok: true,
+        status: res.status,
+        data: hasEnvelope ? payload.data : payload,
+        message: payload?.message || '',
+        errors: {},
+    };
 }
 
 function toast(msg, type = 'info') {
@@ -53,15 +74,19 @@ async function loadLookups() {
     ]);
 
     if (customersRes.ok) {
-        const raw = Array.isArray(customersRes.data?.data) ? customersRes.data.data : [];
-        customers = raw.map(entry => entry || {}).filter(c => c?.pKdNr != null);
-        customerMap = Object.fromEntries(customers.map(c => [Number(c.pKdNr), c]));
+        const raw = Array.isArray(customersRes.data) ? customersRes.data : [];
+        customers = raw
+            .map((entry) => entry?.customer || entry)
+            .filter((c) => c?.pKdNr != null);
+        customerMap = Object.fromEntries(customers.map((c) => [Number(c.pKdNr), c]));
     }
 
     if (productsRes.ok) {
-        const raw = Array.isArray(productsRes.data?.data) ? productsRes.data.data : [];
-        products = raw.filter(p => p?.pArtikelNr != null);
-        productMap = Object.fromEntries(products.map(p => [Number(p.pArtikelNr), p]));
+        const raw = Array.isArray(productsRes.data)
+            ? productsRes.data
+            : (Array.isArray(productsRes.data?.products) ? productsRes.data.products : []);
+        products = raw.filter((p) => p?.pArtikelNr != null);
+        productMap = Object.fromEntries(products.map((p) => [Number(p.pArtikelNr), p]));
     }
 
     fillCustomerSelect();
@@ -72,15 +97,14 @@ function fillCustomerSelect(selectedId = '') {
     if (!sel) return;
 
     const opts = ['<option value="">Select customer…</option>'];
-    customers.forEach(c => {
-        const label = `#${c.pKdNr} · ${esc(c.name || 'Unknown')}`;
+    customers.forEach((c) => {
+        const label = esc(c.name || 'Unknown');
         const selected = String(c.pKdNr) === String(selectedId) ? ' selected' : '';
         opts.push(`<option value="${c.pKdNr}"${selected}>${label}</option>`);
     });
 
     if (selectedId && !customerMap[Number(selectedId)]) {
-        const unknownLabel = `#${selectedId} · [not listed]`;
-        opts.push(`<option value="${selectedId}" selected>${unknownLabel}</option>`);
+        opts.push(`<option value="${selectedId}" selected>[not listed]</option>`);
     }
 
     sel.innerHTML = opts.join('');
@@ -88,15 +112,14 @@ function fillCustomerSelect(selectedId = '') {
 
 function productOptionsHtml(selectedId = '') {
     const opts = ['<option value="">Select product…</option>'];
-    products.forEach(p => {
-        const label = `#${p.pArtikelNr} · ${esc(p.bezeichnung || 'Unknown')}`;
+    products.forEach((p) => {
+        const label = esc(p.bezeichnung || 'Unknown');
         const selected = String(p.pArtikelNr) === String(selectedId) ? ' selected' : '';
         opts.push(`<option value="${p.pArtikelNr}"${selected}>${label}</option>`);
     });
 
     if (selectedId && !productMap[Number(selectedId)]) {
-        const unknownLabel = `#${selectedId} · [not listed]`;
-        opts.push(`<option value="${selectedId}" selected>${unknownLabel}</option>`);
+        opts.push(`<option value="${selectedId}" selected>[not listed]</option>`);
     }
 
     return opts.join('');
@@ -104,17 +127,16 @@ function productOptionsHtml(selectedId = '') {
 
 // ── DATA ──────────────────────────────────────────────────────────────
 async function loadOrders() {
-    const wrap = document.getElementById('vscroll-inner');
-    wrap.innerHTML = `<div class="loading-row"><div class="spinner"></div> Loading orders…</div>`;
+    setTableState('<div class="loading-row"><div class="spinner"></div> Loading orders…</div>');
 
     const { ok, data } = await api('GET', '/orders');
     if (!ok) {
         toast('Failed to load orders', 'error');
-        wrap.innerHTML = `<div class="empty-state"><div class="icon">◳</div><p>Failed to load orders.</p></div>`;
+        setTableState('<div class="empty-state">Failed to load orders.</div>');
         return;
     }
 
-    const list = Array.isArray(data.data) ? data.data : [];
+    const list = Array.isArray(data) ? data : [];
     allOrders = list.map(normalizeOrder);
     applyFilters();
 }
@@ -124,10 +146,10 @@ function normalizeOrder(entry) {
     const items = Array.isArray(entry?.items) ? entry.items : [];
 
     const customer = customerMap[Number(info.fKdNr)] || null;
-    const customerName = customer?.name || `Customer #${info.fKdNr ?? '—'}`;
+    const customerName = customer?.name || 'Unknown customer';
 
     const itemNames = items
-        .map(item => item?.bezeichnung || `#${item?.fArtikelNr ?? ''}`)
+        .map((item) => item?.bezeichnung || `#${item?.fArtikelNr ?? ''}`)
         .filter(Boolean)
         .join(' ');
 
@@ -136,15 +158,15 @@ function normalizeOrder(entry) {
         aufDat: info.aufDat || '',
         aufTermin: info.aufTermin || '',
         fKdNr: Number(info.fKdNr),
-        customer_text: `#${info.fKdNr} · ${customerName}`,
+        customer_text: customerName,
         item_count: items.length,
         order_total: Number(entry?.order_total ?? 0),
         preis_total: Number(entry?.preis_total ?? 0),
         item_names: itemNames,
-        items: items.map(item => ({
+        items: items.map((item) => ({
             pAufPosNr: item?.pAufPosNr,
             fArtikelNr: item?.fArtikelNr,
-            bezeichnung: item?.bezeichnung || "",
+            bezeichnung: item?.bezeichnung || '',
             aufMenge: Number(item?.aufMenge ?? 0),
             kaufPreis: Number(item?.kaufPreis ?? 0),
             line_total: Number(item?.line_total ?? 0),
@@ -154,9 +176,9 @@ function normalizeOrder(entry) {
 
 // ── FILTER + SORT ─────────────────────────────────────────────────────
 function applyFilters() {
-    const q = document.getElementById('search').value.trim().toLowerCase();
+    const q = document.getElementById('search')?.value?.trim().toLowerCase() || '';
 
-    filtered = allOrders.filter(order => {
+    filtered = allOrders.filter((order) => {
         if (!q) return true;
 
         const haystack = [
@@ -186,69 +208,66 @@ function applyFilters() {
         return av > bv ? sortDir : (av < bv ? -sortDir : 0);
     });
 
-    renderVirtual();
+    const statTotal = document.getElementById('stat-total');
+    if (statTotal) statTotal.textContent = String(filtered.length);
+
+    const statTotalEur = document.getElementById('stat-total-eur');
+    if (statTotalEur) {
+        const totalEur = filtered.reduce((sum, order) => sum + Number(order.preis_total || 0), 0);
+        statTotalEur.textContent = fmtMoney(totalEur);
+    }
+
+    renderTableRows();
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────
-function renderVirtual() {
-    const vscroll = document.getElementById('vscroll');
-    const inner = document.getElementById('vscroll-inner');
+function setTableState(contentHtml) {
+    const body = document.getElementById('orders-body');
+    if (!body) return;
 
-    if (filtered.length === 0) {
-        inner.style.height = '200px';
-        inner.innerHTML = `<div class="empty-state"><div class="icon">◳</div><p>No orders match your search.</p></div>`;
+    body.innerHTML = `
+        <tr>
+            <td colspan="7">${contentHtml}</td>
+        </tr>
+    `;
+}
+
+function renderTableRows() {
+    const body = document.getElementById('orders-body');
+    if (!body) return;
+
+    if (!filtered.length) {
+        setTableState('<div class="empty-state">No orders match your search.</div>');
         return;
     }
 
-    inner.style.height = filtered.length * ROW_H + 'px';
-    inner.innerHTML = '';
-
-    function paint() {
-        const scrollTop = vscroll.scrollTop;
-        const viewH = vscroll.clientHeight;
-        const startIdx = Math.max(0, Math.floor(scrollTop / ROW_H) - OVER);
-        const endIdx = Math.min(filtered.length - 1, Math.ceil((scrollTop + viewH) / ROW_H) + OVER);
-
-        [...inner.querySelectorAll('.row')].forEach(el => {
-            const i = Number(el.dataset.idx);
-            if (i < startIdx || i > endIdx) el.remove();
-        });
-
-        const rendered = new Set([...inner.querySelectorAll('.row')].map(el => Number(el.dataset.idx)));
-        for (let i = startIdx; i <= endIdx; i++) {
-            if (rendered.has(i)) continue;
-            inner.appendChild(buildRow(filtered[i], i));
-        }
-    }
-
-    paint();
-    vscroll.onscroll = paint;
+    body.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    filtered.forEach((order) => frag.appendChild(buildRow(order)));
+    body.appendChild(frag);
 }
 
-function buildRow(order, idx) {
-    const top = idx * ROW_H;
-
+function buildRow(order) {
     const editBtn = CAN_WRITE
-        ? `<button class="btn-icon edit" title="Edit" data-id="${order.pAufNr}">✎</button>`
+        ? `<button class="btn-icon edit" title="Edit" data-id="${order.pAufNr}"><img class="action-icon" src="${ICONS.edit}" alt="Edit"></button>`
         : '';
 
     const delBtn = CAN_DELETE
-        ? `<button class="btn-icon del" title="Delete" data-id="${order.pAufNr}">⊗</button>`
+        ? `<button class="btn-icon del" title="Delete" data-id="${order.pAufNr}"><img class="action-icon" src="${ICONS.del}" alt="Delete"></button>`
         : '';
 
-    const row = document.createElement('div');
-    row.className = 'row row-clickable';
-    row.dataset.idx = String(idx);
-    row.style.top = top + 'px';
+    const actionsHtml = `<div class="orders-actions">${editBtn}${delBtn}</div>`;
+
+    const row = document.createElement('tr');
+    row.className = 'row-clickable';
     row.innerHTML = `
-        <div class="cell cell-id">#${order.pAufNr || '—'}</div>
-        <div class="cell cell-customer" title="${esc(order.customer_text)}">${esc(order.customer_text)}</div>
-        <div class="cell">${fmtDate(order.aufDat)}</div>
-        <div class="cell">${fmtDate(order.aufTermin)}</div>
-        <div class="cell cell-num">${order.item_count}</div>
-        <div class="cell cell-num">${order.order_total}</div>
-        <div class="cell cell-num">${fmtMoney(order.preis_total)}</div>
-        <div class="cell"><div class="actions">${editBtn}${delBtn}</div></div>
+        <td class="cell-id">#${order.pAufNr || '—'}</td>
+        <td class="cell-customer" title="${esc(order.customer_text)}">${esc(order.customer_text)}</td>
+        <td class="cell-date">${fmtDate(order.aufDat)}</td>
+        <td class="cell-date">${fmtDate(order.aufTermin)}</td>
+        <td class="cell-items td-items">${order.item_count}</td>
+        <td class="cell-total td-total">€${fmtMoney(order.preis_total)}</td>
+        <td class="td-actions">${actionsHtml}</td>
     `;
 
     row.addEventListener('click', () => openInspect(order.pAufNr));
@@ -278,11 +297,11 @@ function openAdd() {
     fillCustomerSelect();
 
     const now = new Date();
-    document.getElementById('f-aufDat').value = toLocalInput(now);
+    setDateFieldValue('f-aufDat', toDateInput(now));
 
     const due = new Date(now);
     due.setDate(due.getDate() + 7);
-    document.getElementById('f-aufTermin').value = toLocalInput(due);
+    setDateFieldValue('f-aufTermin', toDateInput(due));
 
     document.getElementById('item-rows').innerHTML = '';
     addItemRow();
@@ -294,13 +313,13 @@ function openAdd() {
 }
 
 function openEdit(orderId) {
-    const order = allOrders.find(o => Number(o.pAufNr) === Number(orderId));
+    const order = allOrders.find((o) => Number(o.pAufNr) === Number(orderId));
     if (!order) return;
 
     clearFormErrors();
     document.getElementById('f-id').value = order.pAufNr;
-    document.getElementById('f-aufDat').value = toLocalInput(order.aufDat);
-    document.getElementById('f-aufTermin').value = toLocalInput(order.aufTermin);
+    setDateFieldValue('f-aufDat', toDateInput(order.aufDat));
+    setDateFieldValue('f-aufTermin', toDateInput(order.aufTermin));
     fillCustomerSelect(order.fKdNr);
 
     const rows = document.getElementById('item-rows');
@@ -309,7 +328,7 @@ function openEdit(orderId) {
     if (!order.items.length) {
         addItemRow();
     } else {
-        order.items.forEach(item => addItemRow(item));
+        order.items.forEach((item) => addItemRow(item));
     }
 
     document.getElementById('modal-form-title').textContent = 'Edit Order';
@@ -319,43 +338,60 @@ function openEdit(orderId) {
 }
 
 function openInspect(orderId) {
-    const order = allOrders.find(o => Number(o.pAufNr) === Number(orderId));
+    const order = allOrders.find((o) => Number(o.pAufNr) === Number(orderId));
     if (!order) return;
 
     document.getElementById('view-order-badge').textContent = `#${order.pAufNr}`;
     document.getElementById('view-customer').textContent = order.customer_text || '—';
     document.getElementById('view-created').textContent = fmtDate(order.aufDat);
     document.getElementById('view-due').textContent = fmtDate(order.aufTermin);
-    const customerOrders = allOrders.filter(o => Number(o.fKdNr) === Number(order.fKdNr));
-    const totalProducts = customerOrders.reduce((sum, o) => sum + Number(o.order_total || 0), 0);
-    const totalEur = customerOrders.reduce((sum, o) => sum + Number(o.preis_total || 0), 0);
-    document.getElementById('view-total-products').textContent = String(totalProducts);
-    document.getElementById('view-total-eur').textContent = `€${fmtMoney(totalEur)}`;
+
+    const totalQty = Number(order.order_total || 0);
+    const totalEur = Number(order.preis_total || 0);
+    const totalQtyText = String(totalQty);
+    const totalEurText = `€${fmtMoney(totalEur)}`;
 
     const itemsEl = document.getElementById('view-items');
     if (!itemsEl) return;
 
+    const totalsRow = `
+        <div class="inspect-total-row" aria-label="Order totals">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div class="inspect-total-cell">
+                <span>Total Qty</span>
+                <strong id="view-total-qty">${esc(totalQtyText)}</strong>
+            </div>
+            <div></div>
+            <div class="inspect-total-cell">
+                <span>Total EUR</span>
+                <strong id="view-total-eur">${esc(totalEurText)}</strong>
+            </div>
+        </div>
+    `;
+
     if (!order.items.length) {
-        itemsEl.innerHTML = `
-            <div class="inspect-empty">No items for this order.</div>
-        `;
+        itemsEl.innerHTML = '<div class="inspect-empty">No items for this order.</div>' + totalsRow;
     } else {
-        itemsEl.innerHTML = order.items.map(item => {
+        const itemRows = order.items.map((item) => {
             const pos = item.pAufPosNr != null ? item.pAufPosNr : '—';
             const itemId = item.fArtikelNr != null ? item.fArtikelNr : '—';
             const itemName = item.bezeichnung || '[unknown]';
-            const productLabel = `#${itemId} · ${itemName}`;
 
             return `
                 <div class="inspect-item-row">
                     <div>${esc(pos)}</div>
-                    <div title="${esc(productLabel)}">${esc(productLabel)}</div>
+                    <div>${esc(itemId)}</div>
+                    <div title="${esc(itemName)}">${esc(itemName)}</div>
                     <div class="num">${Number(item.aufMenge || 0)}</div>
-                    <div class="num">${fmtMoney(item.kaufPreis)}</div>
-                    <div class="num">${fmtMoney(item.line_total)}</div>
+                    <div class="num">€${fmtMoney(item.kaufPreis)}</div>
+                    <div class="num">€${fmtMoney(item.line_total)}</div>
                 </div>
             `;
         }).join('');
+
+        itemsEl.innerHTML = itemRows + totalsRow;
     }
 
     document.getElementById('modal-view-overlay').classList.add('open');
@@ -370,7 +406,7 @@ function openDelete(orderId) {
 function addItemRow(item = {}) {
     const container = document.getElementById('item-rows');
     const row = document.createElement('div');
-    row.className = 'item-row';
+    row.className = 'orders-item-row';
 
     const posNr = item?.pAufPosNr != null ? String(item.pAufPosNr) : '';
     const artikelNr = item?.fArtikelNr != null ? String(item.fArtikelNr) : '';
@@ -378,12 +414,33 @@ function addItemRow(item = {}) {
 
     row.innerHTML = `
         <input type="hidden" class="i-posnr" value="${posNr}">
-        <select class="form-select i-artikel">${productOptionsHtml(artikelNr)}</select>
-        <input type="number" class="form-input i-menge" min="1" step="1" value="${menge}">
-        <button type="button" class="item-remove" title="Remove item">−</button>
+        <div class="orders-item-field">
+            <span class="form-label orders-item-label">Product</span>
+            <div class="select-wrap">
+                <select class="form-select i-artikel" aria-label="Product">${productOptionsHtml(artikelNr)}</select>
+                <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
+            </div>
+        </div>
+        <div class="orders-item-field">
+            <span class="form-label orders-item-label">Qty</span>
+            <div class="quantity-wrap number-input-wrap">
+                <input type="number" class="form-input i-menge" min="1" step="1" value="${menge}" aria-label="Quantity">
+                <div class="number-stepper-controls">
+                    <button type="button" class="number-stepper-button" title="Increase quantity" aria-label="Increase quantity" data-number-step="up">
+                        <span class="modal-control-icon icon-chevron-up" aria-hidden="true"></span>
+                    </button>
+                    <button type="button" class="number-stepper-button" title="Decrease quantity" aria-label="Decrease quantity" data-number-step="down">
+                        <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="orders-item-remove form-row-remove" title="Remove item" aria-label="Remove item">
+            <span class="modal-control-icon icon-trash" aria-hidden="true"></span>
+        </button>
     `;
 
-    row.querySelector('.item-remove')?.addEventListener('click', () => {
+    row.querySelector('.orders-item-remove')?.addEventListener('click', () => {
         row.remove();
         ensureAtLeastOneItemRow();
     });
@@ -392,7 +449,7 @@ function addItemRow(item = {}) {
 }
 
 function ensureAtLeastOneItemRow() {
-    const rows = document.querySelectorAll('#item-rows .item-row');
+    const rows = document.querySelectorAll('#item-rows .orders-item-row');
     if (!rows.length) addItemRow();
 }
 
@@ -408,7 +465,7 @@ async function submitOrderForm(e) {
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
-    const { ok, data } = id
+    const { ok, data, message } = id
         ? await api('PUT', `/orders/${id}`, payload)
         : await api('POST', '/orders', payload);
 
@@ -417,12 +474,12 @@ async function submitOrderForm(e) {
 
     if (!ok) {
         applyValidationErrors(data);
-        toast(data.message || 'Save failed', 'error');
+        toast(message || 'Save failed', 'error');
         return;
     }
 
     closeModal('modal-form-overlay');
-    toast(id ? 'Order updated.' : 'Order created.', 'success');
+    toast(message || (id ? 'Order updated.' : 'Order created.'), 'success');
     await loadOrders();
 }
 
@@ -432,13 +489,13 @@ function buildPayload() {
     const customerIdRaw = document.getElementById('f-fKdNr').value;
 
     const payload = {
-        aufDat: fromLocalInput(aufDatRaw),
+        aufDat: fromDateInput(aufDatRaw),
         fKdNr: Number(customerIdRaw),
-        aufTermin: fromLocalInput(aufTerminRaw),
+        aufTermin: fromDateInput(aufTerminRaw),
         items: [],
     };
 
-    const itemRows = [...document.querySelectorAll('#item-rows .item-row')];
+    const itemRows = [...document.querySelectorAll('#item-rows .orders-item-row')];
 
     if (!itemRows.length) {
         document.getElementById('err-items').textContent = 'At least one item is required.';
@@ -491,28 +548,29 @@ async function confirmDelete() {
     btn.disabled = true;
     btn.textContent = 'Deleting…';
 
-    const { ok, status, data } = await api('DELETE', `/orders/${pendingDeleteId}`);
+    const { ok, data, message } = await api('DELETE', `/orders/${pendingDeleteId}`);
 
     btn.disabled = false;
     btn.textContent = 'Delete';
     closeModal('modal-del-overlay');
 
     if (ok) {
-        toast(status === 204 ? 'Order deleted.' : (data.message || 'Order deleted.'), 'success');
+        toast(message || 'Order deleted.', 'success');
         await loadOrders();
     } else {
-        toast(data.message || data.error || 'Delete failed.', 'error');
+        toast(message || data?.error || 'Delete failed.', 'error');
     }
 
     pendingDeleteId = null;
 }
 
 function closeModal(id) {
+    window.AppDatePicker?.closeAll();
     document.getElementById(id)?.classList.remove('open');
 }
 
 function clearFormErrors() {
-    document.querySelectorAll('.form-error').forEach(el => {
+    document.querySelectorAll('.form-error').forEach((el) => {
         el.textContent = '';
     });
 }
@@ -520,30 +578,47 @@ function clearFormErrors() {
 // ── UTILS ─────────────────────────────────────────────────────────────
 function fmtDate(value) {
     if (!value) return '—';
-    return String(value).replace('T', ' ').slice(0, 16);
+
+    const raw = String(value);
+    const datePart = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+    return datePart ? datePart[1] : raw.slice(0, 10);
 }
 
 function fmtMoney(value) {
-    return Number(value || 0).toFixed(2);
+    return Number(value || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 }
 
-function toLocalInput(value) {
-    const d = value instanceof Date ? value : new Date(String(value).replace(' ', 'T'));
-    if (Number.isNaN(d.getTime())) return '';
-
-    const pad = n => String(n).padStart(2, '0');
-    const y = d.getFullYear();
-    const m = pad(d.getMonth() + 1);
-    const day = pad(d.getDate());
-    const h = pad(d.getHours());
-    const min = pad(d.getMinutes());
-
-    return `${y}-${m}-${day}T${h}:${min}`;
-}
-
-function fromLocalInput(value) {
+function toDateInput(value) {
     if (!value) return '';
-    return value.replace('T', ' ') + ':00';
+
+    if (value instanceof Date) return formatDateValue(value);
+
+    const raw = String(value);
+    const datePart = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (datePart) return datePart[1];
+
+    const parsed = new Date(raw.replace(' ', 'T'));
+    return Number.isNaN(parsed.getTime()) ? '' : formatDateValue(parsed);
+}
+
+function fromDateInput(value) {
+    return value || '';
+}
+
+function setDateFieldValue(id, value) {
+    const input = document.getElementById(id);
+    if (!input) return;
+
+    input.value = value;
+    input._datePickerMonth = null;
+}
+
+function formatDateValue(date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function esc(s) {
@@ -554,7 +629,21 @@ function esc(s) {
 }
 
 // ── EVENTS ────────────────────────────────────────────────────────────
-document.querySelectorAll('.th[data-sort]').forEach(th => {
+function syncSortHeaders() {
+    document.querySelectorAll('.th[data-sort]').forEach((header) => {
+        const active = header.dataset.sort === sortKey;
+        const arrow = header.querySelector('.sort-arrow');
+
+        header.classList.toggle('sorted', active);
+        header.setAttribute('aria-sort', active ? (sortDir === 1 ? 'ascending' : 'descending') : 'none');
+
+        if (!arrow) return;
+        arrow.classList.remove('sort-none', 'sort-asc', 'sort-desc');
+        arrow.classList.add(active ? (sortDir === 1 ? 'sort-asc' : 'sort-desc') : 'sort-none');
+    });
+}
+
+document.querySelectorAll('.th[data-sort]').forEach((th) => {
     th.addEventListener('click', () => {
         const key = th.dataset.sort;
 
@@ -564,15 +653,12 @@ document.querySelectorAll('.th[data-sort]').forEach(th => {
             sortDir = 1;
         }
 
-        document.querySelectorAll('.th').forEach(header => {
-            header.classList.toggle('sorted', header.dataset.sort === sortKey);
-            const arrow = header.querySelector('.sort-arrow');
-            if (arrow) arrow.textContent = header.dataset.sort === sortKey ? (sortDir === 1 ? '↑' : '↓') : '↕';
-        });
-
+        syncSortHeaders();
         applyFilters();
     });
 });
+
+syncSortHeaders();
 
 document.getElementById('search')?.addEventListener('input', applyFilters);
 document.getElementById('btn-add')?.addEventListener('click', openAdd);
@@ -583,14 +669,19 @@ document.getElementById('modal-view-close')?.addEventListener('click', () => clo
 document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
 document.getElementById('modal-del-confirm')?.addEventListener('click', confirmDelete);
 
-document.querySelectorAll('.overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => {
+document.querySelectorAll('.overlay').forEach((overlay) => {
+    overlay.addEventListener('click', (e) => {
         if (e.target === overlay) closeModal(overlay.id);
     });
 });
 
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        if (window.AppDatePicker?.hasOpen()) {
+            window.AppDatePicker.closeAll();
+            return;
+        }
+
         closeModal('modal-form-overlay');
         closeModal('modal-view-overlay');
         closeModal('modal-del-overlay');
@@ -598,7 +689,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ── INIT ──────────────────────────────────────────────────────────────
-if (document.getElementById('vscroll-inner')) {
+if (document.getElementById('orders-body')) {
     (async () => {
         await loadLookups();
         await loadOrders();

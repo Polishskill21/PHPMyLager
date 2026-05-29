@@ -1,15 +1,17 @@
 // ── CONFIG ────────────────────────────────────────────────────────────
-const CSRF       = document.querySelector('meta[name="csrf-token"]').content;
-const CAN_WRITE  = document.querySelector('meta[name="can-write"]')?.content === 'true';
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+const CAN_WRITE = document.querySelector('meta[name="can-write"]')?.content === 'true';
 const CAN_DELETE = document.querySelector('meta[name="can-delete"]')?.content === 'true';
-const ROW_H      = 56;
-const OVER       = 8;
+const ICONS = {
+    edit: '/icons/lucide/pencil.png',
+    del: '/icons/lucide/trash-2.png',
+};
 
 // ── STATE ─────────────────────────────────────────────────────────────
-let allCustomers    = [];
-let filtered        = [];
-let sortKey         = 'pKdNr';
-let sortDir         = 1;
+let allCustomers = [];
+let filtered = [];
+let sortKey = 'pKdNr';
+let sortDir = 1;
 let pendingDeleteId = null;
 
 // ── API HELPERS ───────────────────────────────────────────────────────
@@ -26,8 +28,27 @@ async function api(method, path, body = null) {
     if (body) opts.body = JSON.stringify(body);
 
     const res = await fetch('/api' + path, opts);
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, data };
+    const payload = res.status === 204 ? null : await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        const errorPayload = payload && typeof payload === 'object' ? payload : {};
+        return {
+            ok: false,
+            status: res.status,
+            data: errorPayload,
+            message: errorPayload.message || 'Request failed.',
+            errors: errorPayload.errors || {},
+        };
+    }
+
+    const hasEnvelope = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(payload, 'data');
+    return {
+        ok: true,
+        status: res.status,
+        data: hasEnvelope ? payload.data : payload,
+        message: payload?.message || '',
+        errors: {},
+    };
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────
@@ -41,23 +62,22 @@ function toast(msg, type = 'info') {
 
 // ── LOAD DATA ─────────────────────────────────────────────────────────
 async function loadCustomers() {
-    const wrap = document.getElementById('vscroll-inner');
-    wrap.innerHTML = `<div class="loading-row"><div class="spinner"></div> Loading customers…</div>`;
+    setTableState('customers-body', 7, '<div class="loading-row"><div class="spinner"></div> Loading customers…</div>');
 
     const { ok, data } = await api('GET', '/customers');
     if (!ok) {
         toast('Failed to load customers', 'error');
-        wrap.innerHTML = `<div class="empty-state"><div class="icon">🧙</div><p>Failed to load customers.</p></div>`;
+        setTableState('customers-body', 7, '<div class="empty-state"><p>Failed to load customers.</p></div>');
         return;
     }
 
-    const list = Array.isArray(data.data) ? data.data : [];
+    const list = Array.isArray(data) ? data : [];
     allCustomers = list.map(normalizeCustomer);
     applyFilters();
 }
 
 function normalizeCustomer(entry) {
-    const customer = entry || {};
+    const customer = entry?.customer || entry || {};
 
     return {
         pKdNr: customer.pKdNr,
@@ -106,86 +126,62 @@ function applyFilters() {
         return av > bv ? sortDir : (av < bv ? -sortDir : 0);
     });
 
-    renderVirtual();
+    renderRows();
 }
 
-// ── VIRTUAL SCROLL ────────────────────────────────────────────────────
-function renderVirtual() {
-    const vscroll = document.getElementById('vscroll');
-    const inner = document.getElementById('vscroll-inner');
+// ── TABLE RENDERING ──────────────────────────────────────────────────
+function renderRows() {
+    const body = document.getElementById('customers-body');
+    if (!body) return;
 
     if (filtered.length === 0) {
-        inner.style.height = '200px';
-        inner.innerHTML = `<div class="empty-state"><div class="icon">🧙</div><p>No customers match your search.</p></div>`;
+        setTableState('customers-body', 7, '<div class="empty-state"><p>No customers match your search.</p></div>');
         return;
     }
 
-    inner.style.height = (filtered.length * ROW_H) + 'px';
-    inner.innerHTML = '';
-
-    function paint() {
-        const scrollTop = vscroll.scrollTop;
-        const viewH = vscroll.clientHeight;
-        const startIdx = Math.max(0, Math.floor(scrollTop / ROW_H) - OVER);
-        const endIdx = Math.min(filtered.length - 1, Math.ceil((scrollTop + viewH) / ROW_H) + OVER);
-
-        [...inner.querySelectorAll('.row')].forEach(el => {
-            const i = +el.dataset.idx;
-            if (i < startIdx || i > endIdx) el.remove();
-        });
-
-        const rendered = new Set([...inner.querySelectorAll('.row')].map(el => +el.dataset.idx));
-        for (let i = startIdx; i <= endIdx; i++) {
-            if (rendered.has(i)) continue;
-            inner.appendChild(buildRow(filtered[i], i));
-        }
-    }
-
-    paint();
-    vscroll.onscroll = paint;
+    body.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    filtered.forEach(customer => fragment.appendChild(buildRow(customer)));
+    body.appendChild(fragment);
 }
 
-function buildRow(customer, idx) {
-    const top = idx * ROW_H;
-
+function buildRow(customer) {
     const editBtn = CAN_WRITE
-        ? `<button class="btn-icon edit" title="Edit" data-id="${customer.pKdNr}">✎</button>`
+        ? `<button class="btn-icon edit" title="Edit" data-id="${customer.pKdNr}"><img class="action-icon" src="${ICONS.edit}" alt="Edit"></button>`
         : '';
 
     const delBtn = CAN_DELETE
-        ? `<button class="btn-icon del" title="Archive" data-id="${customer.pKdNr}">⊗</button>`
+        ? `<button class="btn-icon del" title="Archive" data-id="${customer.pKdNr}"><img class="action-icon" src="${ICONS.del}" alt="Archive"></button>`
         : '';
 
-    const row = document.createElement('div');
-    row.className = 'row';
-    row.dataset.idx = idx;
-    row.style.top = top + 'px';
+    const row = document.createElement('tr');
     row.innerHTML = `
-        <div class="cell cell-id">#${customer.pKdNr ?? '—'}</div>
-        <div class="cell cell-name" title="${esc(customer.name)}">${esc(customer.name || '—')}</div>
-        <div class="cell cell-muted" title="${esc(customer.email)}">${esc(customer.email || '—')}</div>
-        <div class="cell" title="${esc(customer.strasse)}">${esc(customer.strasse || '—')}</div>
-        <div class="cell" title="${esc(customer.ort)}">${esc(customer.ort || '—')}</div>
-        <div class="cell cell-num">${customer.plz ?? '—'}</div>
-        <div class="cell"><div class="actions">${editBtn}${delBtn}</div></div>
+        <td class="cell-id">#${customer.pKdNr ?? '—'}</td>
+        <td class="cell-name" title="${esc(customer.name)}">${esc(customer.name || '—')}</td>
+        <td class="cell-muted" title="${esc(customer.email)}">${esc(customer.email || '—')}</td>
+        <td title="${esc(customer.strasse)}">${esc(customer.strasse || '—')}</td>
+        <td title="${esc(customer.ort)}">${esc(customer.ort || '—')}</td>
+        <td class="cell-number">${customer.plz ?? '—'}</td>
+        <td class="cell-actions"><div class="table-actions">${editBtn}${delBtn}</div></td>
     `;
 
-    if (CAN_WRITE) {
-        row.querySelector('.btn-icon.edit')?.addEventListener('click', () => openEdit(customer.pKdNr));
-    }
-
-    if (CAN_DELETE) {
-        row.querySelector('.btn-icon.del')?.addEventListener('click', () => openDelete(customer.pKdNr, customer.name));
-    }
-
+    row.querySelector('.btn-icon.edit')?.addEventListener('click', () => openEdit(customer.pKdNr));
+    row.querySelector('.btn-icon.del')?.addEventListener('click', () => openDelete(customer.pKdNr, customer.name));
     return row;
+}
+
+function setTableState(bodyId, colspan, html) {
+    const body = document.getElementById(bodyId);
+    if (!body) return;
+    body.innerHTML = `<tr class="table-state-row"><td class="table-state-cell" colspan="${colspan}">${html}</td></tr>`;
 }
 
 function esc(s) {
     return String(s)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
 
 // ── FORM + MODAL ──────────────────────────────────────────────────────
@@ -236,7 +232,7 @@ document.getElementById('customer-form')?.addEventListener('submit', async e => 
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
-    const { ok, data } = id
+    const { ok, data, message } = id
         ? await api('PUT', `/customers/${id}`, payload)
         : await api('POST', '/customers', payload);
 
@@ -254,7 +250,7 @@ document.getElementById('customer-form')?.addEventListener('submit', async e => 
             });
         }
 
-        toast(data.message || 'Save failed', 'error');
+        toast(message || 'Save failed', 'error');
         return;
     }
 
@@ -277,17 +273,17 @@ document.getElementById('modal-del-confirm')?.addEventListener('click', async ()
     btn.disabled = true;
     btn.textContent = 'Processing…';
 
-    const { ok, status, data } = await api('DELETE', `/customers/${pendingDeleteId}`);
+    const { ok, data, message } = await api('DELETE', `/customers/${pendingDeleteId}`);
 
     btn.disabled = false;
     btn.textContent = 'Archive';
     closeModal('modal-del-overlay');
 
     if (ok) {
-        toast(status === 204 ? 'Customer archived.' : (data.message || 'Customer archived.'), 'success');
+        toast(message || 'Customer archived.', 'success');
         await loadCustomers();
     } else {
-        toast(data.message || data.error || 'Archive failed.', 'error');
+        toast(message || data?.error || 'Archive failed.', 'error');
     }
 
     pendingDeleteId = null;
@@ -350,6 +346,6 @@ document.getElementById('search')?.addEventListener('input', applyFilters);
 document.getElementById('btn-add')?.addEventListener('click', openAdd);
 
 // ── INIT ──────────────────────────────────────────────────────────────
-if (document.getElementById('vscroll-inner')) {
+if (document.getElementById('customers-body')) {
     loadCustomers();
 }

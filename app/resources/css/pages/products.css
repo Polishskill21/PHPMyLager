@@ -1,0 +1,14 @@
+.products-search {
+    width: min(340px, 100%);
+    flex-basis: 340px;
+}
+
+.products-toolbar .filter-select {
+    width: 170px;
+    flex: 0 0 170px;
+}
+
+.stock-ok { background: var(--color-success-soft); color: var(--color-success); }
+.stock-warn { background: var(--color-warning-soft); color: var(--color-warning); }
+.stock-empty { background: var(--color-danger-soft); color: var(--color-danger); }
+.stat-low-value { color: var(--color-warning); }

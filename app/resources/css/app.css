@@ -1,4 +1,13 @@
 @import 'tailwindcss';
+@import './base/tokens.css';
+@import './base/base.css';
+@import './components/icons.css';
+@import './components/navigation.css';
+@import './components/buttons.css';
+@import './components/forms.css';
+@import './components/modals.css';
+@import './components/list-page.css';
+@import './components/feedback.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
