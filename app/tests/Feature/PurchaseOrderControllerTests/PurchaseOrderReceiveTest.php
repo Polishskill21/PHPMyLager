@@ -4,6 +4,8 @@ namespace Tests\Feature\PurchaseOrders;
 
 use App\Models\PurchaseOrders\PurchaseOrder;
 use App\Models\PurchaseOrders\PurchaseOrderItem;
+use App\Models\WarehouseGroups\WarehouseGroup;
+use Illuminate\Support\Facades\DB;
 use App\Models\Products\Product;
 use App\Models\Auth\User;
 use App\Enums\PurchaseOrderStatus;
@@ -27,6 +29,11 @@ class PurchaseOrderReceiveTest extends TestCase
 
     public function test_receiving_delivery_updates_stock_and_status(): void
     {
+        DB::table(WarehouseGroup::TABLE)->insert([
+            WarehouseGroup::COL_ID     => 1,
+            WarehouseGroup::COL_NAME   => 'Test Group',
+        ]);
+
         $product = Product::create([Product::COL_NAME => 'Test', Product::COL_BESTAND => 10, Product::COL_WG_ID => 1]);
         
         $order = PurchaseOrder::create([

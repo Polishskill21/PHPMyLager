@@ -4,6 +4,8 @@ namespace Tests\Feature\PurchaseOrders;
 
 use App\Models\PurchaseOrders\PurchaseOrder;
 use App\Models\PurchaseOrders\PurchaseOrderItem;
+use App\Models\WarehouseGroups\WarehouseGroup;
+use Illuminate\Support\Facades\DB;
 use App\Models\Products\Product;
 use App\Models\Auth\User;
 use App\Enums\PurchaseOrderStatus;
@@ -25,6 +27,10 @@ class PurchaseOrderUpdateTest extends TestCase
         parent::setUp();
 
         $this->writer = User::factory()->create(['role' => 'writer']);
+        DB::table(WarehouseGroup::TABLE)->insert([
+            WarehouseGroup::COL_ID     => 1,
+            WarehouseGroup::COL_NAME   => 'Test Group',
+        ]);
         $this->product = Product::create([Product::COL_NAME => 'Product A', Product::COL_BESTAND => 0, Product::COL_WG_ID => 1]);
     }
 
