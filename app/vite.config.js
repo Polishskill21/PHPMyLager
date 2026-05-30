@@ -14,6 +14,7 @@ export default defineConfig({
                 'resources/css/pages/products.css',
                 'resources/css/pages/purchase-orders.css',
                 'resources/css/pages/suppliers.css',
+                'resources/css/pages/warehouse.css',
                 'resources/js/app.js',
             ],
             refresh: true,

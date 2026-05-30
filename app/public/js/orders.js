@@ -8,14 +8,10 @@ const ICONS = {
 };
 
 // ── STATE ─────────────────────────────────────────────────────────────
-let allOrders = [];
 let customers = [];
 let products = [];
 let customerMap = {};
 let productMap = {};
-let filtered = [];
-let sortKey = 'pAufNr';
-let sortDir = 1;
 let pendingDeleteId = null;
 
 // ── API HELPERS ───────────────────────────────────────────────────────
@@ -125,22 +121,7 @@ function productOptionsHtml(selectedId = '') {
     return opts.join('');
 }
 
-// ── DATA ──────────────────────────────────────────────────────────────
-async function loadOrders() {
-    setTableState('<div class="loading-row"><div class="spinner"></div> Loading orders…</div>');
-
-    const { ok, data } = await api('GET', '/orders');
-    if (!ok) {
-        toast('Failed to load orders', 'error');
-        setTableState('<div class="empty-state">Failed to load orders.</div>');
-        return;
-    }
-
-    const list = Array.isArray(data) ? data : [];
-    allOrders = list.map(normalizeOrder);
-    applyFilters();
-}
-
+// ── NORMALIZE (a fetched order for the modal / inspect view) ──────────
 function normalizeOrder(entry) {
     const info = entry?.order_info || {};
     const items = Array.isArray(entry?.items) ? entry.items : [];
@@ -174,119 +155,38 @@ function normalizeOrder(entry) {
     };
 }
 
-// ── FILTER + SORT ─────────────────────────────────────────────────────
-function applyFilters() {
-    const q = document.getElementById('search')?.value?.trim().toLowerCase() || '';
-
-    filtered = allOrders.filter((order) => {
-        if (!q) return true;
-
-        const haystack = [
-            order.pAufNr,
-            order.fKdNr,
-            order.customer_text,
-            order.aufDat,
-            order.aufTermin,
-            order.item_names,
-        ].join(' ').toLowerCase();
-
-        return haystack.includes(q);
-    });
-
-    filtered.sort((a, b) => {
-        let av = a[sortKey];
-        let bv = b[sortKey];
-
-        if (['pAufNr', 'fKdNr', 'item_count', 'order_total', 'preis_total'].includes(sortKey)) {
-            av = Number(av) || 0;
-            bv = Number(bv) || 0;
-            return (av - bv) * sortDir;
-        }
-
-        av = String(av || '').toLowerCase();
-        bv = String(bv || '').toLowerCase();
-        return av > bv ? sortDir : (av < bv ? -sortDir : 0);
-    });
-
+// ── SEARCH FILTER (client-side row hide over server-rendered rows) ────
+function filterOrderRows() {
+    const search = document.getElementById('search');
     const statTotal = document.getElementById('stat-total');
-    if (statTotal) statTotal.textContent = String(filtered.length);
+    const statEur = document.getElementById('stat-total-eur');
+    const emptyRow = document.getElementById('orders-empty-filter-row');
+    if (!search) return;
 
-    const statTotalEur = document.getElementById('stat-total-eur');
-    if (statTotalEur) {
-        const totalEur = filtered.reduce((sum, order) => sum + Number(order.preis_total || 0), 0);
-        statTotalEur.textContent = fmtMoney(totalEur);
-    }
+    const q = search.value.trim().toLowerCase();
+    const rows = document.querySelectorAll('.orders-table tbody tr[data-sort-row]');
+    let visible = 0;
+    let totalEur = 0;
 
-    renderTableRows();
-}
+    rows.forEach((row) => {
+        const haystack = [
+            row.dataset.sortId,
+            row.dataset.sortCustomer,
+            row.dataset.sortCreated,
+            row.dataset.sortDelivery,
+        ].join(' ').toLowerCase();
+        const match = !q || haystack.includes(q);
 
-// ── RENDER ────────────────────────────────────────────────────────────
-function setTableState(contentHtml) {
-    const body = document.getElementById('orders-body');
-    if (!body) return;
+        row.hidden = !match;
+        if (match) {
+            visible += 1;
+            totalEur += Number(row.dataset.sortTotal || 0);
+        }
+    });
 
-    body.innerHTML = `
-        <tr>
-            <td colspan="7">${contentHtml}</td>
-        </tr>
-    `;
-}
-
-function renderTableRows() {
-    const body = document.getElementById('orders-body');
-    if (!body) return;
-
-    if (!filtered.length) {
-        setTableState('<div class="empty-state">No orders match your search.</div>');
-        return;
-    }
-
-    body.innerHTML = '';
-    const frag = document.createDocumentFragment();
-    filtered.forEach((order) => frag.appendChild(buildRow(order)));
-    body.appendChild(frag);
-}
-
-function buildRow(order) {
-    const editBtn = CAN_WRITE
-        ? `<button class="btn-icon edit" title="Edit" data-id="${order.pAufNr}"><img class="action-icon" src="${ICONS.edit}" alt="Edit"></button>`
-        : '';
-
-    const delBtn = CAN_DELETE
-        ? `<button class="btn-icon del" title="Delete" data-id="${order.pAufNr}"><img class="action-icon" src="${ICONS.del}" alt="Delete"></button>`
-        : '';
-
-    const actionsHtml = `<div class="orders-actions">${editBtn}${delBtn}</div>`;
-
-    const row = document.createElement('tr');
-    row.className = 'row-clickable';
-    row.innerHTML = `
-        <td class="cell-id">#${order.pAufNr || '—'}</td>
-        <td class="cell-customer" title="${esc(order.customer_text)}">${esc(order.customer_text)}</td>
-        <td class="cell-date">${fmtDate(order.aufDat)}</td>
-        <td class="cell-date">${fmtDate(order.aufTermin)}</td>
-        <td class="cell-items td-items">${order.item_count}</td>
-        <td class="cell-total td-total">€${fmtMoney(order.preis_total)}</td>
-        <td class="td-actions">${actionsHtml}</td>
-    `;
-
-    row.addEventListener('click', () => openInspect(order.pAufNr));
-
-    if (CAN_WRITE) {
-        row.querySelector('.btn-icon.edit')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openEdit(order.pAufNr);
-        });
-    }
-
-    if (CAN_DELETE) {
-        row.querySelector('.btn-icon.del')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openDelete(order.pAufNr);
-        });
-    }
-
-    return row;
+    if (statTotal) statTotal.textContent = String(visible);
+    if (statEur) statEur.textContent = fmtMoney(totalEur);
+    if (emptyRow) emptyRow.hidden = visible > 0 || rows.length === 0;
 }
 
 // ── FORM / MODALS ─────────────────────────────────────────────────────
@@ -312,11 +212,16 @@ function openAdd() {
     document.getElementById('modal-form-overlay').classList.add('open');
 }
 
-function openEdit(orderId) {
-    const order = allOrders.find((o) => Number(o.pAufNr) === Number(orderId));
-    if (!order) return;
-
+async function openEdit(orderId) {
     clearFormErrors();
+
+    const { ok, data, message } = await api('GET', `/orders/${orderId}`);
+    if (!ok) {
+        toast(message || 'Failed to load order.', 'error');
+        return;
+    }
+    const order = normalizeOrder(data);
+
     document.getElementById('f-id').value = order.pAufNr;
     setDateFieldValue('f-aufDat', toDateInput(order.aufDat));
     setDateFieldValue('f-aufTermin', toDateInput(order.aufTermin));
@@ -337,9 +242,13 @@ function openEdit(orderId) {
     document.getElementById('modal-form-overlay').classList.add('open');
 }
 
-function openInspect(orderId) {
-    const order = allOrders.find((o) => Number(o.pAufNr) === Number(orderId));
-    if (!order) return;
+async function openInspect(orderId) {
+    const { ok, data, message } = await api('GET', `/orders/${orderId}`);
+    if (!ok) {
+        toast(message || 'Failed to load order.', 'error');
+        return;
+    }
+    const order = normalizeOrder(data);
 
     document.getElementById('view-order-badge').textContent = `#${order.pAufNr}`;
     document.getElementById('view-customer').textContent = order.customer_text || '—';
@@ -480,7 +389,7 @@ async function submitOrderForm(e) {
 
     closeModal('modal-form-overlay');
     toast(message || (id ? 'Order updated.' : 'Order created.'), 'success');
-    await loadOrders();
+    window.location.reload();
 }
 
 function buildPayload() {
@@ -556,7 +465,7 @@ async function confirmDelete() {
 
     if (ok) {
         toast(message || 'Order deleted.', 'success');
-        await loadOrders();
+        window.location.reload();
     } else {
         toast(message || data?.error || 'Delete failed.', 'error');
     }
@@ -628,70 +537,50 @@ function esc(s) {
         .replace(/>/g, '&gt;');
 }
 
-// ── EVENTS ────────────────────────────────────────────────────────────
-function syncSortHeaders() {
-    document.querySelectorAll('.th[data-sort]').forEach((header) => {
-        const active = header.dataset.sort === sortKey;
-        const arrow = header.querySelector('.sort-arrow');
+// ── EVENTS / INIT ─────────────────────────────────────────────────────
+function initOrdersPage() {
+    document.getElementById('search')?.addEventListener('input', filterOrderRows);
+    document.getElementById('btn-add')?.addEventListener('click', openAdd);
+    document.getElementById('btn-add-item')?.addEventListener('click', () => addItemRow());
+    document.getElementById('order-form')?.addEventListener('submit', submitOrderForm);
+    document.getElementById('modal-form-cancel')?.addEventListener('click', () => closeModal('modal-form-overlay'));
+    document.getElementById('modal-view-close')?.addEventListener('click', () => closeModal('modal-view-overlay'));
+    document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
+    document.getElementById('modal-del-confirm')?.addEventListener('click', confirmDelete);
 
-        header.classList.toggle('sorted', active);
-        header.setAttribute('aria-sort', active ? (sortDir === 1 ? 'ascending' : 'descending') : 'none');
-
-        if (!arrow) return;
-        arrow.classList.remove('sort-none', 'sort-asc', 'sort-desc');
-        arrow.classList.add(active ? (sortDir === 1 ? 'sort-asc' : 'sort-desc') : 'sort-none');
+    document.querySelectorAll('.order-row').forEach((row) => {
+        row.addEventListener('click', () => openInspect(row.dataset.id));
     });
+    document.querySelectorAll('.order-edit').forEach((btn) => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); openEdit(btn.dataset.id); });
+    });
+    document.querySelectorAll('.order-delete').forEach((btn) => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); openDelete(btn.dataset.id); });
+    });
+
+    document.querySelectorAll('.overlay').forEach((overlay) => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal(overlay.id);
+        });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (window.AppDatePicker?.hasOpen()) {
+                window.AppDatePicker.closeAll();
+                return;
+            }
+
+            closeModal('modal-form-overlay');
+            closeModal('modal-view-overlay');
+            closeModal('modal-del-overlay');
+        }
+    });
+
+    filterOrderRows();
 }
 
-document.querySelectorAll('.th[data-sort]').forEach((th) => {
-    th.addEventListener('click', () => {
-        const key = th.dataset.sort;
-
-        if (sortKey === key) sortDir *= -1;
-        else {
-            sortKey = key;
-            sortDir = 1;
-        }
-
-        syncSortHeaders();
-        applyFilters();
-    });
-});
-
-syncSortHeaders();
-
-document.getElementById('search')?.addEventListener('input', applyFilters);
-document.getElementById('btn-add')?.addEventListener('click', openAdd);
-document.getElementById('btn-add-item')?.addEventListener('click', () => addItemRow());
-document.getElementById('order-form')?.addEventListener('submit', submitOrderForm);
-document.getElementById('modal-form-cancel')?.addEventListener('click', () => closeModal('modal-form-overlay'));
-document.getElementById('modal-view-close')?.addEventListener('click', () => closeModal('modal-view-overlay'));
-document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
-document.getElementById('modal-del-confirm')?.addEventListener('click', confirmDelete);
-
-document.querySelectorAll('.overlay').forEach((overlay) => {
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeModal(overlay.id);
-    });
-});
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        if (window.AppDatePicker?.hasOpen()) {
-            window.AppDatePicker.closeAll();
-            return;
-        }
-
-        closeModal('modal-form-overlay');
-        closeModal('modal-view-overlay');
-        closeModal('modal-del-overlay');
-    }
-});
-
-// ── INIT ──────────────────────────────────────────────────────────────
-if (document.getElementById('orders-body')) {
-    (async () => {
-        await loadLookups();
-        await loadOrders();
-    })();
+if (document.querySelector('.orders-page')) {
+    loadLookups();
+    initOrdersPage();
 }

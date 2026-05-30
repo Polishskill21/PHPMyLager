@@ -13,6 +13,11 @@
 @endpush
 
 @section('content')
+@php
+    $canWrite = Auth::user()->canWrite();
+    $canDelete = Auth::user()->canDelete();
+    $lowCount = $products->filter(fn ($p) => $p->bestand > 0 && $p->bestand <= $p->meldeBest)->count();
+@endphp
 <section class="list-page products-page">
     <header class="page-header">
         <h1 class="page-title">
@@ -28,23 +33,32 @@
             <input id="search" class="form-input page-search-input" type="text" placeholder="Search by name or ID…">
         </div>
 
-        <select id="filter-stock" class="form-select filter-select">
-            <option value="all">All stock</option>
-            <option value="ok">In stock</option>
-            <option value="warn">Low stock</option>
-            <option value="empty">Out of stock</option>
-        </select>
+        <div class="select-wrap filter-select">
+            <select id="filter-stock" class="form-select">
+                <option value="all">All stock</option>
+                <option value="ok">In stock</option>
+                <option value="warn">Low stock</option>
+                <option value="empty">Out of stock</option>
+            </select>
+            <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
+        </div>
 
-        <select id="filter-wg" class="form-select filter-select">
-            <option value="all">All groups</option>
-        </select>
+        <div class="select-wrap filter-select">
+            <select id="filter-wg" class="form-select">
+                <option value="all">All groups</option>
+                @foreach($groups as $group)
+                    <option value="{{ $group->pWgNr }}">{{ $group->warengruppe ?: ('Group '.$group->pWgNr) }}</option>
+                @endforeach
+            </select>
+            <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
+        </div>
 
-        <div class="stat-pill">Total: <span id="stat-total">—</span></div>
-        <div class="stat-pill">Low: <span id="stat-low" class="stat-low-value">—</span></div>
+        <div class="stat-pill">Total: <span id="stat-total">{{ $products->count() }}</span></div>
+        <div class="stat-pill">Low: <span id="stat-low" class="stat-low-value">{{ $lowCount }}</span></div>
 
         <div class="page-toolbar-spacer"></div>
 
-        @if(Auth::user()->canWrite())
+        @if($canWrite)
             <button class="btn btn-primary" id="btn-add">
                 <img class="ui-icon" src="{{ asset('icons/lucide/plus.png') }}" alt="">
                 <span>Add Product</span>
@@ -54,7 +68,7 @@
 
     <div class="table-shell">
         <div class="table-wrap">
-            <table class="data-table products-table" id="products-table">
+            <table class="data-table products-table" id="products-table" data-static-sort>
                 <colgroup>
                     <col class="col-id">
                     <col class="col-name">
@@ -67,21 +81,62 @@
                 </colgroup>
                 <thead>
                 <tr>
-                    <th class="th cell-id" data-sort="pArtikelNr"><span class="table-th-inner"><span>ID</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-name" data-sort="bezeichnung"><span class="table-th-inner"><span>Name</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-left" data-sort="fWgNr"><span class="table-th-inner"><span>Group</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-money" data-sort="ekPreis"><span class="table-th-inner"><span>Buy €</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-money" data-sort="vkPreis"><span class="table-th-inner"><span>Sell €</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-status" data-sort="bestand"><span class="table-th-inner"><span>Stock</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-number" data-sort="meldeBest"><span class="table-th-inner"><span>Reorder</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-id" data-sort="id" data-sort-type="number"><span class="table-th-inner"><span>ID</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-name" data-sort="name"><span class="table-th-inner"><span>Name</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-left" data-sort="group"><span class="table-th-inner"><span>Group</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-money" data-sort="buy" data-sort-type="number"><span class="table-th-inner"><span>Buy €</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-money" data-sort="sell" data-sort-type="number"><span class="table-th-inner"><span>Sell €</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-status" data-sort="stock" data-sort-type="number"><span class="table-th-inner"><span>Stock</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-number" data-sort="reorder" data-sort-type="number"><span class="table-th-inner"><span>Reorder</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="cell-actions">Actions</th>
                 </tr>
                 </thead>
-                <tbody id="products-body">
-                <tr class="table-state-row">
-                    <td class="table-state-cell" colspan="8">
-                        <div class="loading-row"><div class="spinner"></div> Loading products…</div>
-                    </td>
+                <tbody>
+                @forelse($products as $product)
+                    @php
+                        $state = $product->bestand == 0 ? 'empty' : ($product->bestand <= $product->meldeBest ? 'warn' : 'ok');
+                        $stockIcon = $state === 'warn' ? '◐' : '●';
+                        $groupName = $product->warengruppe?->warengruppe ?: ($product->fWgNr ?? '—');
+                    @endphp
+                    <tr data-sort-row
+                        data-sort-id="{{ $product->pArtikelNr }}"
+                        data-sort-name="{{ $product->bezeichnung ?: '' }}"
+                        data-sort-group="{{ $groupName }}"
+                        data-sort-buy="{{ $product->ekPreis }}"
+                        data-sort-sell="{{ $product->vkPreis }}"
+                        data-sort-stock="{{ $product->bestand }}"
+                        data-sort-reorder="{{ $product->meldeBest }}"
+                        data-filter-stock="{{ $state }}"
+                        data-filter-wg="{{ $product->fWgNr }}">
+                        <td class="cell-id">#{{ $product->pArtikelNr }}</td>
+                        <td class="cell-name" title="{{ $product->bezeichnung }}">{{ $product->bezeichnung ?: '—' }}</td>
+                        <td class="cell-muted" title="{{ $groupName }}">{{ $groupName }}</td>
+                        <td class="cell-money">{{ number_format($product->ekPreis, 2) }}</td>
+                        <td class="cell-money">{{ number_format($product->vkPreis, 2) }}</td>
+                        <td class="cell-status"><span class="stock-badge stock-{{ $state }}">{{ $stockIcon }} {{ $product->bestand }}</span></td>
+                        <td class="cell-number">{{ $product->meldeBest }}</td>
+                        <td class="cell-actions">
+                            <div class="table-actions">
+                                @if($canWrite)
+                                    <button class="btn-icon product-edit" title="Edit" data-id="{{ $product->pArtikelNr }}">
+                                        <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
+                                    </button>
+                                @endif
+                                @if($canDelete)
+                                    <button class="btn-icon del product-delete" title="Discontinue" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
+                                        <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Discontinue">
+                                    </button>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr class="table-state-row">
+                        <td class="table-state-cell" colspan="8"><div class="empty-state">No products found.</div></td>
+                    </tr>
+                @endforelse
+                <tr class="table-state-row" id="products-empty-filter-row" hidden>
+                    <td class="table-state-cell" colspan="8"><div class="empty-state">No products match your filters.</div></td>
                 </tr>
                 </tbody>
             </table>
@@ -107,7 +162,14 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="f-fWgNr">Warehouse Group <em class="required-marker">*</em></label>
-                    <select class="form-select" id="f-fWgNr"></select>
+                    <div class="select-wrap">
+                        <select class="form-select" id="f-fWgNr">
+                            @foreach($groups as $group)
+                                <option value="{{ $group->pWgNr }}">{{ $group->warengruppe ?: ('Group '.$group->pWgNr) }}</option>
+                            @endforeach
+                        </select>
+                        <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
+                    </div>
                     <div class="form-error" id="err-fWgNr"></div>
                 </div>
                 <div class="form-group">
@@ -181,7 +243,7 @@
 
 <div class="overlay" id="modal-del-overlay">
     <div class="modal modal-sm">
-        <div class="modal-title modal-title-danger">⚠ Discontinue Product</div>
+        <div class="modal-title modal-title-danger">Discontinue Product</div>
         <p class="confirm-body">
             This will soft-delete <span class="confirm-target" id="del-target-name"></span>
             (ID&nbsp;<span class="confirm-target" id="del-target-id"></span>).
@@ -196,5 +258,6 @@
 @endsection
 
 @push('scripts')
+    <script src="{{ asset('js/list-sort.js') }}?v={{ filemtime(public_path('js/list-sort.js')) }}"></script>
     <script src="{{ asset('js/products.js') }}?v={{ filemtime(public_path('js/products.js')) }}"></script>
 @endpush

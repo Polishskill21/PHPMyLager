@@ -326,7 +326,6 @@
 #modal-del-overlay .modal-title {
     justify-content: center;
     margin: 0;
-    color: var(--color-danger-hover);
     font-size: 1.15rem;
     line-height: 1.15;
     text-align: center;

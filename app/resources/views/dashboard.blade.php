@@ -42,9 +42,9 @@
             <div class="dashboard-card-value">Go to Customers</div>
         </a>
         <a href="{{ route('warehouse') }}" class="dashboard-card dashboard-card-link">
-            <img class="dashboard-card-icon" src="{{ asset('icons/lucide/warehouse.png') }}" alt="">
-            <div class="dashboard-card-title">Warehouse</div>
-            <div class="dashboard-card-value">Go to Groups</div>
+            <img class="dashboard-card-icon" src="{{ asset('icons/lucide/boxes.png') }}" alt="">
+            <div class="dashboard-card-title">Product Groups</div>
+            <div class="dashboard-card-value">Go to Product Groups</div>
         </a>
         <a href="{{ route('purchase-orders') }}" class="dashboard-card dashboard-card-link">
             <img class="dashboard-card-icon" src="{{ asset('icons/lucide/package.png') }}" alt="">

@@ -1,0 +1,12 @@
+.warehouse-search {
+    width: min(360px, 100%);
+    flex-basis: 360px;
+}
+
+.warehouse-table {
+    --table-min-width: 620px;
+}
+
+.warehouse-table .col-id { width: 96px; }
+.warehouse-table .col-count { width: 130px; }
+.warehouse-table .col-actions { width: 90px; }

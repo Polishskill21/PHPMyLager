@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Models\PurchaseOrders\PurchaseOrder;
 use App\Models\Suppliers\Supplier;
+use App\Models\WarehouseGroups\WarehouseGroup;
+use App\Models\Customers\Customer;
+use App\Models\Products\Product;
+use App\Models\Orders\Order;
 
 // Redirect root to login
 Route::get('/', fn() => redirect()->route('login'));
@@ -17,10 +21,29 @@ Route::middleware('guest')->group(function () {
 // Protected routes (must be logged in)
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard',  fn() => view('dashboard'))->name('dashboard');
-    Route::get('/products',  fn() => view('products'))->name('products');
-    Route::get('/orders',  fn() => view('orders'))->name('orders');
-    Route::get('/customers',  fn() => view('customers'))->name('customers');
-    Route::get('/warehouse', fn() => view('warehouse'))->name('warehouse');
+    Route::get('/products', function () {
+        return view('products', [
+            'products' => Product::with('warengruppe')->orderBy('pArtikelNr')->get(),
+            'groups'   => WarehouseGroup::orderBy('pWgNr')->get(),
+        ]);
+    })->name('products');
+
+    Route::get('/orders', function () {
+        return view('orders', [
+            'orders' => Order::with(['customer', 'items'])->orderByDesc('aufDat')->get(),
+        ]);
+    })->name('orders');
+
+    Route::get('/customers', function () {
+        return view('customers', [
+            'customers' => Customer::orderBy('pKdNr')->get(),
+        ]);
+    })->name('customers');
+    Route::get('/warehouse', function () {
+        return view('warehouse', [
+            'groups' => WarehouseGroup::withCount('products')->orderBy('pWgNr')->get(),
+        ]);
+    })->name('warehouse');
 
     Route::get('/purchase-orders', function () {
         return view('purchase-orders', [

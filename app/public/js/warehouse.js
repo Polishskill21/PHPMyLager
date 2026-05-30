@@ -1,250 +1,117 @@
-// ── CONFIG ────────────────────────────────────────────────────────────
-const CSRF       = document.querySelector('meta[name="csrf-token"]').content;
-const CAN_WRITE  = document.querySelector('meta[name="can-write"]')?.content === 'true';
-const ROW_H      = 56;
-const OVER       = 8;
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-// ── STATE ─────────────────────────────────────────────────────────────
-let allGroups = [];
-let filtered  = [];
-let sortKey   = 'pWgNr';
-let sortDir   = 1;
-
-// ── API HELPERS ───────────────────────────────────────────────────────
 async function api(method, path, body = null) {
     const opts = {
         method,
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': CSRF,
-            'Accept': 'application/json',
+            Accept: 'application/json',
         },
     };
 
     if (body) opts.body = JSON.stringify(body);
 
     const res = await fetch('/api' + path, opts);
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, data };
-}
+    const payload = res.status === 204 ? null : await res.json().catch(() => ({}));
 
-// ── TOAST ─────────────────────────────────────────────────────────────
-function toast(msg, type = 'info') {
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${msg}`;
-    document.getElementById('toast-area')?.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
-
-// ── LOAD DATA ─────────────────────────────────────────────────────────
-async function loadGroups() {
-    const wrap = document.getElementById('vscroll-inner');
-    wrap.innerHTML = `<div class="loading-row"><div class="spinner"></div> Loading product groups…</div>`;
-
-    const { ok, data } = await api('GET', '/warehouse-groups');
-    if (!ok) {
-        toast('Failed to load product groups', 'error');
-        wrap.innerHTML = `<div class="empty-state"><div class="icon">◫</div><p>Failed to load product groups.</p></div>`;
-        return;
+    if (!res.ok) {
+        const errorPayload = payload && typeof payload === 'object' ? payload : {};
+        return {
+            ok: false,
+            status: res.status,
+            data: errorPayload,
+            message: errorPayload.message || 'Request failed.',
+            errors: errorPayload.errors || {},
+        };
     }
 
-    const list = Array.isArray(data.data) ? data.data : [];
-    allGroups = list.map(normalizeGroup);
-    applyFilters();
-}
-
-function normalizeGroup(entry) {
     return {
-        pWgNr: entry?.pWgNr,
-        warengruppe: entry?.warengruppe || '',
+        ok: true,
+        status: res.status,
+        data: payload?.data ?? payload,
+        message: payload?.message || '',
+        errors: {},
     };
 }
 
-// ── FILTER + SORT ─────────────────────────────────────────────────────
-function applyFilters() {
-    const q = document.getElementById('search').value.trim().toLowerCase();
+function toast(msg, type = 'info') {
+    const area = document.getElementById('toast-area');
+    if (!area) return;
 
-    filtered = allGroups.filter(g => {
-        if (!q) return true;
-        const haystack = [g.pWgNr, g.warengruppe].join(' ').toLowerCase();
-        return haystack.includes(q);
-    });
-
-    filtered.sort((a, b) => {
-        let av = a[sortKey];
-        let bv = b[sortKey];
-
-        if (sortKey === 'pWgNr') {
-            av = parseFloat(av) || 0;
-            bv = parseFloat(bv) || 0;
-            return (av - bv) * sortDir;
-        }
-
-        if (typeof av === 'string') {
-            av = av.toLowerCase();
-            bv = (bv || '').toLowerCase();
-        }
-
-        return av > bv ? sortDir : (av < bv ? -sortDir : 0);
-    });
-
-    renderVirtual();
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${esc(msg)}`;
+    area.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
 }
 
-// ── VIRTUAL SCROLL ────────────────────────────────────────────────────
-function renderVirtual() {
-    const vscroll = document.getElementById('vscroll');
-    const inner = document.getElementById('vscroll-inner');
-
-    if (filtered.length === 0) {
-        inner.style.height = '200px';
-        inner.innerHTML = `<div class="empty-state"><div class="icon">◫</div><p>No product groups match your search.</p></div>`;
-        return;
-    }
-
-    inner.style.height = (filtered.length * ROW_H) + 'px';
-    inner.innerHTML = '';
-
-    function paint() {
-        const scrollTop = vscroll.scrollTop;
-        const viewH = vscroll.clientHeight;
-        const startIdx = Math.max(0, Math.floor(scrollTop / ROW_H) - OVER);
-        const endIdx = Math.min(filtered.length - 1, Math.ceil((scrollTop + viewH) / ROW_H) + OVER);
-
-        [...inner.querySelectorAll('.row')].forEach(el => {
-            const i = +el.dataset.idx;
-            if (i < startIdx || i > endIdx) el.remove();
-        });
-
-        const rendered = new Set([...inner.querySelectorAll('.row')].map(el => +el.dataset.idx));
-        for (let i = startIdx; i <= endIdx; i++) {
-            if (rendered.has(i)) continue;
-            inner.appendChild(buildRow(filtered[i], i));
-        }
-    }
-
-    paint();
-    vscroll.onscroll = paint;
-}
-
-function buildRow(group, idx) {
-    const top = idx * ROW_H;
-
-    const editBtn = CAN_WRITE
-        ? `<button class="btn-icon edit" title="Edit" data-id="${group.pWgNr}">✎</button>`
-        : '';
-
-    const row = document.createElement('div');
-    row.className = 'row';
-    row.classList.add('row-clickable');
-    row.dataset.idx = idx;
-    row.style.top = top + 'px';
-    row.innerHTML = `
-        <div class="cell cell-id">#${group.pWgNr ?? '—'}</div>
-        <div class="cell cell-name" title="${esc(group.warengruppe)}">${esc(group.warengruppe || '—')}</div>
-        <div class="cell"><div class="actions">${editBtn}</div></div>
-    `;
-
-    row.addEventListener('click', () => openGroupView(group));
-
-    if (CAN_WRITE) {
-        row.querySelector('.btn-icon.edit')?.addEventListener('click', (event) => {
-            event.stopPropagation();
-            openEdit(group.pWgNr);
-        });
-    }
-
-    return row;
-}
-
-function esc(s) {
-    return String(s)
+function esc(value) {
+    return String(value ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
 
-async function openGroupView(group) {
-    const overlay = document.getElementById('modal-view-overlay');
-    const list = document.getElementById('group-products-list');
-    const count = document.getElementById('group-products-count');
-    const title = document.getElementById('modal-view-title');
-    const badge = document.getElementById('modal-view-badge');
+// ── SEARCH FILTER ─────────────────────────────────────────────────────
+function filterGroupRows() {
+    const input = document.getElementById('warehouse-search');
+    const total = document.getElementById('warehouse-stat-total');
+    const emptyRow = document.getElementById('warehouse-empty-filter-row');
+    if (!input) return;
 
-    title.textContent = group.warengruppe || 'Product Group';
-    badge.textContent = `#${group.pWgNr}`;
-    count.textContent = '0';
-    list.innerHTML = `<div class="list-empty">Loading products…</div>`;
-    overlay.classList.add('open');
+    const query = input.value.trim().toLowerCase();
+    let visible = 0;
 
-    const { ok, data } = await api('GET', `/warehouse-groups/${group.pWgNr}/products`);
-    
-    if (!ok) {
-        list.innerHTML = `<div class="list-empty">Failed to load products.</div>`;
-        return;
-    }
+    document.querySelectorAll('.warehouse-table tbody tr[data-sort-row]').forEach((row) => {
+        const haystack = [row.dataset.sortId, row.dataset.sortName].join(' ').toLowerCase();
+        const match = !query || haystack.includes(query);
 
-    const items = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
-    count.textContent = String(items.length);
+        row.hidden = !match;
+        if (match) visible += 1;
+    });
 
-    if (items.length === 0) {
-        list.innerHTML = `<div class="list-empty">No products in this group.</div>`;
-        return;
-    }
-
-    list.innerHTML = items.map(p => {
-        const id = p.pArtikelNr ?? '—';
-        const name = esc(p.bezeichnung || '—');
-        return `
-            <div class="list-row">
-                <div class="list-cell">#${id}</div>
-                <div class="list-cell" title="${name}">${name}</div>
-            </div>
-        `;
-    }).join('');
+    if (total) total.textContent = String(visible);
+    if (emptyRow) emptyRow.hidden = !query || visible > 0;
 }
 
-// ── FORM + MODAL ──────────────────────────────────────────────────────
+// ── ADD / EDIT FORM ───────────────────────────────────────────────────
 function openAdd() {
     clearFormErrors();
+    document.getElementById('group-form')?.reset();
     document.getElementById('f-id').value = '';
-    document.getElementById('group-form').reset();
-    document.getElementById('modal-form-title').textContent = 'New Product Group';
-    document.getElementById('modal-form-badge').textContent = 'CREATE';
-    document.getElementById('modal-form-submit').textContent = 'Save Product Group';
-    document.getElementById('modal-form-overlay').classList.add('open');
-    document.getElementById('f-warengruppe').focus();
+    document.getElementById('group-form-title').textContent = 'New Product Group';
+    document.getElementById('group-form-badge').textContent = 'CREATE';
+    document.getElementById('group-form-submit').textContent = 'Save Product Group';
+    document.getElementById('modal-group-form-overlay').classList.add('open');
+    document.getElementById('f-warengruppe')?.focus();
 }
 
-function openEdit(id) {
-    const group = allGroups.find(g => Number(g.pWgNr) === Number(id));
-    if (!group) return;
-
+function openEdit(id, name) {
     clearFormErrors();
-    document.getElementById('f-id').value = group.pWgNr;
-    document.getElementById('f-warengruppe').value = group.warengruppe || '';
-
-    document.getElementById('modal-form-title').textContent = 'Edit Product Group';
-    document.getElementById('modal-form-badge').textContent = `#${group.pWgNr}`;
-    document.getElementById('modal-form-submit').textContent = 'Update Product Group';
-    document.getElementById('modal-form-overlay').classList.add('open');
-    document.getElementById('f-warengruppe').focus();
+    document.getElementById('f-id').value = id ?? '';
+    document.getElementById('f-warengruppe').value = name || '';
+    document.getElementById('group-form-title').textContent = 'Edit Product Group';
+    document.getElementById('group-form-badge').textContent = `#${id}`;
+    document.getElementById('group-form-submit').textContent = 'Update Product Group';
+    document.getElementById('modal-group-form-overlay').classList.add('open');
+    document.getElementById('f-warengruppe')?.focus();
 }
 
-document.getElementById('group-form')?.addEventListener('submit', async e => {
-    e.preventDefault();
+async function submitGroupForm(event) {
+    event.preventDefault();
     clearFormErrors();
 
     const id = document.getElementById('f-id').value;
     const name = document.getElementById('f-warengruppe').value.trim();
     const payload = { warengruppe: name === '' ? null : name };
 
-    const btn = document.getElementById('modal-form-submit');
+    const btn = document.getElementById('group-form-submit');
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
-    const { ok, data } = id
+    const { ok, data, message } = id
         ? await api('PUT', `/warehouse-groups/${id}`, payload)
         : await api('POST', '/warehouse-groups', payload);
 
@@ -252,82 +119,63 @@ document.getElementById('group-form')?.addEventListener('submit', async e => {
     btn.textContent = id ? 'Update Product Group' : 'Save Product Group';
 
     if (!ok) {
-        if (data.errors) {
-            Object.entries(data.errors).forEach(([key, messages]) => {
-                const err = document.getElementById('err-' + key);
-                const field = document.getElementById('f-' + key);
-
-                if (err) err.textContent = messages[0];
-                if (field) field.classList.add('invalid');
-            });
-        }
-
-        toast(data.message || 'Save failed', 'error');
+        applyValidationErrors(data);
+        toast(message || 'Save failed.', 'error');
         return;
     }
 
-    closeModal('modal-form-overlay');
-    toast(id ? 'Product group updated.' : 'Product group created.', 'success');
-    await loadGroups();
-});
+    closeModal('modal-group-form-overlay');
+    toast(message || (id ? 'Product group updated.' : 'Product group created.'), 'success');
+    window.location.reload();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function applyValidationErrors(data) {
+    Object.entries(data?.errors || {}).forEach(([key, messages]) => {
+        const msg = Array.isArray(messages) ? messages[0] : String(messages);
+        const err = document.getElementById('err-' + key);
+        const field = document.getElementById('f-' + key);
+
+        if (err) err.textContent = msg;
+        if (field) field.classList.add('invalid');
+    });
+}
+
+function clearFormErrors() {
+    document.querySelectorAll('.form-error').forEach((el) => { el.textContent = ''; });
+    document.querySelectorAll('.form-input.invalid, .form-select.invalid').forEach((el) => el.classList.remove('invalid'));
+}
 
 function closeModal(id) {
     document.getElementById(id)?.classList.remove('open');
 }
 
-document.getElementById('modal-form-cancel')?.addEventListener('click', () => closeModal('modal-form-overlay'));
-document.getElementById('modal-view-close')?.addEventListener('click', () => closeModal('modal-view-overlay'));
+// ── INIT ──────────────────────────────────────────────────────────────
+function initWarehousePage() {
+    document.getElementById('warehouse-search')?.addEventListener('input', filterGroupRows);
+    document.getElementById('btn-add-group')?.addEventListener('click', openAdd);
+    document.getElementById('group-form')?.addEventListener('submit', submitGroupForm);
+    document.getElementById('group-form-cancel')?.addEventListener('click', () => closeModal('modal-group-form-overlay'));
 
-document.querySelectorAll('.overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => {
-        if (e.target === overlay) closeModal(overlay.id);
-    });
-});
-
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-        closeModal('modal-form-overlay');
-        closeModal('modal-view-overlay');
-    }
-});
-
-function clearFormErrors() {
-    document.querySelectorAll('.form-error').forEach(el => {
-        el.textContent = '';
+    document.querySelectorAll('.group-edit').forEach((btn) => {
+        btn.addEventListener('click', () => openEdit(btn.dataset.id, btn.dataset.name));
     });
 
-    document.querySelectorAll('.form-input.invalid, .form-select.invalid').forEach(el => {
-        el.classList.remove('invalid');
+    document.querySelectorAll('.overlay').forEach((overlay) => {
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) closeModal(overlay.id);
+        });
     });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeModal('modal-group-form-overlay');
+        }
+    });
+
+    filterGroupRows();
 }
 
-// ── EVENT LISTENERS ──────────────────────────────────────────────────
-document.querySelectorAll('.th[data-sort]').forEach(th => {
-    th.addEventListener('click', () => {
-        const key = th.dataset.sort;
-
-        if (sortKey === key) sortDir *= -1;
-        else {
-            sortKey = key;
-            sortDir = 1;
-        }
-
-        document.querySelectorAll('.th').forEach(header => {
-            header.classList.toggle('sorted', header.dataset.sort === sortKey);
-            const arrow = header.querySelector('.sort-arrow');
-            if (arrow) {
-                arrow.textContent = header.dataset.sort === sortKey ? (sortDir === 1 ? '↑' : '↓') : '↕';
-            }
-        });
-
-        applyFilters();
-    });
-});
-
-document.getElementById('search')?.addEventListener('input', applyFilters);
-document.getElementById('btn-add')?.addEventListener('click', openAdd);
-
-// ── INIT ──────────────────────────────────────────────────────────────
-if (document.getElementById('vscroll-inner')) {
-    loadGroups();
+if (document.querySelector('.warehouse-page')) {
+    initWarehousePage();
 }

@@ -13,6 +13,10 @@
 @endpush
 
 @section('content')
+@php
+    $canWrite = Auth::user()->canWrite();
+    $canDelete = Auth::user()->canDelete();
+@endphp
 <section class="list-page customers-page">
     <header class="page-header">
         <h1 class="page-title">
@@ -28,9 +32,11 @@
             <input id="search" class="form-input page-search-input" type="text" placeholder="Search by ID, name, email, street, city or PLZ…">
         </div>
 
+        <div class="stat-pill">Customers: <span id="customers-stat-total">{{ $customers->count() }}</span></div>
+
         <div class="page-toolbar-spacer"></div>
 
-        @if(Auth::user()->canWrite())
+        @if($canWrite)
             <button class="btn btn-primary" id="btn-add">
                 <img class="ui-icon" src="{{ asset('icons/lucide/plus.png') }}" alt="">
                 <span>Add Customer</span>
@@ -40,7 +46,7 @@
 
     <div class="table-shell">
         <div class="table-wrap">
-            <table class="data-table customers-table" id="customers-table">
+            <table class="data-table customers-table" id="customers-table" data-static-sort>
                 <colgroup>
                     <col class="col-id">
                     <col class="col-name">
@@ -52,20 +58,52 @@
                 </colgroup>
                 <thead>
                 <tr>
-                    <th class="th cell-id" data-sort="pKdNr"><span class="table-th-inner"><span>ID</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-id" data-sort="id" data-sort-type="number"><span class="table-th-inner"><span>ID</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-name" data-sort="name"><span class="table-th-inner"><span>Name</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-left" data-sort="email"><span class="table-th-inner"><span>Email</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-left" data-sort="strasse"><span class="table-th-inner"><span>Street</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-left" data-sort="ort"><span class="table-th-inner"><span>City</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-number" data-sort="plz"><span class="table-th-inner"><span>PLZ</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-left" data-sort="street"><span class="table-th-inner"><span>Street</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-left" data-sort="city"><span class="table-th-inner"><span>City</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-number" data-sort="plz" data-sort-type="number"><span class="table-th-inner"><span>PLZ</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="cell-actions">Actions</th>
                 </tr>
                 </thead>
-                <tbody id="customers-body">
-                <tr class="table-state-row">
-                    <td class="table-state-cell" colspan="7">
-                        <div class="loading-row"><div class="spinner"></div> Loading customers…</div>
-                    </td>
+                <tbody>
+                @forelse($customers as $customer)
+                    <tr data-sort-row
+                        data-sort-id="{{ $customer->pKdNr }}"
+                        data-sort-name="{{ $customer->name ?: '' }}"
+                        data-sort-email="{{ $customer->email ?: '' }}"
+                        data-sort-street="{{ $customer->strasse ?: '' }}"
+                        data-sort-city="{{ $customer->ort ?: '' }}"
+                        data-sort-plz="{{ $customer->plz ?: '' }}">
+                        <td class="cell-id">#{{ $customer->pKdNr }}</td>
+                        <td class="cell-name" title="{{ $customer->name }}">{{ $customer->name ?: '—' }}</td>
+                        <td class="cell-muted" title="{{ $customer->email }}">{{ $customer->email ?: '—' }}</td>
+                        <td title="{{ $customer->strasse }}">{{ $customer->strasse ?: '—' }}</td>
+                        <td title="{{ $customer->ort }}">{{ $customer->ort ?: '—' }}</td>
+                        <td class="cell-number">{{ $customer->plz ?: '—' }}</td>
+                        <td class="cell-actions">
+                            <div class="table-actions">
+                                @if($canWrite)
+                                    <button class="btn-icon customer-edit" title="Edit" data-id="{{ $customer->pKdNr }}">
+                                        <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
+                                    </button>
+                                @endif
+                                @if($canDelete)
+                                    <button class="btn-icon del customer-delete" title="Archive" data-id="{{ $customer->pKdNr }}" data-name="{{ $customer->name }}">
+                                        <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Archive">
+                                    </button>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr class="table-state-row">
+                        <td class="table-state-cell" colspan="7"><div class="empty-state">No customers found.</div></td>
+                    </tr>
+                @endforelse
+                <tr class="table-state-row" id="customers-empty-filter-row" hidden>
+                    <td class="table-state-cell" colspan="7"><div class="empty-state">No customers match your search.</div></td>
                 </tr>
                 </tbody>
             </table>
@@ -124,7 +162,7 @@
 
 <div class="overlay" id="modal-del-overlay">
     <div class="modal modal-sm">
-        <div class="modal-title modal-title-danger">⚠ Archive Customer</div>
+        <div class="modal-title modal-title-danger">Archive Customer</div>
         <p class="confirm-body">
             This will soft-delete <span class="confirm-target" id="del-target-name"></span>
             (ID&nbsp;<span class="confirm-target" id="del-target-id"></span>).
@@ -139,5 +177,6 @@
 @endsection
 
 @push('scripts')
+    <script src="{{ asset('js/list-sort.js') }}?v={{ filemtime(public_path('js/list-sort.js')) }}"></script>
     <script src="{{ asset('js/customers.js') }}?v={{ filemtime(public_path('js/customers.js')) }}"></script>
 @endpush

@@ -13,6 +13,11 @@
 @endpush
 
 @section('content')
+@php
+    $canWrite = Auth::user()->canWrite();
+    $canDelete = Auth::user()->canDelete();
+    $ordersTotalEur = $orders->sum(fn ($o) => $o->items->sum(fn ($i) => $i->aufMenge * $i->kaufPreis));
+@endphp
 <section class="orders-page">
     <header class="page-header orders-header">
         <h1 class="page-title">
@@ -28,12 +33,12 @@
             <input id="search" class="form-input page-search-input" type="text" placeholder="Search by order or customer ID...">
         </div>
 
-        <div class="stat-pill">Total Orders: <span id="stat-total">0</span></div>
-        <div class="stat-pill">Total EUR: <span id="stat-total-eur">0.00</span></div>
+        <div class="stat-pill">Total Orders: <span id="stat-total">{{ $orders->count() }}</span></div>
+        <div class="stat-pill">Total EUR: <span id="stat-total-eur">{{ number_format($ordersTotalEur, 2) }}</span></div>
 
         <div class="page-toolbar-spacer"></div>
 
-        @if(Auth::user()->canWrite())
+        @if($canWrite)
             <button id="btn-add" class="btn btn-primary">
                 <img class="ui-icon" src="{{ asset('icons/lucide/plus.png') }}" alt="">
                 <span>Add Order</span>
@@ -43,7 +48,7 @@
 
     <div class="table-shell orders-table-shell">
         <div class="table-wrap orders-table-wrap">
-            <table class="data-table orders-table" id="orders-table">
+            <table class="data-table orders-table" id="orders-table" data-static-sort>
                 <colgroup>
                     <col class="col-id">
                     <col class="col-customer">
@@ -55,20 +60,60 @@
                 </colgroup>
                 <thead>
                 <tr>
-                    <th class="th cell-id" data-sort="pAufNr"><span class="table-th-inner"><span>ID</span><span class="sort-arrow sort-none" aria-hidden="true"></span></span></th>
-                    <th class="th cell-customer" data-sort="customer_text"><span class="table-th-inner"><span>Name</span><span class="sort-arrow sort-none" aria-hidden="true"></span></span></th>
-                    <th class="th cell-date" data-sort="aufDat"><span class="table-th-inner"><span>Created</span><span class="sort-arrow sort-none" aria-hidden="true"></span></span></th>
-                    <th class="th cell-date" data-sort="aufTermin"><span class="table-th-inner"><span>Delivery</span><span class="sort-arrow sort-none" aria-hidden="true"></span></span></th>
-                    <th class="th td-items cell-number" data-sort="item_count"><span class="table-th-inner"><span>Items</span><span class="sort-arrow sort-none" aria-hidden="true"></span></span></th>
-                    <th class="th td-total cell-money" data-sort="preis_total"><span class="table-th-inner"><span>Total EUR</span><span class="sort-arrow sort-none" aria-hidden="true"></span></span></th>
+                    <th class="th cell-id" data-sort="id" data-sort-type="number"><span class="table-th-inner"><span>ID</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-customer" data-sort="customer"><span class="table-th-inner"><span>Name</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-date" data-sort="created"><span class="table-th-inner"><span>Created</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-date" data-sort="delivery"><span class="table-th-inner"><span>Delivery</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th td-items cell-number" data-sort="items" data-sort-type="number"><span class="table-th-inner"><span>Items</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th td-total cell-money" data-sort="total" data-sort-type="number"><span class="table-th-inner"><span>Total EUR</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="cell-actions">Actions</th>
                 </tr>
                 </thead>
-                <tbody id="orders-body">
-                <tr class="table-state-row">
-                    <td class="table-state-cell" colspan="7">
-                        <div class="loading-row"><div class="spinner"></div> Loading orders...</div>
-                    </td>
+                <tbody>
+                @forelse($orders as $order)
+                    @php
+                        $itemCount = $order->items->count();
+                        $orderTotal = $order->items->sum(fn ($i) => $i->aufMenge * $i->kaufPreis);
+                        $customerName = $order->customer?->name ?: 'Unknown customer';
+                        $created = $order->aufDat ? \Illuminate\Support\Carbon::parse($order->aufDat)->format('Y-m-d') : '';
+                        $delivery = $order->aufTermin ? \Illuminate\Support\Carbon::parse($order->aufTermin)->format('Y-m-d') : '';
+                    @endphp
+                    <tr class="row-clickable order-row" data-sort-row
+                        data-id="{{ $order->pAufNr }}"
+                        data-sort-id="{{ $order->pAufNr }}"
+                        data-sort-customer="{{ $customerName }}"
+                        data-sort-created="{{ $created }}"
+                        data-sort-delivery="{{ $delivery }}"
+                        data-sort-items="{{ $itemCount }}"
+                        data-sort-total="{{ $orderTotal }}">
+                        <td class="cell-id">#{{ $order->pAufNr }}</td>
+                        <td class="cell-customer" title="{{ $customerName }}">{{ $customerName }}</td>
+                        <td class="cell-date">{{ $created ?: '—' }}</td>
+                        <td class="cell-date">{{ $delivery ?: '—' }}</td>
+                        <td class="cell-number td-items">{{ $itemCount }}</td>
+                        <td class="cell-money td-total">€{{ number_format($orderTotal, 2) }}</td>
+                        <td class="cell-actions">
+                            <div class="orders-actions">
+                                @if($canWrite)
+                                    <button class="btn-icon order-edit" title="Edit" data-id="{{ $order->pAufNr }}">
+                                        <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
+                                    </button>
+                                @endif
+                                @if($canDelete)
+                                    <button class="btn-icon del order-delete" title="Delete" data-id="{{ $order->pAufNr }}">
+                                        <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Delete">
+                                    </button>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr class="table-state-row">
+                        <td class="table-state-cell" colspan="7"><div class="empty-state">No orders found.</div></td>
+                    </tr>
+                @endforelse
+                <tr class="table-state-row" id="orders-empty-filter-row" hidden>
+                    <td class="table-state-cell" colspan="7"><div class="empty-state">No orders match your search.</div></td>
                 </tr>
                 </tbody>
             </table>
@@ -184,7 +229,7 @@
     <div class="modal modal-sm">
         <div class="delete-modal-content">
             <div class="delete-modal-copy">
-                <div class="modal-title">Delete Order</div>
+                <div class="modal-title modal-title-danger">Delete Order</div>
                 <p class="confirm-body">
                     This will delete order <span class="confirm-target" id="del-target-id"></span>
                     and restore stock from its items.
@@ -201,5 +246,6 @@
 @endsection
 
 @push('scripts')
+    <script src="{{ asset('js/list-sort.js') }}?v={{ filemtime(public_path('js/list-sort.js')) }}"></script>
     <script src="{{ asset('js/orders.js') }}?v={{ filemtime(public_path('js/orders.js')) }}"></script>
 @endpush

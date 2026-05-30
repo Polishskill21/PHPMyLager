@@ -4,7 +4,7 @@
         ['route' => 'products', 'label' => 'Products', 'icon' => 'drill.png', 'match' => 'products'],
         ['route' => 'orders', 'label' => 'Orders', 'icon' => 'shopping-cart.png', 'match' => 'orders'],
         ['route' => 'customers', 'label' => 'Customers', 'icon' => 'users-round.png', 'match' => 'customers'],
-        ['route' => 'warehouse', 'label' => 'Warehouse', 'icon' => 'warehouse.png', 'match' => 'warehouse'],
+        ['route' => 'warehouse', 'label' => 'Product Groups', 'icon' => 'boxes.png', 'match' => 'warehouse'],
         ['route' => 'purchase-orders', 'label' => 'Purchase Orders', 'icon' => 'package.png', 'match' => 'purchase-orders'],
         ['route' => 'suppliers', 'label' => 'Suppliers', 'icon' => 'truck.png', 'match' => 'suppliers'],
     ];
