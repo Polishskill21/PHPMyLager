@@ -93,7 +93,8 @@ Returns all active (non-deleted) products. The "has_stock_history" allows for an
       "bestand": 1010,
       "meldeBest": 400,
       "lagerplatz": "D01-12B",
-      "has_stock_history": false
+      "has_stock_history": false,
+      "warengruppe_name": "Optics & Glass"
     },
     {
       "pArtikelNr": 10028,
@@ -104,7 +105,8 @@ Returns all active (non-deleted) products. The "has_stock_history" allows for an
       "bestand": 680,
       "meldeBest": 210,
       "lagerplatz": "B04-02C",
-      "has_stock_history": false
+      "has_stock_history": false,
+      "warengruppe_name": "Etwas"
     },
     ...
   ],
@@ -124,7 +126,8 @@ Returns all active (non-deleted) products. The "has_stock_history" allows for an
     "bestand": 50,
     "meldeBest": 10,
     "lagerplatz": "A12-03B",
-    "has_stock_history": false
+    "has_stock_history": false,
+    "warengruppe_name": "Etwas"
   }
 }
 ```
@@ -141,10 +144,8 @@ Returns all active (non-deleted) products. The "has_stock_history" allows for an
       "new_bestand": 45,
       "reason": "Damaged items removed from shelf.",
       "created_at": "2026-05-22T17:45:00.000000Z",
-      "user": {
-        "id": 2,
-        "name": "Admin User"
-      }
+      "product_name": "Handlupe 90mm",
+      "user_name": "Admin User"
     }
   ]
 }
@@ -174,7 +175,8 @@ Returns all active (non-deleted) products. The "has_stock_history" allows for an
     "vkPreis": 299.99,
     "bestand": 50,
     "meldeBest": 10,
-    "lagerplatz": "A12-03B"
+    "lagerplatz": "A12-03B",
+    "warengruppe_name": "Etwas"
   },
   "message": "Product created successfully."
 }
@@ -200,7 +202,8 @@ Returns all active (non-deleted) products. The "has_stock_history" allows for an
     "vkPreis": 349.99,
     "bestand": 50,
     "meldeBest": 10,
-    "lagerplatz": "B04-01A"
+    "lagerplatz": "B04-01A",
+    "warengruppe_name": "Etwas"
   },
   "message": "Product updated successfully."
 }
