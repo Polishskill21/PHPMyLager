@@ -42,7 +42,8 @@ class Product extends Model
     public    $timestamps = false;
 
     protected $hidden = [
-        'deleted_at'
+        'deleted_at',
+        'warengruppe'
     ];
 
     protected $fillable = [
@@ -66,6 +67,7 @@ class Product extends Model
         'has_stock_history',
         'warengruppe_name'
     ];
+
 
     // ── Relationships ─────────────────────────────────────────────────────────
 

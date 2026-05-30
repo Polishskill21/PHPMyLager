@@ -44,6 +44,11 @@ class InventoryLog extends Model
         'user_name',
     ];
 
+    protected $hidden = [
+        'product',
+        'user',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, self::COL_USER_ID, User::COL_ID);
