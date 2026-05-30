@@ -55,7 +55,7 @@ class ProductController extends Controller
      */
     public function stockHistory(Product $product): JsonResponse
     {
-        $history = $product->inventoryLogs()->with('user:id,name')->get();
+        $history = $product->inventoryLogs()->get();
         return $this->ok($history);
     }
 
