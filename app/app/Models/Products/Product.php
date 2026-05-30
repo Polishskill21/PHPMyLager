@@ -63,7 +63,8 @@ class Product extends Model
     ];
 
     protected $appends = [
-        'has_stock_history'
+        'has_stock_history',
+        'warengruppe_name'
     ];
 
     // ── Relationships ─────────────────────────────────────────────────────────
@@ -87,5 +88,10 @@ class Product extends Model
     public function getHasStockHistoryAttribute(): bool
     {
         return $this->inventoryLogs()->exists();
+    }
+
+    public function getWarengruppeNameAttribute(): ?string
+    {
+        return $this->warengruppe?->{WarehouseGroup::COL_NAME};
     }
 }
