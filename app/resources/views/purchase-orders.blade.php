@@ -79,7 +79,8 @@
                         // status is cast to the PurchaseOrderStatus enum — normalise to its string value
                         $status = $order->status instanceof \BackedEnum ? $order->status->value : ($order->status ?: 'offen');
                         $isEditable = in_array($status, ['offen', 'bestellt'], true);
-                        $isReceivable = $status === 'bestellt';
+                        // Receivable while not yet fully delivered or cancelled; a partial receive promotes offen → bestellt.
+                        $isReceivable = in_array($status, ['offen', 'bestellt'], true);
                     @endphp
                     <tr class="row-clickable purchase-order-row" data-sort-row
                         data-id="{{ $order->pBestNr }}"
@@ -107,7 +108,7 @@
                                     @endif
                                     @if($canWrite && $isReceivable)
                                         <button class="btn-icon purchase-order-receive" title="Receive delivery" data-id="{{ $order->pBestNr }}">
-                                            <img class="action-icon" src="{{ asset('icons/lucide/truck.png') }}" alt="Receive delivery">
+                                            <img class="action-icon" src="{{ asset('icons/lucide/list-checks.png') }}" alt="Receive delivery">
                                         </button>
                                     @endif
                                     @if($canDelete && $isEditable)

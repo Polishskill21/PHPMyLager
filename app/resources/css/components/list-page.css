@@ -103,6 +103,10 @@
     min-width: var(--table-min-width, 760px);
     border-collapse: collapse;
     table-layout: fixed;
+    /* Number of row action icons this table renders for the highest-privilege user.
+       Drives the col-actions width so icons are never clipped. Pages with more/fewer
+       actions override this (e.g. Products = 4, Purchase Orders = 3). */
+    --actions-count: 2;
 }
 
 /* Shared semantic column widths — keep structural column types visually stable
@@ -111,7 +115,11 @@
    city / group / phone) are intentionally left to `auto` so they absorb the remaining
    width. Keyed on the `col-*` classes carried by each table's <colgroup>. */
 .data-table col.col-id { width: 84px; }
-.data-table col.col-actions { width: 104px; }
+/* Width scales with the number of action icons: each .btn-icon is 28px, the
+   .table-actions gap is 9px, +36px for cell padding + buffer. 2→101, 3→138, 4→175. */
+.data-table col.col-actions {
+    width: calc(var(--actions-count) * 28px + (var(--actions-count) - 1) * 9px + 36px);
+}
 .data-table col.col-status { width: 124px; }
 
 /* date columns */

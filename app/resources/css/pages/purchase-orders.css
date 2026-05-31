@@ -3,6 +3,9 @@
 .status-geliefert { background: var(--color-success-soft); color: var(--color-success); }
 .status-storniert { background: var(--color-danger-soft); color: var(--color-danger); }
 
+/* Up to three row actions: edit, receive delivery, cancel. */
+.purchase-orders-table { --actions-count: 3; }
+
 .purchase-order-modal {
     --modal-large-width: 900px;
     --purchase-order-item-qty-width: 96px;

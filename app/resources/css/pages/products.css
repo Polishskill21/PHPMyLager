@@ -3,6 +3,9 @@
     flex-basis: 340px;
 }
 
+/* Up to four row actions: edit, adjust stock, history, discontinue. */
+.products-table { --actions-count: 4; }
+
 .products-toolbar .filter-select {
     width: 170px;
     flex: 0 0 170px;

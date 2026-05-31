@@ -124,11 +124,11 @@
                                 @endif
                                 @if($canDelete)
                                     <button class="btn-icon product-adjust" title="Adjust stock" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}" data-stock="{{ $product->bestand }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/settings.png') }}" alt="Adjust stock">
+                                        <img class="action-icon" src="{{ asset('icons/lucide/list-checks.png') }}" alt="Adjust stock">
                                     </button>
                                 @endif
                                 <button class="btn-icon product-history" title="Stock history" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
-                                    <img class="action-icon" src="{{ asset('icons/lucide/boxes.png') }}" alt="Stock history">
+                                    <img class="action-icon" src="{{ asset('icons/lucide/clipboard-clock.png') }}" alt="Stock history">
                                 </button>
                                 @if($canDelete)
                                     <button class="btn-icon del product-delete" title="Discontinue" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
