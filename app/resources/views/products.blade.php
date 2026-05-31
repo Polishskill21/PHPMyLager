@@ -123,6 +123,14 @@
                                     </button>
                                 @endif
                                 @if($canDelete)
+                                    <button class="btn-icon product-adjust" title="Adjust stock" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}" data-stock="{{ $product->bestand }}">
+                                        <img class="action-icon" src="{{ asset('icons/lucide/settings.png') }}" alt="Adjust stock">
+                                    </button>
+                                @endif
+                                <button class="btn-icon product-history" title="Stock history" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
+                                    <img class="action-icon" src="{{ asset('icons/lucide/boxes.png') }}" alt="Stock history">
+                                </button>
+                                @if($canDelete)
                                     <button class="btn-icon del product-delete" title="Discontinue" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
                                         <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Discontinue">
                                     </button>
@@ -202,7 +210,7 @@
                     </div>
                     <div class="form-error" id="err-vkPreis"></div>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="fg-bestand">
                     <label class="form-label" for="f-bestand">Stock Qty <em class="required-marker">*</em></label>
                     <div class="number-input-wrap">
                         <input class="form-input" id="f-bestand" type="number" min="0" step="1" placeholder="0">
@@ -252,6 +260,79 @@
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary btn-cancel" id="modal-del-cancel">Keep it</button>
             <button type="button" class="btn btn-danger btn-submit btn-submit-delete" id="modal-del-confirm">Discontinue</button>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="modal-adjust-overlay">
+    <div class="modal" id="modal-adjust">
+        <div class="modal-title">
+            <span>Adjust Stock</span>
+            <span class="badge" id="adjust-badge">#-</span>
+        </div>
+        <p class="adjust-subtitle">Set a new physical stock level. Every adjustment is recorded with a reason.</p>
+        <form id="adjust-form" autocomplete="off">
+            <input type="hidden" id="f-adjust-id">
+            <div class="form-grid">
+                <div class="form-group form-full">
+                    <span class="form-label">Product</span>
+                    <div class="adjust-readonly" id="adjust-product-name">—</div>
+                </div>
+                <div class="form-group">
+                    <span class="form-label">Current Stock</span>
+                    <div class="adjust-readonly" id="adjust-current-stock">—</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="f-adjust-bestand">New Stock Level <em class="required-marker">*</em></label>
+                    <div class="number-input-wrap">
+                        <input class="form-input" id="f-adjust-bestand" type="number" min="0" step="1" placeholder="0">
+                        <div class="number-stepper-controls">
+                            <button type="button" class="number-stepper-button" title="Increase stock" aria-label="Increase stock" data-number-step="up">
+                                <span class="modal-control-icon icon-chevron-up" aria-hidden="true"></span>
+                            </button>
+                            <button type="button" class="number-stepper-button" title="Decrease stock" aria-label="Decrease stock" data-number-step="down">
+                                <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-error" id="err-adjust-bestand"></div>
+                </div>
+                <div class="form-group form-full">
+                    <label class="form-label" for="f-adjust-reason">Reason <em class="required-marker">*</em></label>
+                    <textarea class="form-input adjust-reason" id="f-adjust-reason" rows="3" maxlength="255" placeholder="e.g. Stocktake correction, damaged goods, returns"></textarea>
+                    <div class="form-error" id="err-adjust-reason"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel" id="modal-adjust-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-submit btn-submit-save" id="modal-adjust-submit">Save Adjustment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="overlay" id="modal-history-overlay">
+    <div class="modal modal-inspect" id="modal-history">
+        <div class="inspect-header">
+            <div class="inspect-heading">
+                <h2 class="inspect-title">Stock History</h2>
+                <span class="badge inspect-badge" id="history-badge">#-</span>
+            </div>
+        </div>
+        <p class="inspect-subtitle">Manual stock adjustments recorded for this product.</p>
+        <div class="inspect-items products-history-items">
+            <div class="inspect-item-head">
+                <div>Date</div>
+                <div>User</div>
+                <div class="num">Old</div>
+                <div class="num">New</div>
+                <div class="num">Δ</div>
+                <div>Reason</div>
+            </div>
+            <div class="inspect-item-list" id="history-items"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-cancel" id="modal-history-close">Close</button>
         </div>
     </div>
 </div>

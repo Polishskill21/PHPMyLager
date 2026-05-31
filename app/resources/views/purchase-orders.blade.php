@@ -76,8 +76,10 @@
                 @forelse($purchaseOrders as $order)
                     @php
                         $totalValue = $order->items->sum(fn ($item) => (float) ($item->ekPreis ?? 0) * (int) $item->bestMenge);
-                        $status = $order->status ?: 'offen';
+                        // status is cast to the PurchaseOrderStatus enum — normalise to its string value
+                        $status = $order->status instanceof \BackedEnum ? $order->status->value : ($order->status ?: 'offen');
                         $isEditable = in_array($status, ['offen', 'bestellt'], true);
+                        $isReceivable = $status === 'bestellt';
                     @endphp
                     <tr class="row-clickable purchase-order-row" data-sort-row
                         data-id="{{ $order->pBestNr }}"
@@ -103,9 +105,14 @@
                                             <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
                                         </button>
                                     @endif
+                                    @if($canWrite && $isReceivable)
+                                        <button class="btn-icon purchase-order-receive" title="Receive delivery" data-id="{{ $order->pBestNr }}">
+                                            <img class="action-icon" src="{{ asset('icons/lucide/truck.png') }}" alt="Receive delivery">
+                                        </button>
+                                    @endif
                                     @if($canDelete && $isEditable)
-                                        <button class="btn-icon del purchase-order-delete" title="Delete" data-id="{{ $order->pBestNr }}">
-                                            <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Delete">
+                                        <button class="btn-icon del purchase-order-delete" title="Cancel" data-id="{{ $order->pBestNr }}">
+                                            <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Cancel">
                                         </button>
                                     @endif
                                 </div>
@@ -234,16 +241,47 @@
     </div>
 </div>
 
+<div class="overlay" id="modal-purchase-order-receive-overlay">
+    <div class="modal modal-large-crud purchase-order-receive-modal" id="modal-purchase-order-receive">
+        <div class="modal-title">
+            <span>Receive Delivery</span>
+            <span class="badge" id="po-receive-badge">#-</span>
+        </div>
+        <p class="receive-subtitle">Enter the quantity received now for each line. Remaining is the ordered amount minus what was already delivered.</p>
+
+        <form id="purchase-order-receive-form" autocomplete="off">
+            <input type="hidden" id="f-receive-id">
+            <div class="receive-items">
+                <div class="receive-item-head">
+                    <div>Product</div>
+                    <div class="num">Ordered</div>
+                    <div class="num">Delivered</div>
+                    <div class="num">Remaining</div>
+                    <div>Receive now</div>
+                </div>
+                <div class="receive-item-list" id="receive-item-rows"></div>
+                <div class="form-error" id="err-receive-items"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel" id="purchase-order-receive-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-submit btn-submit-save" id="purchase-order-receive-submit">Register Delivery</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="overlay" id="modal-purchase-order-del-overlay">
     <div class="modal modal-sm">
-        <div class="modal-title modal-title-danger">Delete Purchase Order</div>
+        <div class="modal-title modal-title-danger">Cancel Purchase Order</div>
         <p class="confirm-body">
-            This uses the current delete route and cancels purchase order
-            <span class="confirm-target" id="purchase-order-del-target-id"></span> when it is still open or ordered.
+            This marks purchase order <span class="confirm-target" id="purchase-order-del-target-id"></span>
+            as <strong>storniert</strong>. Any stock already received for this order is reversed. The order
+            is not deleted and stays on record.
         </p>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary btn-cancel" id="purchase-order-del-cancel">Keep it</button>
-            <button type="button" class="btn btn-danger btn-submit btn-submit-delete" id="purchase-order-del-confirm">Delete</button>
+            <button type="button" class="btn btn-danger btn-submit btn-submit-delete" id="purchase-order-del-confirm">Cancel order</button>
         </div>
     </div>
 </div>

@@ -12,3 +12,63 @@
 .stock-warn { background: var(--color-warning-soft); color: var(--color-warning); }
 .stock-empty { background: var(--color-danger-soft); color: var(--color-danger); }
 .stat-low-value { color: var(--color-warning); }
+
+/* Adjust-stock modal */
+.adjust-subtitle {
+    margin: -.35rem 0 .9rem;
+    color: var(--color-text-muted);
+    font-size: .85rem;
+}
+
+.adjust-readonly {
+    min-height: var(--control-height);
+    display: flex;
+    align-items: center;
+    padding: 0 .65rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-soft);
+    color: var(--color-text-strong);
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.adjust-reason {
+    min-height: 72px;
+    padding-top: .5rem;
+    line-height: 1.4;
+    resize: vertical;
+}
+
+/* Stock-history inspect modal — re-maps the shared 6-col item grid to:
+   Date | User | Old | New | Δ | Reason */
+.products-history-items .inspect-item-head,
+.products-history-items .inspect-item-row {
+    grid-template-columns: 116px minmax(120px, 1fr) 64px 64px 64px minmax(160px, 1.6fr);
+    min-width: 720px;
+}
+
+/* Reset shared per-position styling (col 3 is a number here, not a product name;
+   all columns left-aligned except the three numeric ones). */
+.products-history-items .inspect-item-head div,
+.products-history-items .inspect-item-row div {
+    text-align: left;
+}
+
+.products-history-items .inspect-item-row div:nth-child(3) {
+    color: var(--color-text-soft);
+    font-family: var(--font-mono);
+    font-size: .88rem;
+}
+
+.products-history-items .inspect-item-head div:nth-child(3),
+.products-history-items .inspect-item-head div:nth-child(4),
+.products-history-items .inspect-item-head div:nth-child(5),
+.products-history-items .inspect-item-row div:nth-child(3),
+.products-history-items .inspect-item-row div:nth-child(4),
+.products-history-items .inspect-item-row div:nth-child(5) {
+    text-align: right;
+}
+
+.products-history-items .delta-up { color: var(--color-success); }
+.products-history-items .delta-down { color: var(--color-danger); }

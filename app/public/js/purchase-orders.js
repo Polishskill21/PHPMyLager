@@ -422,6 +422,120 @@ function fmtMoney(value) {
     });
 }
 
+async function openReceive(id) {
+    clearFormErrors();
+
+    const { ok, data, message } = await api('GET', `/purchase-orders/${id}`);
+    if (!ok) {
+        toast(message || 'Failed to load purchase order.', 'error');
+        return;
+    }
+
+    const info = data?.order_info || {};
+    const items = Array.isArray(data?.items) ? data.items : [];
+
+    document.getElementById('f-receive-id').value = info.pBestNr ?? id;
+    document.getElementById('po-receive-badge').textContent = `#${info.pBestNr ?? id}`;
+    document.getElementById('err-receive-items').textContent = '';
+
+    const list = document.getElementById('receive-item-rows');
+    list.innerHTML = items.map((item) => {
+        const ordered = Number(item.bestMenge || 0);
+        const delivered = Number(item.gelieferteMenge || 0);
+        const remaining = Math.max(ordered - delivered, 0);
+        const name = item.bezeichnung || '[unknown]';
+        const done = remaining <= 0;
+
+        return `
+            <div class="receive-item-row" data-posnr="${esc(item.pBestPosNr)}" data-remaining="${remaining}">
+                <div class="receive-item-name" title="${esc(name)}">${esc(name)}</div>
+                <div class="num">${ordered}</div>
+                <div class="num">${delivered}</div>
+                <div class="num">${remaining}</div>
+                <div class="receive-item-input">
+                    <span class="number-input-wrap">
+                        <input class="form-input i-receive" type="number" min="0" max="${remaining}" step="1" value="0" ${done ? 'disabled' : ''} aria-label="Receive now for ${esc(name)}">
+                        <span class="number-stepper-controls">
+                            <button type="button" class="number-stepper-button" title="Increase" aria-label="Increase" data-number-step="up">
+                                <span class="modal-control-icon icon-chevron-up" aria-hidden="true"></span>
+                            </button>
+                            <button type="button" class="number-stepper-button" title="Decrease" aria-label="Decrease" data-number-step="down">
+                                <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
+                            </button>
+                        </span>
+                    </span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (!items.length) {
+        list.innerHTML = '<div class="inspect-empty">No items on this purchase order.</div>';
+    }
+
+    document.getElementById('modal-purchase-order-receive-overlay').classList.add('open');
+}
+
+async function submitReceive(event) {
+    event.preventDefault();
+    clearFormErrors();
+
+    const id = document.getElementById('f-receive-id').value;
+    const errEl = document.getElementById('err-receive-items');
+    const rows = [...document.querySelectorAll('#receive-item-rows .receive-item-row')];
+
+    const items = [];
+    let invalid = false;
+
+    rows.forEach((row) => {
+        const input = row.querySelector('.i-receive');
+        if (!input || input.disabled) return;
+
+        const qty = Number(input.value || 0);
+        const remaining = Number(row.dataset.remaining || 0);
+
+        if (!Number.isFinite(qty) || qty < 0 || qty > remaining) {
+            invalid = true;
+            input.classList.add('invalid');
+            return;
+        }
+
+        if (qty > 0) items.push({ pBestPosNr: Number(row.dataset.posnr), gelieferteMenge: qty });
+    });
+
+    if (invalid) {
+        errEl.textContent = 'Each quantity must be between 0 and the remaining amount.';
+        return;
+    }
+
+    if (!items.length) {
+        errEl.textContent = 'Enter at least one quantity to receive.';
+        return;
+    }
+
+    const btn = document.getElementById('purchase-order-receive-submit');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    const { ok, data, message } = await api('PATCH', `/purchase-orders/${id}/receive`, { items });
+
+    btn.disabled = false;
+    btn.textContent = 'Register Delivery';
+
+    if (!ok) {
+        const firstError = data?.errors && Object.keys(data.errors).length
+            ? Object.values(data.errors)[0]
+            : null;
+        errEl.textContent = Array.isArray(firstError) ? firstError[0] : (message || 'Receive failed.');
+        toast(message || 'Receive failed.', 'error');
+        return;
+    }
+
+    closeModal('modal-purchase-order-receive-overlay');
+    toast(message || 'Delivery registered.', 'success');
+    window.location.reload();
+}
+
 function openDelete(id) {
     pendingDeleteId = id;
     document.getElementById('purchase-order-del-target-id').textContent = `#${id}`;
@@ -433,19 +547,19 @@ async function confirmDelete() {
 
     const btn = document.getElementById('purchase-order-del-confirm');
     btn.disabled = true;
-    btn.textContent = 'Deleting…';
+    btn.textContent = 'Cancelling…';
 
     const { ok, data, message } = await api('DELETE', `/purchase-orders/${pendingDeleteId}`);
 
     btn.disabled = false;
-    btn.textContent = 'Delete';
+    btn.textContent = 'Cancel order';
     closeModal('modal-purchase-order-del-overlay');
 
     if (ok) {
-        toast(message || 'Purchase order deleted.', 'success');
+        toast(message || 'Purchase order cancelled.', 'success');
         window.location.reload();
     } else {
-        toast(message || data?.error || 'Delete failed.', 'error');
+        toast(message || data?.error || 'Cancellation failed.', 'error');
     }
 
     pendingDeleteId = null;
@@ -549,6 +663,8 @@ function initPurchaseOrdersPage() {
     document.getElementById('purchase-order-del-cancel')?.addEventListener('click', () => closeModal('modal-purchase-order-del-overlay'));
     document.getElementById('purchase-order-del-confirm')?.addEventListener('click', confirmDelete);
     document.getElementById('modal-purchase-order-view-close')?.addEventListener('click', () => closeModal('modal-purchase-order-view-overlay'));
+    document.getElementById('purchase-order-receive-form')?.addEventListener('submit', submitReceive);
+    document.getElementById('purchase-order-receive-cancel')?.addEventListener('click', () => closeModal('modal-purchase-order-receive-overlay'));
 
     document.querySelectorAll('.purchase-order-row').forEach((row) => {
         row.addEventListener('click', () => openInspect(row.dataset.id));
@@ -556,6 +672,10 @@ function initPurchaseOrdersPage() {
 
     document.querySelectorAll('.purchase-order-edit').forEach((btn) => {
         btn.addEventListener('click', (event) => { event.stopPropagation(); openEdit(btn.dataset.id); });
+    });
+
+    document.querySelectorAll('.purchase-order-receive').forEach((btn) => {
+        btn.addEventListener('click', (event) => { event.stopPropagation(); openReceive(btn.dataset.id); });
     });
 
     document.querySelectorAll('.purchase-order-delete').forEach((btn) => {
@@ -578,6 +698,7 @@ function initPurchaseOrdersPage() {
             closeModal('modal-purchase-order-form-overlay');
             closeModal('modal-purchase-order-del-overlay');
             closeModal('modal-purchase-order-view-overlay');
+            closeModal('modal-purchase-order-receive-overlay');
         }
     });
 

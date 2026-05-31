@@ -85,6 +85,9 @@ function openAdd() {
     clearFormErrors();
     document.getElementById('product-form')?.reset();
     document.getElementById('f-id').value = '';
+    // Stock is only set at creation time; it can be changed later via Adjust Stock.
+    const stockGroup = document.getElementById('fg-bestand');
+    if (stockGroup) stockGroup.style.display = '';
     document.getElementById('modal-form-title').textContent = 'New Product';
     document.getElementById('modal-form-badge').textContent = 'CREATE';
     document.getElementById('modal-form-submit').textContent = 'Save Product';
@@ -105,9 +108,12 @@ async function openEdit(id) {
     document.getElementById('f-bezeichnung').value = data.bezeichnung || '';
     document.getElementById('f-ekPreis').value = data.ekPreis ?? '';
     document.getElementById('f-vkPreis').value = data.vkPreis ?? '';
-    document.getElementById('f-bestand').value = data.bestand ?? '';
     document.getElementById('f-meldeBest').value = data.meldeBest ?? '';
     document.getElementById('f-fWgNr').value = data.fWgNr;
+
+    // Stock is not editable here (PUT ignores it) — use Adjust Stock instead.
+    const stockGroup = document.getElementById('fg-bestand');
+    if (stockGroup) stockGroup.style.display = 'none';
 
     document.getElementById('modal-form-title').textContent = 'Edit Product';
     document.getElementById('modal-form-badge').textContent = `#${data.pArtikelNr}`;
@@ -126,9 +132,11 @@ async function submitProductForm(event) {
         fWgNr: parseInt(document.getElementById('f-fWgNr').value),
         ekPreis: parseFloat(document.getElementById('f-ekPreis').value),
         vkPreis: parseFloat(document.getElementById('f-vkPreis').value),
-        bestand: parseInt(document.getElementById('f-bestand').value),
         meldeBest: parseInt(document.getElementById('f-meldeBest').value),
     };
+
+    // Stock is only set on creation; updates go through the Adjust Stock flow.
+    if (!id) payload.bestand = parseInt(document.getElementById('f-bestand').value);
 
     const btn = document.getElementById('modal-form-submit');
     btn.disabled = true;
@@ -183,6 +191,113 @@ async function confirmDelete() {
     pendingDeleteId = null;
 }
 
+// ── ADJUST STOCK (admin) ──────────────────────────────────────────────
+function openAdjust(id, name, stock) {
+    clearFormErrors();
+    document.getElementById('f-adjust-id').value = id;
+    document.getElementById('adjust-badge').textContent = `#${id}`;
+    document.getElementById('adjust-product-name').textContent = name || `Product #${id}`;
+    document.getElementById('adjust-current-stock').textContent = stock ?? '—';
+    document.getElementById('f-adjust-bestand').value = stock ?? '';
+    document.getElementById('f-adjust-reason').value = '';
+    document.getElementById('modal-adjust-overlay').classList.add('open');
+    document.getElementById('f-adjust-bestand')?.focus();
+}
+
+async function submitAdjust(event) {
+    event.preventDefault();
+    clearFormErrors();
+
+    const id = document.getElementById('f-adjust-id').value;
+    const bestand = parseInt(document.getElementById('f-adjust-bestand').value, 10);
+    const reason = document.getElementById('f-adjust-reason').value.trim();
+
+    let valid = true;
+    if (!Number.isFinite(bestand) || bestand < 0) {
+        setAdjustError('bestand', 'Enter a valid stock level (0 or more).');
+        valid = false;
+    }
+    if (reason.length < 5) {
+        setAdjustError('reason', 'Reason must be at least 5 characters.');
+        valid = false;
+    }
+    if (!valid) return;
+
+    const btn = document.getElementById('modal-adjust-submit');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    const { ok, data, message } = await api('PATCH', `/products/${id}/adjust-stock`, { bestand, reason });
+
+    btn.disabled = false;
+    btn.textContent = 'Save Adjustment';
+
+    if (!ok) {
+        applyAdjustErrors(data?.errors || {});
+        toast(message || 'Adjustment failed.', 'error');
+        return;
+    }
+
+    closeModal('modal-adjust-overlay');
+    toast(message || 'Stock adjusted.', 'success');
+    window.location.reload();
+}
+
+function setAdjustError(key, msg) {
+    const err = document.getElementById('err-adjust-' + key);
+    const field = document.getElementById('f-adjust-' + key);
+    if (err) err.textContent = msg;
+    if (field) field.classList.add('invalid');
+}
+
+function applyAdjustErrors(errors) {
+    Object.entries(errors).forEach(([key, messages]) => {
+        setAdjustError(key, Array.isArray(messages) ? messages[0] : String(messages));
+    });
+}
+
+// ── STOCK HISTORY (all roles) ─────────────────────────────────────────
+async function openHistory(id) {
+    const { ok, data, message } = await api('GET', `/products/${id}/stock-history`);
+    if (!ok) {
+        toast(message || 'Failed to load stock history.', 'error');
+        return;
+    }
+
+    document.getElementById('history-badge').textContent = `#${id}`;
+
+    const rows = Array.isArray(data) ? [...data] : [];
+    rows.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+
+    const el = document.getElementById('history-items');
+    if (!rows.length) {
+        el.innerHTML = '<div class="inspect-empty">No stock adjustments recorded for this product.</div>';
+    } else {
+        el.innerHTML = rows.map((row) => {
+            const oldB = Number(row.old_bestand ?? 0);
+            const newB = Number(row.new_bestand ?? 0);
+            const delta = newB - oldB;
+            const deltaStr = (delta > 0 ? '+' : '') + delta;
+            const user = row.user_name || (row.user_id != null ? `User #${row.user_id}` : '—');
+            const date = row.created_at ? String(row.created_at).slice(0, 10) : '—';
+            const reason = row.reason || '—';
+
+            return `
+                <div class="inspect-item-row">
+                    <div>${esc(date)}</div>
+                    <div title="${esc(user)}">${esc(user)}</div>
+                    <div class="num">${oldB}</div>
+                    <div class="num">${newB}</div>
+                    <div class="num ${delta >= 0 ? 'delta-up' : 'delta-down'}">${esc(deltaStr)}</div>
+                    <div title="${esc(reason)}">${esc(reason)}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    document.getElementById('modal-history-overlay').classList.add('open');
+}
+
 // ── HELPERS ───────────────────────────────────────────────────────────
 function applyValidationErrors(data) {
     Object.entries(data?.errors || {}).forEach(([key, messages]) => {
@@ -214,9 +329,20 @@ function initProductsPage() {
     document.getElementById('modal-form-cancel')?.addEventListener('click', () => closeModal('modal-form-overlay'));
     document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
     document.getElementById('modal-del-confirm')?.addEventListener('click', confirmDelete);
+    document.getElementById('adjust-form')?.addEventListener('submit', submitAdjust);
+    document.getElementById('modal-adjust-cancel')?.addEventListener('click', () => closeModal('modal-adjust-overlay'));
+    document.getElementById('modal-history-close')?.addEventListener('click', () => closeModal('modal-history-overlay'));
 
     document.querySelectorAll('.product-edit').forEach((btn) => {
         btn.addEventListener('click', () => openEdit(btn.dataset.id));
+    });
+
+    document.querySelectorAll('.product-adjust').forEach((btn) => {
+        btn.addEventListener('click', () => openAdjust(btn.dataset.id, btn.dataset.name, btn.dataset.stock));
+    });
+
+    document.querySelectorAll('.product-history').forEach((btn) => {
+        btn.addEventListener('click', () => openHistory(btn.dataset.id));
     });
 
     document.querySelectorAll('.product-delete').forEach((btn) => {
@@ -233,6 +359,8 @@ function initProductsPage() {
         if (event.key === 'Escape') {
             closeModal('modal-form-overlay');
             closeModal('modal-del-overlay');
+            closeModal('modal-adjust-overlay');
+            closeModal('modal-history-overlay');
         }
     });
 
