@@ -342,6 +342,86 @@ async function submitPurchaseOrderForm(event) {
     window.location.reload();
 }
 
+async function openInspect(id) {
+    const { ok, data, message } = await api('GET', `/purchase-orders/${id}`);
+    if (!ok) {
+        toast(message || 'Failed to load purchase order.', 'error');
+        return;
+    }
+
+    const info = data?.order_info || {};
+    const items = Array.isArray(data?.items) ? data.items : [];
+
+    document.getElementById('po-view-badge').textContent = `#${info.pBestNr ?? id}`;
+    document.getElementById('po-view-supplier').textContent = info.lieferant || '—';
+    document.getElementById('po-view-ordered').textContent = fmtDate(info.bestDat);
+    document.getElementById('po-view-expected').textContent = fmtDate(info.erwLieferDat);
+
+    const statusEl = document.getElementById('po-view-status');
+    const status = info.status || 'offen';
+    statusEl.textContent = status;
+    statusEl.className = `status-badge status-${status}`;
+    statusEl.hidden = false;
+
+    const totalQty = Number(data?.total_ordered ?? 0);
+    const totalEur = Number(data?.total_value ?? 0);
+
+    const totalsRow = `
+        <div class="inspect-total-row" aria-label="Purchase order totals">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div class="inspect-total-cell">
+                <span>Total Qty</span>
+                <strong>${esc(String(totalQty))}</strong>
+            </div>
+            <div></div>
+            <div class="inspect-total-cell">
+                <span>Total EUR</span>
+                <strong>€${esc(fmtMoney(totalEur))}</strong>
+            </div>
+        </div>
+    `;
+
+    const itemsEl = document.getElementById('po-view-items');
+    if (!items.length) {
+        itemsEl.innerHTML = '<div class="inspect-empty">No items for this purchase order.</div>' + totalsRow;
+    } else {
+        const rows = items.map((item) => {
+            const pos = item.pBestPosNr != null ? item.pBestPosNr : '—';
+            const productId = item.fArtikelNr != null ? item.fArtikelNr : '—';
+            const productName = item.bezeichnung || '[unknown]';
+
+            return `
+                <div class="inspect-item-row">
+                    <div>${esc(pos)}</div>
+                    <div>${esc(productId)}</div>
+                    <div title="${esc(productName)}">${esc(productName)}</div>
+                    <div class="num">${Number(item.bestMenge || 0)}</div>
+                    <div class="num">€${fmtMoney(item.ekPreis)}</div>
+                    <div class="num">€${fmtMoney(item.line_total)}</div>
+                </div>
+            `;
+        }).join('');
+
+        itemsEl.innerHTML = rows + totalsRow;
+    }
+
+    document.getElementById('modal-purchase-order-view-overlay').classList.add('open');
+}
+
+function fmtDate(value) {
+    if (!value) return '—';
+    return String(value).slice(0, 10);
+}
+
+function fmtMoney(value) {
+    return Number(value || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
 function openDelete(id) {
     pendingDeleteId = id;
     document.getElementById('purchase-order-del-target-id').textContent = `#${id}`;
@@ -468,13 +548,18 @@ function initPurchaseOrdersPage() {
     document.getElementById('purchase-order-form-cancel')?.addEventListener('click', () => closeModal('modal-purchase-order-form-overlay'));
     document.getElementById('purchase-order-del-cancel')?.addEventListener('click', () => closeModal('modal-purchase-order-del-overlay'));
     document.getElementById('purchase-order-del-confirm')?.addEventListener('click', confirmDelete);
+    document.getElementById('modal-purchase-order-view-close')?.addEventListener('click', () => closeModal('modal-purchase-order-view-overlay'));
+
+    document.querySelectorAll('.purchase-order-row').forEach((row) => {
+        row.addEventListener('click', () => openInspect(row.dataset.id));
+    });
 
     document.querySelectorAll('.purchase-order-edit').forEach((btn) => {
-        btn.addEventListener('click', () => openEdit(btn.dataset.id));
+        btn.addEventListener('click', (event) => { event.stopPropagation(); openEdit(btn.dataset.id); });
     });
 
     document.querySelectorAll('.purchase-order-delete').forEach((btn) => {
-        btn.addEventListener('click', () => openDelete(btn.dataset.id));
+        btn.addEventListener('click', (event) => { event.stopPropagation(); openDelete(btn.dataset.id); });
     });
 
     document.querySelectorAll('.overlay').forEach((overlay) => {
@@ -492,6 +577,7 @@ function initPurchaseOrdersPage() {
 
             closeModal('modal-purchase-order-form-overlay');
             closeModal('modal-purchase-order-del-overlay');
+            closeModal('modal-purchase-order-view-overlay');
         }
     });
 

@@ -183,7 +183,7 @@
 </div>
 
 <div class="overlay" id="modal-view-overlay">
-    <div class="modal" id="modal-view">
+    <div class="modal modal-inspect" id="modal-view">
         <div class="inspect-header">
             <div class="inspect-heading">
                 <h2 class="inspect-title">Order Details</h2>

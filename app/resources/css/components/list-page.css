@@ -105,6 +105,49 @@
     table-layout: fixed;
 }
 
+/* Shared semantic column widths — keep structural column types visually stable
+   across every list page (Products, Orders, Customers, Purchase Orders, Suppliers,
+   Warehouse). Descriptive text columns (name / customer / supplier / email / street /
+   city / group / phone) are intentionally left to `auto` so they absorb the remaining
+   width. Keyed on the `col-*` classes carried by each table's <colgroup>. */
+.data-table col.col-id { width: 84px; }
+.data-table col.col-actions { width: 104px; }
+.data-table col.col-status { width: 124px; }
+
+/* date columns */
+.data-table col.col-date,
+.data-table col.col-created,
+.data-table col.col-delivery,
+.data-table col.col-ordered,
+.data-table col.col-expected { width: 132px; }
+
+/* count / quantity columns */
+.data-table col.col-items,
+.data-table col.col-count,
+.data-table col.col-pos,
+.data-table col.col-reorder { width: 104px; }
+
+/* money / price columns */
+.data-table col.col-buy,
+.data-table col.col-sell,
+.data-table col.col-total,
+.data-table col.col-value { width: 116px; }
+
+/* stock badge + postal code */
+.data-table col.col-stock { width: 120px; }
+.data-table col.col-plz { width: 96px; }
+
+/* Secondary text columns — fixed so the primary name/title column stays the ONLY
+   flexible (`auto`) column on every page. This reproduces the Purchase Orders layout
+   everywhere: ID + name grouped on the left, all secondary/meta columns grouped to the
+   right. Without these, pages with several text columns (Products, Customers, Suppliers)
+   split the slack and the meta columns drift toward the middle. */
+.data-table col.col-group { width: 168px; }
+.data-table col.col-email { width: 240px; }
+.data-table col.col-street { width: 200px; }
+.data-table col.col-city { width: 150px; }
+.data-table col.col-phone { width: 160px; }
+
 .data-table thead th {
     height: 46px;
     padding: 0 10px;

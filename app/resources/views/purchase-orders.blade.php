@@ -79,7 +79,8 @@
                         $status = $order->status ?: 'offen';
                         $isEditable = in_array($status, ['offen', 'bestellt'], true);
                     @endphp
-                    <tr data-sort-row
+                    <tr class="row-clickable purchase-order-row" data-sort-row
+                        data-id="{{ $order->pBestNr }}"
                         data-sort-id="{{ $order->pBestNr }}"
                         data-sort-supplier="{{ $order->supplier?->name ?: '' }}"
                         data-sort-status="{{ $status }}"
@@ -186,6 +187,50 @@
                 <button type="submit" class="btn btn-primary btn-submit btn-submit-save" id="purchase-order-form-submit">Save Purchase Order</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="overlay" id="modal-purchase-order-view-overlay">
+    <div class="modal modal-inspect" id="modal-purchase-order-view">
+        <div class="inspect-header">
+            <div class="inspect-heading">
+                <h2 class="inspect-title">Purchase Order Details</h2>
+                <span class="badge inspect-badge" id="po-view-badge">#-</span>
+            </div>
+            <span class="status-badge" id="po-view-status" hidden></span>
+        </div>
+
+        <p class="inspect-subtitle">Detailed item overview for this supplier order.</p>
+
+        <div class="inspect-meta">
+            <div class="inspect-box">
+                <div class="inspect-label">Supplier</div>
+                <div class="inspect-value" id="po-view-supplier">-</div>
+            </div>
+            <div class="inspect-box">
+                <div class="inspect-label">Ordered</div>
+                <div class="inspect-value" id="po-view-ordered">-</div>
+            </div>
+            <div class="inspect-box">
+                <div class="inspect-label">Expected</div>
+                <div class="inspect-value" id="po-view-expected">-</div>
+            </div>
+        </div>
+
+        <div class="inspect-items">
+            <div class="inspect-item-head">
+                <div>Pos</div>
+                <div>Product ID</div>
+                <div>Product</div>
+                <div>Qty</div>
+                <div>Unit EUR</div>
+                <div>Total EUR</div>
+            </div>
+            <div class="inspect-item-list" id="po-view-items"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-cancel" id="modal-purchase-order-view-close">Close</button>
+        </div>
     </div>
 </div>
 

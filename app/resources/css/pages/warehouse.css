@@ -7,6 +7,5 @@
     --table-min-width: 620px;
 }
 
-.warehouse-table .col-id { width: 96px; }
-.warehouse-table .col-count { width: 130px; }
-.warehouse-table .col-actions { width: 90px; }
+/* Column widths inherited from the shared scale in components/list-page.css
+   (col-id / col-count / col-actions); the col-name column stays flexible. */

@@ -1,0 +1,259 @@
+/* Detail / inspect view — shared modal used to read-only inspect a record and its
+   line items (Order Details, Purchase Order Details). Apply `.modal modal-inspect` to
+   the modal and use the `.inspect-*` building blocks inside. Extracted from the Orders
+   page so every list page can reuse the same detail view. */
+
+.modal-inspect {
+    --inspect-modal-width: 900px;
+    width: min(var(--inspect-modal-width), calc(100vw - 28px));
+    max-width: var(--inspect-modal-width);
+    height: calc(100vh - 32px);
+    max-height: calc(100vh - 32px);
+    padding: 1.1rem 1.1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+}
+
+.modal-inspect .modal-footer {
+    flex-shrink: 0;
+    margin-top: .95rem;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.inspect-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .85rem;
+    flex-shrink: 0;
+    margin-bottom: .35rem;
+}
+
+.inspect-heading {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.inspect-title {
+    color: var(--color-text-strong);
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.15;
+}
+
+.inspect-subtitle {
+    flex-shrink: 0;
+    margin: 0 0 .9rem;
+    color: var(--color-text-muted);
+    font-size: .88rem;
+    line-height: 1.35;
+}
+
+.inspect-meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(112px, .75fr) minmax(112px, .75fr);
+    gap: .72rem;
+    flex-shrink: 0;
+    margin-bottom: 1.35rem;
+}
+
+.inspect-box {
+    min-width: 0;
+    padding: .58rem .72rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-raised);
+}
+
+.inspect-label {
+    margin-bottom: .28rem;
+    color: var(--color-text-muted);
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.inspect-value {
+    overflow: hidden;
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: .88rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inspect-items {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: transparent;
+    border: 0;
+}
+
+.inspect-item-head,
+.inspect-item-row,
+.inspect-total-row {
+    display: grid;
+    grid-template-columns: 64px 112px minmax(260px, 1fr) 90px 122px 122px;
+    align-items: center;
+    min-width: 810px;
+}
+
+.inspect-item-head {
+    flex-shrink: 0;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    background: transparent;
+}
+
+.inspect-item-head div {
+    padding: .62rem .72rem;
+    color: var(--color-text-muted);
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.inspect-item-list {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.inspect-item-row { border-bottom: 1px solid var(--color-border); }
+.inspect-item-row:last-child { border-bottom: 0; }
+
+.inspect-item-row div {
+    min-width: 0;
+    overflow: hidden;
+    padding: .62rem .72rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: .88rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inspect-item-row div:nth-child(3) {
+    color: var(--color-text-strong);
+    font-family: var(--font-sans);
+    font-size: .9rem;
+}
+
+.inspect-item-head div:nth-child(1),
+.inspect-item-row div:nth-child(1) { text-align: center; }
+
+.inspect-item-head div:nth-child(4),
+.inspect-item-head div:nth-child(5),
+.inspect-item-head div:nth-child(6),
+.inspect-item-row div:nth-child(4),
+.inspect-item-row div:nth-child(5),
+.inspect-item-row div:nth-child(6),
+.inspect-item-row .num { text-align: right; }
+
+.inspect-item-row .num { color: var(--color-text-soft); }
+
+.inspect-empty {
+    padding: 1rem .72rem;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: .85rem;
+}
+
+.inspect-total-row {
+    margin-top: .45rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.inspect-total-row > div {
+    min-width: 0;
+    padding: .66rem .72rem 0;
+}
+
+.inspect-total-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: .24rem;
+    text-align: right;
+}
+
+.inspect-total-cell span {
+    color: var(--color-text-muted);
+    font-family: var(--font-sans);
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.inspect-total-cell strong {
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: .9rem;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+    .modal-inspect {
+        width: min(var(--inspect-modal-width), calc(100vw - 16px));
+        height: calc(100vh - 16px);
+        max-height: calc(100vh - 16px);
+        padding: 1rem;
+    }
+
+    .inspect-title { font-size: 1.25rem; }
+
+    .inspect-item-head,
+    .inspect-item-row,
+    .inspect-total-row {
+        grid-template-columns: 64px 108px minmax(220px, 1fr) 86px 116px 116px;
+        min-width: 790px;
+    }
+}
+
+@media (max-width: 700px) {
+    .inspect-meta { grid-template-columns: 1fr; }
+
+    .modal-inspect {
+        width: min(100%, calc(100vw - 14px));
+        height: calc(100vh - 14px);
+        max-height: calc(100vh - 14px);
+        padding: .85rem;
+    }
+
+    .inspect-title { font-size: 1.2rem; }
+
+    .inspect-subtitle {
+        margin-bottom: .65rem;
+        font-size: .82rem;
+    }
+
+    .inspect-item-head,
+    .inspect-item-row,
+    .inspect-total-row {
+        grid-template-columns: 52px 86px minmax(160px, 1fr) 64px 92px 96px;
+        min-width: 550px;
+    }
+
+    .inspect-item-head div,
+    .inspect-item-row div,
+    .inspect-total-row > div {
+        padding: .58rem .62rem;
+        font-size: .8rem;
+    }
+}
