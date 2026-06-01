@@ -15,6 +15,7 @@ class ExampleTest extends TestCase
 
     public function test_login_page_loads(): void
     {
+        $this->withoutVite(); 
         $response = $this->get('/login');
         $response->assertStatus(200);
     }
