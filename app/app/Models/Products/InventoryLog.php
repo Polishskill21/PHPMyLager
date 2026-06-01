@@ -39,6 +39,16 @@ class InventoryLog extends Model
         self::COL_REASON,
     ];
 
+    protected $appends = [
+        'product_name',
+        'user_name',
+    ];
+
+    protected $hidden = [
+        'product',
+        'user',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, self::COL_USER_ID, User::COL_ID);
@@ -47,5 +57,15 @@ class InventoryLog extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, self::COL_F_ARTIKEL_NR, Product::COL_ID);
+    }
+
+    public function getProductNameAttribute(): ?string
+    {
+        return $this->product?->{Product::COL_NAME};
+    }
+
+    public function getUserNameAttribute(): ?string
+    {
+        return $this->user?->name;
     }
 }

@@ -1,312 +1,452 @@
-// ── CONFIG ────────────────────────────────────────────────────────────
-const CSRF       = document.querySelector('meta[name="csrf-token"]').content;
-const CAN_WRITE  = document.querySelector('meta[name="can-write"]')?.content === 'true';
-const CAN_DELETE = document.querySelector('meta[name="can-delete"]')?.content === 'true';
-const ROW_H      = 56;
-const OVER       = 8; 
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-// ── STATE ─────────────────────────────────────────────────────────────
-let allProducts  = [];
-let warehouseGroups = {};
-let filtered     = [];
-let sortKey      = 'pArtikelNr';
-let sortDir      = 1;
 let pendingDeleteId = null;
 
-// ── API HELPERS ───────────────────────────────────────────────────────
 async function api(method, path, body = null) {
     const opts = {
         method,
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, Accept: 'application/json' },
     };
     if (body) opts.body = JSON.stringify(body);
+
     const res = await fetch('/api' + path, opts);
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, data };
+    const payload = res.status === 204 ? null : await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        const errorPayload = payload && typeof payload === 'object' ? payload : {};
+        return {
+            ok: false,
+            status: res.status,
+            data: errorPayload,
+            message: errorPayload.message || 'Request failed.',
+            errors: errorPayload.errors || {},
+        };
+    }
+
+    const hasEnvelope = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(payload, 'data');
+    return {
+        ok: true,
+        status: res.status,
+        data: hasEnvelope ? payload.data : payload,
+        message: payload?.message || '',
+        errors: {},
+    };
 }
 
-// ── TOAST ─────────────────────────────────────────────────────────────
 function toast(msg, type = 'info') {
+    const area = document.getElementById('toast-area');
+    if (!area) return;
+
     const el = document.createElement('div');
     el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${msg}`;
-    document.getElementById('toast-area').appendChild(el);
+    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${esc(msg)}`;
+    area.appendChild(el);
     setTimeout(() => el.remove(), 3500);
 }
 
-// ── LOAD DATA ─────────────────────────────────────────────────────────
-async function loadWarehouseGroups() {
-    const { ok, data } = await api('GET', '/warehouse-groups');
-    if (!ok) return;
-    const sel = document.getElementById('filter-wg');
-    const fSel = document.getElementById('f-fWgNr');
-    const list = Array.isArray(data.data) ? data.data : [];
-    list.forEach(g => {
-        warehouseGroups[g.pWgNr] = g.warengruppe || `Group ${g.pWgNr}`;
-        sel.insertAdjacentHTML('beforeend', `<option value="${g.pWgNr}">${g.warengruppe || g.pWgNr}</option>`);
-        fSel.insertAdjacentHTML('beforeend', `<option value="${g.pWgNr}">${g.warengruppe || g.pWgNr}</option>`);
-    });
+function esc(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
 
-async function loadProducts() {
-    const wrap = document.getElementById('vscroll-inner');
-    wrap.innerHTML = `<div class="loading-row"><div class="spinner"></div> Loading products…</div>`;
-    const { ok, data } = await api('GET', '/products');
-    if (!ok) { toast('Failed to load products', 'error'); return; }
-    allProducts = Array.isArray(data.data) ? data.data : [];
-    applyFilters();
+// ── STORAGE LOCATION (lagerplatz) ─────────────────────────────────────
+// Segmented input: Zone [A-Z] · Regal [00-99] · Fach [00-99] · Ebene [A-E]
+// assembling into the server format A01-03B (regex /^[A-Z]\d{2}-\d{2}[A-E]$/).
+const LAGERPLATZ_REGEX = /^[A-Z]\d{2}-\d{2}[A-E]$/;
+
+function lpFields() {
+    return {
+        zone: document.getElementById('f-lp-zone'),
+        regal: document.getElementById('f-lp-regal'),
+        fach: document.getElementById('f-lp-fach'),
+        ebene: document.getElementById('f-lp-ebene'),
+        wrap: document.getElementById('lagerplatz-fields'),
+    };
 }
 
-// ── FILTER + SORT ─────────────────────────────────────────────────────
-function applyFilters() {
-    const q     = document.getElementById('search').value.trim().toLowerCase();
-    const stock = document.getElementById('filter-stock').value;
-    const wg    = document.getElementById('filter-wg').value;
+const pad2 = (v) => (v === '' ? '' : String(v).padStart(2, '0'));
 
-    filtered = allProducts.filter(p => {
-        if (q && !p.bezeichnung?.toLowerCase().includes(q) && !String(p.pArtikelNr).includes(q)) return false;
-        if (wg !== 'all' && p.fWgNr != wg) return false;
-        if (stock === 'ok'    && !(p.bestand > p.meldeBest)) return false;
-        if (stock === 'warn'  && !(p.bestand > 0 && p.bestand <= p.meldeBest)) return false;
-        if (stock === 'empty' && p.bestand > 0) return false;
-        return true;
-    });
+// Returns { ok, value } where value is the assembled string or null (all blank),
+// or { ok:false, error } when the four parts are partially filled / invalid.
+function readLagerplatz() {
+    const f = lpFields();
+    const zone = f.zone.value.trim();
+    const regal = pad2(f.regal.value.replace(/\D/g, ''));
+    const fach = pad2(f.fach.value.replace(/\D/g, ''));
+    const ebene = f.ebene.value.trim();
 
-    filtered.sort((a, b) => {
-        let av = a[sortKey];
-        let bv = b[sortKey];
-
-        if (['pArtikelNr', 'ekPreis', 'vkPreis', 'bestand', 'meldeBest'].includes(sortKey)) {
-            av = parseFloat(av) || 0;
-            bv = parseFloat(bv) || 0;
-            return (av - bv) * sortDir;
-        }
-
-        if (typeof av === 'string') av = av.toLowerCase(), bv = (bv||'').toLowerCase();
-        return av > bv ? sortDir : (av < bv ? -sortDir : 0);
-    });
-
-    const low = allProducts.filter(p => p.bestand <= p.meldeBest && p.bestand > 0).length;
-    document.getElementById('stat-total').textContent = allProducts.length;
-    document.getElementById('stat-low').textContent   = low;
-
-    renderVirtual();
-}
-
-// ── VIRTUAL SCROLL ────────────────────────────────────────────────────
-function renderVirtual() {
-    const vscroll = document.getElementById('vscroll');
-    const inner   = document.getElementById('vscroll-inner');
-
-    if (filtered.length === 0) {
-        inner.style.height = '200px';
-        inner.innerHTML = `<div class="empty-state"><div class="icon">◈</div><p>No products match your filters.</p></div>`;
-        return;
+    const parts = [zone, regal, fach, ebene];
+    if (parts.every((p) => p === '')) return { ok: true, value: null };
+    if (parts.some((p) => p === '')) {
+        return { ok: false, error: 'Complete all four parts (Zone, Regal, Fach, Ebene) or leave the location blank.' };
     }
 
-    inner.style.height = (filtered.length * ROW_H) + 'px';
-    inner.innerHTML = '';
-
-    function paint() {
-        const scrollTop = vscroll.scrollTop;
-        const viewH     = vscroll.clientHeight;
-        const startIdx  = Math.max(0, Math.floor(scrollTop / ROW_H) - OVER);
-        const endIdx    = Math.min(filtered.length - 1, Math.ceil((scrollTop + viewH) / ROW_H) + OVER);
-
-        [...inner.querySelectorAll('.row')].forEach(el => {
-            const i = +el.dataset.idx;
-            if (i < startIdx || i > endIdx) el.remove();
-        });
-
-        const rendered = new Set([...inner.querySelectorAll('.row')].map(el => +el.dataset.idx));
-        for (let i = startIdx; i <= endIdx; i++) {
-            if (rendered.has(i)) continue;
-            inner.appendChild(buildRow(filtered[i], i));
-        }
+    const value = `${zone}${regal}-${fach}${ebene}`;
+    if (!LAGERPLATZ_REGEX.test(value)) {
+        return { ok: false, error: 'The location format must be A01-03B — Zone(A–Z), Regal(01–99), Fach(01–99), Ebene(A–E).' };
     }
-
-    paint();
-    vscroll.onscroll = paint;
+    return { ok: true, value };
 }
 
-function buildRow(p, idx) {
-    const top = idx * ROW_H;
-    const stockClass = p.bestand === 0 ? 'stock-empty' : p.bestand <= p.meldeBest ? 'stock-warn' : 'stock-ok';
-    const stockIcon  = p.bestand === 0 ? '●' : p.bestand <= p.meldeBest ? '◐' : '●';
-    const wgName = warehouseGroups[p.fWgNr] || p.fWgNr;
-
-    const editBtn = CAN_WRITE  ? `<button class="btn-icon edit" title="Edit" data-id="${p.pArtikelNr}">✎</button>` : '';
-    const delBtn  = CAN_DELETE ? `<button class="btn-icon del"  title="Discontinue" data-id="${p.pArtikelNr}">⊗</button>` : '';
-
-    const row = document.createElement('div');
-    row.className = 'row';
-    row.dataset.idx = idx;
-    row.style.top = top + 'px';
-    row.innerHTML = `
-        <div class="cell cell-id">#${p.pArtikelNr}</div>
-        <div class="cell cell-name">${esc(p.bezeichnung || '—')}</div>
-        <div class="cell" title="${esc(wgName)}" style="font-size:.78rem; color:var(--muted)">${esc(wgName)}</div>
-        <div class="cell cell-num">${fmt(p.ekPreis)}</div>
-        <div class="cell cell-num">${fmt(p.vkPreis)}</div>
-        <div class="cell cell-num">
-            <span class="stock-badge ${stockClass}">${stockIcon} ${p.bestand ?? '—'}</span>
-        </div>
-        <div class="cell cell-num" style="color:var(--muted)">${p.meldeBest ?? '—'}</div>
-        <div class="cell"><div class="actions">${editBtn}${delBtn}</div></div>
-    `;
-
-    if (CAN_WRITE) {
-        row.querySelector('.btn-icon.edit')?.addEventListener('click', () => openEdit(p.pArtikelNr));
+// Parse an existing "A01-03B" back into the four sub-fields (or clear them).
+function writeLagerplatz(value) {
+    const f = lpFields();
+    if (value && LAGERPLATZ_REGEX.test(value)) {
+        f.zone.value = value[0];
+        f.regal.value = value.slice(1, 3);
+        f.fach.value = value.slice(4, 6);
+        f.ebene.value = value[6];
+    } else {
+        f.zone.value = '';
+        f.regal.value = '';
+        f.fach.value = '';
+        f.ebene.value = '';
     }
-    if (CAN_DELETE) {
-        row.querySelector('.btn-icon.del')?.addEventListener('click', () => openDelete(p.pArtikelNr, p.bezeichnung));
-    }
-    return row;
 }
 
-function fmt(v) { return v != null ? Number(v).toFixed(2) : '—'; }
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// ── SEARCH + FILTERS (client-side row hide) ───────────────────────────
+function filterProductRows() {
+    const search = document.getElementById('search');
+    const stockSel = document.getElementById('filter-stock');
+    const wgSel = document.getElementById('filter-wg');
+    const emptyRow = document.getElementById('products-empty-filter-row');
+    if (!search) return;
 
-// ── EVENT LISTENERS ──────────────────────────────────────────────────
-document.querySelectorAll('.th[data-sort]').forEach(th => {
-    th.addEventListener('click', () => {
-        const k = th.dataset.sort;
-        if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
-        document.querySelectorAll('.th').forEach(t => {
-            t.classList.toggle('sorted', t.dataset.sort === sortKey);
-            const arr = t.querySelector('.sort-arrow');
-            if (arr) arr.textContent = t.dataset.sort === sortKey ? (sortDir === 1 ? '↑' : '↓') : '↕';
-        });
-        applyFilters();
+    const q = search.value.trim().toLowerCase();
+    const stockVal = stockSel ? stockSel.value : 'all';
+    const wgVal = wgSel ? wgSel.value : 'all';
+
+    const rows = document.querySelectorAll('.products-table tbody tr[data-sort-row]');
+    let visible = 0;
+
+    rows.forEach((row) => {
+        const haystack = [row.dataset.sortId, row.dataset.sortName].join(' ').toLowerCase();
+        let match = !q || haystack.includes(q);
+        if (match && stockVal !== 'all' && row.dataset.filterStock !== stockVal) match = false;
+        if (match && wgVal !== 'all' && row.dataset.filterWg !== wgVal) match = false;
+
+        row.hidden = !match;
+        if (match) visible += 1;
     });
-});
 
-document.getElementById('search')?.addEventListener('input', applyFilters);
-document.getElementById('filter-stock')?.addEventListener('change', applyFilters);
-document.getElementById('filter-wg')?.addEventListener('change', applyFilters);
-document.getElementById('btn-add')?.addEventListener('click', openAdd);
+    if (emptyRow) emptyRow.hidden = visible > 0 || rows.length === 0;
+}
 
-// ── MODALS ────────────────────────────────────────────────────────────
+// ── ADD / EDIT FORM ───────────────────────────────────────────────────
 function openAdd() {
     clearFormErrors();
+    document.getElementById('product-form')?.reset();
     document.getElementById('f-id').value = '';
-    document.getElementById('product-form').reset();
+    // Stock is only set at creation time; it can be changed later via Adjust Stock.
+    const stockGroup = document.getElementById('fg-bestand');
+    if (stockGroup) stockGroup.style.display = '';
     document.getElementById('modal-form-title').textContent = 'New Product';
     document.getElementById('modal-form-badge').textContent = 'CREATE';
     document.getElementById('modal-form-submit').textContent = 'Save Product';
     document.getElementById('modal-form-overlay').classList.add('open');
-    document.getElementById('f-bezeichnung').focus();
+    document.getElementById('f-bezeichnung')?.focus();
 }
 
-function openEdit(id) {
-    const p = allProducts.find(x => x.pArtikelNr === id);
-    if (!p) return;
+async function openEdit(id) {
     clearFormErrors();
-    document.getElementById('f-id').value          = p.pArtikelNr;
-    document.getElementById('f-bezeichnung').value = p.bezeichnung || '';
-    document.getElementById('f-ekPreis').value     = p.ekPreis ?? '';
-    document.getElementById('f-vkPreis').value     = p.vkPreis ?? '';
-    document.getElementById('f-bestand').value     = p.bestand ?? '';
-    document.getElementById('f-meldeBest').value   = p.meldeBest ?? '';
-    document.getElementById('f-fWgNr').value       = p.fWgNr;
+
+    const { ok, data, message } = await api('GET', `/products/${id}`);
+    if (!ok) {
+        toast(message || 'Failed to load product.', 'error');
+        return;
+    }
+
+    document.getElementById('f-id').value = data.pArtikelNr ?? '';
+    document.getElementById('f-bezeichnung').value = data.bezeichnung || '';
+    document.getElementById('f-ekPreis').value = data.ekPreis ?? '';
+    document.getElementById('f-vkPreis').value = data.vkPreis ?? '';
+    document.getElementById('f-meldeBest').value = data.meldeBest ?? '';
+    writeLagerplatz(data.lagerplatz || '');
+    document.getElementById('f-fWgNr').value = data.fWgNr;
+
+    // Stock is not editable here (PUT ignores it) — use Adjust Stock instead.
+    const stockGroup = document.getElementById('fg-bestand');
+    if (stockGroup) stockGroup.style.display = 'none';
+
     document.getElementById('modal-form-title').textContent = 'Edit Product';
-    document.getElementById('modal-form-badge').textContent = `#${id}`;
+    document.getElementById('modal-form-badge').textContent = `#${data.pArtikelNr}`;
     document.getElementById('modal-form-submit').textContent = 'Update Product';
     document.getElementById('modal-form-overlay').classList.add('open');
-    document.getElementById('f-bezeichnung').focus();
+    document.getElementById('f-bezeichnung')?.focus();
 }
 
-document.getElementById('product-form')?.addEventListener('submit', async e => {
-    e.preventDefault();
+async function submitProductForm(event) {
+    event.preventDefault();
     clearFormErrors();
 
     const id = document.getElementById('f-id').value;
+
+    const loc = readLagerplatz();
+    if (!loc.ok) {
+        setFieldError('lagerplatz', loc.error);
+        lpFields().wrap?.classList.add('invalid');
+        return;
+    }
+
     const payload = {
         bezeichnung: document.getElementById('f-bezeichnung').value.trim(),
-        fWgNr:       parseInt(document.getElementById('f-fWgNr').value),
-        ekPreis:     parseFloat(document.getElementById('f-ekPreis').value),
-        vkPreis:     parseFloat(document.getElementById('f-vkPreis').value),
-        bestand:     parseInt(document.getElementById('f-bestand').value),
-        meldeBest:   parseInt(document.getElementById('f-meldeBest').value),
+        fWgNr: parseInt(document.getElementById('f-fWgNr').value),
+        ekPreis: parseFloat(document.getElementById('f-ekPreis').value),
+        vkPreis: parseFloat(document.getElementById('f-vkPreis').value),
+        meldeBest: parseInt(document.getElementById('f-meldeBest').value),
+        // lagerplatz is optional (nullable on the server); null clears it.
+        lagerplatz: loc.value,
     };
+
+    // Stock is only set on creation; updates go through the Adjust Stock flow.
+    if (!id) payload.bestand = parseInt(document.getElementById('f-bestand').value);
 
     const btn = document.getElementById('modal-form-submit');
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
-    const { ok, data } = id
-        ? await api('PUT',  `/products/${id}`, payload)
-        : await api('POST', '/products',       payload);
+    const { ok, data, message } = id
+        ? await api('PUT', `/products/${id}`, payload)
+        : await api('POST', '/products', payload);
 
     btn.disabled = false;
     btn.textContent = id ? 'Update Product' : 'Save Product';
 
     if (!ok) {
-        if (data.errors) {
-            Object.entries(data.errors).forEach(([k, msgs]) => {
-                const el = document.getElementById('err-' + k);
-                if (el) { el.textContent = msgs[0]; document.getElementById('f-'+k)?.classList.add('invalid'); }
-            });
-        }
-        toast(data.message || 'Save failed', 'error');
+        applyValidationErrors(data);
+        toast(message || 'Save failed.', 'error');
         return;
     }
 
     closeModal('modal-form-overlay');
-    toast(id ? 'Product updated.' : 'Product created.', 'success');
-    await loadProducts();
-});
+    toast(message || (id ? 'Product updated.' : 'Product created.'), 'success');
+    window.location.reload();
+}
 
+// ── DELETE ────────────────────────────────────────────────────────────
 function openDelete(id, name) {
     pendingDeleteId = id;
     document.getElementById('del-target-name').textContent = name || 'this product';
-    document.getElementById('del-target-id').textContent   = id;
+    document.getElementById('del-target-id').textContent = id;
     document.getElementById('modal-del-overlay').classList.add('open');
 }
 
-document.getElementById('modal-del-confirm')?.addEventListener('click', async () => {
+async function confirmDelete() {
     if (!pendingDeleteId) return;
+
     const btn = document.getElementById('modal-del-confirm');
-    btn.disabled = true; btn.textContent = 'Processing…';
+    btn.disabled = true;
+    btn.textContent = 'Processing…';
 
-    const { ok, data } = await api('DELETE', `/products/${pendingDeleteId}`);
-    btn.disabled = false; btn.textContent = 'Discontinue';
+    const { ok, data, message } = await api('DELETE', `/products/${pendingDeleteId}`);
 
+    btn.disabled = false;
+    btn.textContent = 'Discontinue';
     closeModal('modal-del-overlay');
+
     if (ok) {
-        toast(data.message || 'Product discontinued.', 'success');
-        await loadProducts();
+        toast(message || 'Product discontinued.', 'success');
+        window.location.reload();
     } else {
-        toast(data.message || data.error || 'Delete failed.', 'error');
+        toast(message || data?.error || 'Delete failed.', 'error');
     }
+
     pendingDeleteId = null;
-});
+}
 
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+// ── ADJUST STOCK (admin) ──────────────────────────────────────────────
+function openAdjust(id, name, stock) {
+    clearFormErrors();
+    document.getElementById('f-adjust-id').value = id;
+    document.getElementById('adjust-badge').textContent = `#${id}`;
+    document.getElementById('adjust-product-name').textContent = name || `Product #${id}`;
+    document.getElementById('adjust-current-stock').textContent = stock ?? '—';
+    document.getElementById('f-adjust-bestand').value = stock ?? '';
+    document.getElementById('f-adjust-reason').value = '';
+    document.getElementById('modal-adjust-overlay').classList.add('open');
+    document.getElementById('f-adjust-bestand')?.focus();
+}
 
-document.getElementById('modal-form-cancel')?.addEventListener('click', () => closeModal('modal-form-overlay'));
-document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
+async function submitAdjust(event) {
+    event.preventDefault();
+    clearFormErrors();
 
-document.querySelectorAll('.overlay').forEach(ov => {
-    ov.addEventListener('click', e => { if (e.target === ov) closeModal(ov.id); });
-});
+    const id = document.getElementById('f-adjust-id').value;
+    const bestand = parseInt(document.getElementById('f-adjust-bestand').value, 10);
+    const reason = document.getElementById('f-adjust-reason').value.trim();
 
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-        closeModal('modal-form-overlay');
-        closeModal('modal-del-overlay');
+    let valid = true;
+    if (!Number.isFinite(bestand) || bestand < 0) {
+        setAdjustError('bestand', 'Enter a valid stock level (0 or more).');
+        valid = false;
     }
-});
+    if (reason.length < 5) {
+        setAdjustError('reason', 'Reason must be at least 5 characters.');
+        valid = false;
+    }
+    if (!valid) return;
+
+    const btn = document.getElementById('modal-adjust-submit');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    const { ok, data, message } = await api('PATCH', `/products/${id}/adjust-stock`, { bestand, reason });
+
+    btn.disabled = false;
+    btn.textContent = 'Save Adjustment';
+
+    if (!ok) {
+        applyAdjustErrors(data?.errors || {});
+        toast(message || 'Adjustment failed.', 'error');
+        return;
+    }
+
+    closeModal('modal-adjust-overlay');
+    toast(message || 'Stock adjusted.', 'success');
+    window.location.reload();
+}
+
+function setAdjustError(key, msg) {
+    const err = document.getElementById('err-adjust-' + key);
+    const field = document.getElementById('f-adjust-' + key);
+    if (err) err.textContent = msg;
+    if (field) field.classList.add('invalid');
+}
+
+function applyAdjustErrors(errors) {
+    Object.entries(errors).forEach(([key, messages]) => {
+        setAdjustError(key, Array.isArray(messages) ? messages[0] : String(messages));
+    });
+}
+
+// ── STOCK HISTORY (all roles) ─────────────────────────────────────────
+async function openHistory(id) {
+    const { ok, data, message } = await api('GET', `/products/${id}/stock-history`);
+    if (!ok) {
+        toast(message || 'Failed to load stock history.', 'error');
+        return;
+    }
+
+    document.getElementById('history-badge').textContent = `#${id}`;
+
+    const rows = Array.isArray(data) ? [...data] : [];
+    rows.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+
+    const el = document.getElementById('history-items');
+    if (!rows.length) {
+        el.innerHTML = '<div class="inspect-empty">No stock adjustments recorded for this product.</div>';
+    } else {
+        el.innerHTML = rows.map((row) => {
+            const oldB = Number(row.old_bestand ?? 0);
+            const newB = Number(row.new_bestand ?? 0);
+            const delta = newB - oldB;
+            const deltaStr = (delta > 0 ? '+' : '') + delta;
+            const user = row.user_name || (row.user_id != null ? `User #${row.user_id}` : '—');
+            const date = row.created_at ? String(row.created_at).slice(0, 10) : '—';
+            const reason = row.reason || '—';
+
+            return `
+                <div class="inspect-item-row">
+                    <div>${esc(date)}</div>
+                    <div title="${esc(user)}">${esc(user)}</div>
+                    <div class="num">${oldB}</div>
+                    <div class="num">${newB}</div>
+                    <div class="num ${delta >= 0 ? 'delta-up' : 'delta-down'}">${esc(deltaStr)}</div>
+                    <div title="${esc(reason)}">${esc(reason)}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    document.getElementById('modal-history-overlay').classList.add('open');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function setFieldError(key, msg) {
+    const err = document.getElementById('err-' + key);
+    if (err) err.textContent = msg;
+}
+
+function applyValidationErrors(data) {
+    Object.entries(data?.errors || {}).forEach(([key, messages]) => {
+        const msg = Array.isArray(messages) ? messages[0] : String(messages);
+        setFieldError(key, msg);
+        const field = document.getElementById('f-' + key);
+        if (field) field.classList.add('invalid');
+        // lagerplatz is a composite control — highlight its wrapper instead.
+        if (key === 'lagerplatz') lpFields().wrap?.classList.add('invalid');
+    });
+}
 
 function clearFormErrors() {
-    document.querySelectorAll('.form-error').forEach(el => el.textContent = '');
-    document.querySelectorAll('.form-input.invalid, .form-select.invalid').forEach(el => el.classList.remove('invalid'));
+    document.querySelectorAll('.form-error').forEach((el) => { el.textContent = ''; });
+    document.querySelectorAll('.form-input.invalid, .form-select.invalid').forEach((el) => el.classList.remove('invalid'));
+    document.getElementById('lagerplatz-fields')?.classList.remove('invalid');
+}
+
+function closeModal(id) {
+    document.getElementById(id)?.classList.remove('open');
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────
-if (document.getElementById('vscroll-inner')) {
-    (async () => {
-        await loadWarehouseGroups();
-        await loadProducts();
-    })();
+function initProductsPage() {
+    document.getElementById('search')?.addEventListener('input', filterProductRows);
+    document.getElementById('filter-stock')?.addEventListener('change', filterProductRows);
+    document.getElementById('filter-wg')?.addEventListener('change', filterProductRows);
+    document.getElementById('btn-add')?.addEventListener('click', openAdd);
+    document.getElementById('product-form')?.addEventListener('submit', submitProductForm);
+    document.getElementById('modal-form-cancel')?.addEventListener('click', () => closeModal('modal-form-overlay'));
+    document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
+    document.getElementById('modal-del-confirm')?.addEventListener('click', confirmDelete);
+    document.getElementById('adjust-form')?.addEventListener('submit', submitAdjust);
+
+    // Storage-location Regal/Fach: digits only, zero-pad to 2 on blur.
+    ['f-lp-regal', 'f-lp-fach'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', () => { el.value = el.value.replace(/\D/g, '').slice(0, 2); });
+        el.addEventListener('blur', () => { if (el.value.length === 1) el.value = el.value.padStart(2, '0'); });
+    });
+    document.getElementById('modal-adjust-cancel')?.addEventListener('click', () => closeModal('modal-adjust-overlay'));
+    document.getElementById('modal-history-close')?.addEventListener('click', () => closeModal('modal-history-overlay'));
+
+    document.querySelectorAll('.product-edit').forEach((btn) => {
+        btn.addEventListener('click', () => openEdit(btn.dataset.id));
+    });
+
+    document.querySelectorAll('.product-adjust').forEach((btn) => {
+        btn.addEventListener('click', () => openAdjust(btn.dataset.id, btn.dataset.name, btn.dataset.stock));
+    });
+
+    document.querySelectorAll('.product-history').forEach((btn) => {
+        btn.addEventListener('click', () => openHistory(btn.dataset.id));
+    });
+
+    document.querySelectorAll('.product-delete').forEach((btn) => {
+        btn.addEventListener('click', () => openDelete(btn.dataset.id, btn.dataset.name));
+    });
+
+    document.querySelectorAll('.overlay').forEach((overlay) => {
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) closeModal(overlay.id);
+        });
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeModal('modal-form-overlay');
+            closeModal('modal-del-overlay');
+            closeModal('modal-adjust-overlay');
+            closeModal('modal-history-overlay');
+        }
+    });
+
+    filterProductRows();
+}
+
+if (document.querySelector('.products-page')) {
+    initProductsPage();
 }

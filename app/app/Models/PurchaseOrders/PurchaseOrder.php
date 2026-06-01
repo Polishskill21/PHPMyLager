@@ -16,8 +16,8 @@ use App\Enums\PurchaseOrderStatus;
  * @property string                 $bestDat       The date and time when the order was placed with the supplier
  * @property string|null            $erwLieferDat  The expected delivery date provided by the supplier
  * @property string                 $status        Current workflow state: 'offen', 'bestellt', 'geliefert', 'storniert'
- * @property \Carbon\Carbon         $created_at    Timestamp when the procurement record was initialized
- * @property \Carbon\Carbon         $updated_at    Timestamp when status or details were last modified
+ *
+ * Note: the bestellkoepfe table has no created_at/updated_at columns, so timestamps are disabled.
  */
 
 class PurchaseOrder extends Model
@@ -31,6 +31,9 @@ class PurchaseOrder extends Model
 
     protected $table      = self::TABLE;
     protected $primaryKey = self::COL_ID;
+
+    // bestellkoepfe has no created_at/updated_at columns (matches the other legacy tables).
+    public $timestamps = false;
 
     protected $fillable = [
         self::COL_F_LIEF_NR,

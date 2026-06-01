@@ -1,0 +1,31 @@
+.app-icon,
+.ui-icon,
+.lucide,
+.action-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    object-fit: contain;
+    filter: var(--icon-filter-muted);
+}
+
+.icon-strong,
+.page-title-icon {
+    filter: var(--icon-filter-strong);
+}
+
+.icon-dark,
+.btn-primary .ui-icon,
+.btn-primary .lucide {
+    filter: var(--icon-filter-dark);
+}
+
+.icon-danger,
+.btn-icon.del .action-icon {
+    filter: var(--icon-filter-danger);
+}
+
+.page-title-icon {
+    width: 24px;
+    height: 24px;
+}

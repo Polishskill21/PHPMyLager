@@ -1,0 +1,88 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+    opacity: 0;
+    background: var(--color-overlay);
+    backdrop-filter: blur(3px);
+    transition: opacity .2s ease, visibility .2s ease;
+}
+
+.overlay.open {
+    visibility: visible;
+    opacity: 1;
+}
+
+.modal {
+    width: 100%;
+    max-width: 520px;
+    padding: 1.1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-modal);
+    transform: translateY(16px) scale(.97);
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+
+.modal-large-crud {
+    width: min(var(--modal-large-width, 900px), calc(100vw - 28px));
+    max-width: var(--modal-large-width, 900px);
+    height: calc(100vh - 32px);
+    max-height: calc(100vh - 32px);
+    padding: 1.1rem 1.1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+}
+
+.modal-large-crud > form {
+    min-height: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+.overlay.open .modal { transform: none; }
+
+.modal-title {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--color-text-strong);
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.badge,
+.modal-title .badge {
+    padding: 3px 7px;
+    border: 1px solid var(--color-badge-border);
+    border-radius: var(--radius-xs);
+    background: var(--color-badge-bg);
+    color: var(--color-text-soft);
+    font-family: var(--font-mono);
+    font-size: .65rem;
+    line-height: 1;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: .65rem;
+    margin-top: 1.25rem;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.modal-sm { max-width: 380px; }
+.confirm-body { color: var(--color-text-muted); font-size: .88rem; line-height: 1.6; }
+.confirm-target { color: var(--color-text-strong); font-family: var(--font-mono); font-weight: 700; }
+.modal-title-danger { color: var(--color-danger); }
