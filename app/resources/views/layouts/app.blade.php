@@ -7,7 +7,7 @@
 
     @stack('meta')
 
-    <title>@yield('title', 'PhpMyLager')</title>
+    <title>@yield('title', 'Storage Management System')</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 

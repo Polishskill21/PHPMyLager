@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Customers – PhpMyLager')
+@section('title', 'Customers – Storage Management System')
 @section('page-title', 'Customers')
 
 @push('meta')

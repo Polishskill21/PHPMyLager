@@ -16,7 +16,7 @@
             <span class="app-brand-mark">
                 <img class="app-icon" src="{{ asset('icons/lucide/layout-grid.png') }}" alt="">
             </span>
-            <span class="app-brand-name">Lagersystem</span>
+            <span class="app-brand-name">Storage Management System</span>
         </a>
 
         <nav class="app-nav" aria-label="Primary navigation">

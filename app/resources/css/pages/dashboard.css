@@ -10,11 +10,31 @@
     color: var(--color-text-faint);
 }
 
+.dashboard-centerpiece {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+    padding-bottom: min(8vh, 5rem);
+}
+
+.dashboard-greeting {
+    margin: 0;
+    color: var(--color-text-strong);
+    font-family: Optima, Candara, "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: clamp(3rem, 5.6vw, 5.75rem);
+    font-weight: 300;
+    line-height: .95;
+    letter-spacing: -.055em;
+    text-align: center;
+}
+
 .dashboard-grid {
     max-width: 820px;
-    /* margin:auto centers the block on both axes: left/right keep it horizontally
-       centered, top/bottom absorb the leftover vertical space in the flex column. */
-    margin: auto;
+    margin: 0;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 2px;
@@ -68,6 +88,15 @@
 }
 
 @media (max-width: 1120px) {
+    .dashboard-centerpiece {
+        gap: 36px;
+        padding-bottom: min(5vh, 3rem);
+    }
+
+    .dashboard-greeting {
+        font-size: clamp(2.5rem, 7vw, 4.25rem);
+    }
+
     .dashboard-grid {
         max-width: 560px;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -75,6 +104,17 @@
 }
 
 @media (max-width: 640px) {
+    .dashboard-centerpiece {
+        justify-content: flex-start;
+        gap: 24px;
+        padding-top: 2rem;
+        padding-bottom: 0;
+    }
+
+    .dashboard-greeting {
+        font-size: clamp(2rem, 10vw, 3rem);
+    }
+
     .dashboard-grid {
         max-width: none;
         grid-template-columns: 1fr;

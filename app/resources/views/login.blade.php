@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Login - PhpMyLager')
+@section('title', 'Login - Storage Management System')
 
 @push('styles')
     @vite('resources/css/pages/login.css')
@@ -10,8 +10,8 @@
 <section class="login-page">
     <div class="login-card">
         <div class="login-brand">
-            <h1>PhpMyLager</h1>
-            <p>Warehouse Management System</p>
+            <h1>Storage Management System</h1>
+            <p>Inventory Control Console</p>
         </div>
 
         @if($errors->any())

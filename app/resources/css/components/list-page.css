@@ -71,8 +71,12 @@
 }
 
 .stat-pill span {
+    min-width: 4ch;
     color: var(--color-text-strong);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-weight: 600;
+    text-align: center;
 }
 
 .list-page {
@@ -361,14 +365,18 @@
 
 .status-badge,
 .stock-badge {
+    min-width: 6ch;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: .3rem;
     border: 1px solid currentColor;
     border-radius: var(--radius-xs);
+    font-family: var(--font-mono);
     font-size: .68rem;
+    font-variant-numeric: tabular-nums;
     font-weight: 700;
+    text-align: center;
 }
 
 .stock-badge {
