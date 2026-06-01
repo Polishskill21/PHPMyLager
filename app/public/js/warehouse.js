@@ -76,6 +76,71 @@ function filterGroupRows() {
     if (emptyRow) emptyRow.hidden = !query || visible > 0;
 }
 
+// ── PRODUCT GROUP DETAIL ──────────────────────────────────────────────
+function formatPrice(value) {
+    const numeric = Number(value ?? 0);
+    return numeric.toFixed(2);
+}
+
+function stockState(product) {
+    const stock = Number(product.bestand ?? 0);
+    const reorder = Number(product.meldeBest ?? 0);
+
+    if (stock === 0) return 'empty';
+    if (stock <= reorder) return 'warn';
+    return 'ok';
+}
+
+function renderGroupProducts(products) {
+    const list = document.getElementById('group-products-list');
+    if (!list) return;
+
+    if (!products.length) {
+        list.innerHTML = '<div class="inspect-empty">No products are assigned to this group.</div>';
+        return;
+    }
+
+    list.innerHTML = products.map((product) => {
+        const state = stockState(product);
+        const stockIcon = state === 'warn' ? '◐' : '●';
+
+        return `
+            <div class="inspect-item-row">
+                <div>#${esc(product.pArtikelNr)}</div>
+                <div title="${esc(product.bezeichnung || '')}">${esc(product.bezeichnung || '—')}</div>
+                <div class="num">${formatPrice(product.ekPreis)}</div>
+                <div class="num">${formatPrice(product.vkPreis)}</div>
+                <div class="num"><span class="stock-badge stock-${state}">${stockIcon} ${esc(product.bestand ?? '—')}</span></div>
+                <div class="num">${esc(product.meldeBest ?? '—')}</div>
+                <div title="${esc(product.lagerplatz || '')}">${esc(product.lagerplatz || '—')}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function openGroupProducts(id, name) {
+    const list = document.getElementById('group-products-list');
+    const badge = document.getElementById('group-products-badge');
+    const subtitle = document.getElementById('group-products-subtitle');
+
+    if (badge) badge.textContent = `#${id}`;
+    if (subtitle) subtitle.textContent = `${name || `Group ${id}`} products.`;
+    if (list) {
+        list.innerHTML = '<div class="inspect-empty">Loading products…</div>';
+    }
+
+    document.getElementById('modal-group-products-overlay')?.classList.add('open');
+
+    const { ok, data, message } = await api('GET', `/warehouse-groups/${id}/products`);
+    if (!ok) {
+        renderGroupProducts([]);
+        toast(message || 'Failed to load group products.', 'error');
+        return;
+    }
+
+    renderGroupProducts(Array.isArray(data) ? data : []);
+}
+
 // ── ADD / EDIT FORM ───────────────────────────────────────────────────
 function openAdd() {
     clearFormErrors();
@@ -156,9 +221,17 @@ function initWarehousePage() {
     document.getElementById('btn-add-group')?.addEventListener('click', openAdd);
     document.getElementById('group-form')?.addEventListener('submit', submitGroupForm);
     document.getElementById('group-form-cancel')?.addEventListener('click', () => closeModal('modal-group-form-overlay'));
+    document.getElementById('group-products-close')?.addEventListener('click', () => closeModal('modal-group-products-overlay'));
+
+    document.querySelectorAll('.warehouse-table tbody tr[data-sort-row]').forEach((row) => {
+        row.addEventListener('click', () => openGroupProducts(row.dataset.groupId, row.dataset.groupName));
+    });
 
     document.querySelectorAll('.group-edit').forEach((btn) => {
-        btn.addEventListener('click', () => openEdit(btn.dataset.id, btn.dataset.name));
+        btn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            openEdit(btn.dataset.id, btn.dataset.name);
+        });
     });
 
     document.querySelectorAll('.overlay').forEach((overlay) => {
@@ -170,6 +243,7 @@ function initWarehousePage() {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             closeModal('modal-group-form-overlay');
+            closeModal('modal-group-products-overlay');
         }
     });
 

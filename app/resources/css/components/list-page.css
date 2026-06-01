@@ -116,9 +116,9 @@
    width. Keyed on the `col-*` classes carried by each table's <colgroup>. */
 .data-table col.col-id { width: 84px; }
 /* Width scales with the number of action icons: each .btn-icon is 28px, the
-   .table-actions gap is 9px, +36px for cell padding + buffer. 2→101, 3→138, 4→175. */
+   .table-actions gap is 9px, +48px for cell padding + buffer. 2→113, 3→150, 4→187. */
 .data-table col.col-actions {
-    width: calc(var(--actions-count) * 28px + (var(--actions-count) - 1) * 9px + 36px);
+    width: calc(var(--actions-count) * 28px + (var(--actions-count) - 1) * 9px + 48px);
 }
 .data-table col.col-status { width: 124px; }
 
@@ -131,9 +131,7 @@
 
 /* count / quantity columns */
 .data-table col.col-items,
-.data-table col.col-count,
-.data-table col.col-pos,
-.data-table col.col-reorder { width: 104px; }
+.data-table col.col-reorder { width: 112px; }
 
 /* money / price columns */
 .data-table col.col-buy,
@@ -144,6 +142,7 @@
 /* stock badge + postal code */
 .data-table col.col-stock { width: 120px; }
 .data-table col.col-plz { width: 96px; }
+.data-table col.col-location { width: 132px; }
 
 /* Secondary text columns — fixed so the primary name/title column stays the ONLY
    flexible (`auto`) column on every page. This reproduces the Purchase Orders layout
@@ -368,6 +367,21 @@
 
 .stock-badge {
     padding: .15rem .5rem;
+}
+
+.stock-ok {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+.stock-warn {
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+}
+
+.stock-empty {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
 
 .status-badge {

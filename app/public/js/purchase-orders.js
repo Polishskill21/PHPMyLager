@@ -365,6 +365,7 @@ async function openInspect(id) {
 
     const totalQty = Number(data?.total_ordered ?? 0);
     const totalEur = Number(data?.total_value ?? 0);
+    const totalDelivered = Number(data?.total_delivered ?? 0);
 
     const totalsRow = `
         <div class="inspect-total-row" aria-label="Purchase order totals">
@@ -374,6 +375,10 @@ async function openInspect(id) {
             <div class="inspect-total-cell">
                 <span>Total Qty</span>
                 <strong>${esc(String(totalQty))}</strong>
+            </div>
+            <div class="inspect-total-cell">
+                <span>Total Delivered</span>
+                <strong>${esc(String(totalDelivered))}</strong>
             </div>
             <div></div>
             <div class="inspect-total-cell">
@@ -398,6 +403,7 @@ async function openInspect(id) {
                     <div>${esc(productId)}</div>
                     <div title="${esc(productName)}">${esc(productName)}</div>
                     <div class="num">${Number(item.bestMenge || 0)}</div>
+                    <div class="num">${Number(item.gelieferteMenge || 0)}</div>
                     <div class="num">€${fmtMoney(item.ekPreis)}</div>
                     <div class="num">€${fmtMoney(item.line_total)}</div>
                 </div>

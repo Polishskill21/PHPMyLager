@@ -74,7 +74,6 @@ async function openEdit(id) {
     document.getElementById('f-strasse').value = data.strasse || '';
     document.getElementById('f-plz').value = data.plz || '';
     document.getElementById('f-ort').value = data.ort || '';
-    document.getElementById('f-telefon').value = data.telefon || '';
 
     document.getElementById('supplier-form-title').textContent = 'Edit Supplier';
     document.getElementById('supplier-form-badge').textContent = `#${data.pLiefNr}`;
@@ -90,7 +89,6 @@ function buildPayload() {
         strasse: optionalValue('f-strasse'),
         plz: optionalValue('f-plz'),
         ort: optionalValue('f-ort'),
-        telefon: optionalValue('f-telefon'),
     };
 }
 
@@ -200,8 +198,9 @@ function filterSupplierRows() {
             row.dataset.sortId,
             row.dataset.sortName,
             row.dataset.sortEmail,
-            row.dataset.sortPhone,
+            row.dataset.sortStreet,
             row.dataset.sortCity,
+            row.dataset.sortPlz,
         ].join(' ').toLowerCase();
         const match = !query || haystack.includes(query);
 

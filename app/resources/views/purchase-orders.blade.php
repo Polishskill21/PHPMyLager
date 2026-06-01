@@ -225,12 +225,13 @@
             </div>
         </div>
 
-        <div class="inspect-items">
+        <div class="inspect-items po-view-items">
             <div class="inspect-item-head">
                 <div>Pos</div>
                 <div>Product ID</div>
                 <div>Product</div>
                 <div>Qty</div>
+                <div>Delivered</div>
                 <div>Unit EUR</div>
                 <div>Total EUR</div>
             </div>

@@ -16,7 +16,7 @@
 @php
     $canWrite = Auth::user()->canWrite();
     $showActions = $canWrite;
-    $colspan = $showActions ? 4 : 3;
+    $colspan = $showActions ? 3 : 2;
 @endphp
 
 <section class="list-page warehouse-page">
@@ -49,7 +49,6 @@
                 <colgroup>
                     <col class="col-id">
                     <col class="col-name">
-                    <col class="col-count">
                     @if($showActions)
                         <col class="col-actions">
                     @endif
@@ -58,7 +57,6 @@
                 <tr>
                     <th class="th cell-id" data-sort="id" data-sort-type="number"><span class="table-th-inner"><span>ID</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-name" data-sort="name"><span class="table-th-inner"><span>Product Group</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-number" data-sort="products" data-sort-type="number"><span class="table-th-inner"><span>Products</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     @if($showActions)
                         <th class="cell-actions">Actions</th>
                     @endif
@@ -66,13 +64,14 @@
                 </thead>
                 <tbody>
                 @forelse($groups as $group)
-                    <tr data-sort-row
+                    <tr class="row-clickable"
+                        data-sort-row
+                        data-group-id="{{ $group->pWgNr }}"
+                        data-group-name="{{ $group->warengruppe ?: ('Group '.$group->pWgNr) }}"
                         data-sort-id="{{ $group->pWgNr }}"
-                        data-sort-name="{{ $group->warengruppe ?: '' }}"
-                        data-sort-products="{{ $group->products_count }}">
+                        data-sort-name="{{ $group->warengruppe ?: '' }}">
                         <td class="cell-id">#{{ $group->pWgNr }}</td>
                         <td class="cell-name" title="{{ $group->warengruppe }}">{{ $group->warengruppe ?: '—' }}</td>
-                        <td class="cell-number">{{ $group->products_count }}</td>
                         @if($showActions)
                             <td class="cell-actions">
                                 <div class="table-actions">
@@ -125,6 +124,35 @@
                 <button type="submit" class="btn btn-primary btn-submit btn-submit-save" id="group-form-submit">Save Product Group</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="overlay" id="modal-group-products-overlay">
+    <div class="modal modal-inspect" id="modal-group-products">
+        <div class="inspect-header">
+            <div class="inspect-heading">
+                <h2 class="inspect-title">Product Group Products</h2>
+                <span class="badge inspect-badge" id="group-products-badge">#-</span>
+            </div>
+        </div>
+        <p class="inspect-subtitle" id="group-products-subtitle">Products assigned to this group.</p>
+
+        <div class="inspect-items warehouse-group-items">
+            <div class="inspect-item-head">
+                <div>ID</div>
+                <div>Name</div>
+                <div>Buy €</div>
+                <div>Sell €</div>
+                <div>Stock</div>
+                <div>Reorder</div>
+                <div>Location</div>
+            </div>
+            <div class="inspect-item-list" id="group-products-list"></div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-cancel" id="group-products-close">Close</button>
+        </div>
     </div>
 </div>
 @endsection

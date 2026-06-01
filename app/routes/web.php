@@ -41,7 +41,7 @@ Route::middleware('auth')->group(function () {
     })->name('customers');
     Route::get('/warehouse', function () {
         return view('warehouse', [
-            'groups' => WarehouseGroup::withCount('products')->orderBy('pWgNr')->get(),
+            'groups' => WarehouseGroup::orderBy('pWgNr')->get(),
         ]);
     })->name('warehouse');
 
@@ -53,7 +53,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/suppliers', function () {
         return view('suppliers', [
-            'suppliers' => Supplier::withCount('purchaseOrders')->orderBy('pLiefNr')->get(),
+            'suppliers' => Supplier::orderBy('pLiefNr')->get(),
         ]);
     })->name('suppliers');
 

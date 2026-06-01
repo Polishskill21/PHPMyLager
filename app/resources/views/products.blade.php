@@ -127,9 +127,11 @@
                                         <img class="action-icon" src="{{ asset('icons/lucide/list-checks.png') }}" alt="Adjust stock">
                                     </button>
                                 @endif
-                                <button class="btn-icon product-history" title="Stock history" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
-                                    <img class="action-icon" src="{{ asset('icons/lucide/clipboard-clock.png') }}" alt="Stock history">
-                                </button>
+                                @if($product->has_stock_history)
+                                    <button class="btn-icon product-history" title="Stock history" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
+                                        <img class="action-icon" src="{{ asset('icons/lucide/clipboard-clock.png') }}" alt="Stock history">
+                                    </button>
+                                @endif
                                 @if($canDelete)
                                     <button class="btn-icon del product-delete" title="Discontinue" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
                                         <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Discontinue">
@@ -326,7 +328,7 @@
                 <div>User</div>
                 <div class="num">Old</div>
                 <div class="num">New</div>
-                <div class="num">Δ</div>
+                <div class="num">Difference</div>
                 <div>Reason</div>
             </div>
             <div class="inspect-item-list" id="history-items"></div>

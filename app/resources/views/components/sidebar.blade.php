@@ -30,12 +30,8 @@
     </div>
 
     <div class="app-sidebar-bottom">
-        <nav class="app-nav app-nav-secondary" aria-label="Secondary navigation">
-            <a href="#" class="app-nav-link">
-                <img class="app-icon" src="{{ asset('icons/lucide/settings.png') }}" alt="">
-                <span>Settings</span>
-            </a>
-        </nav>
+        {{-- Settings is intentionally hidden until a real settings page exists. Keep the
+             bottom slot available so this action can return without restructuring the sidebar. --}}
 
         <div class="app-user-card">
             <div class="app-user-meta">

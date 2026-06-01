@@ -31,7 +31,7 @@
     <div class="page-toolbar suppliers-toolbar">
         <div class="page-search suppliers-search">
             <img class="page-search-icon" src="{{ asset('icons/lucide/search.png') }}" alt="">
-            <input class="form-input page-search-input" id="suppliers-search" type="text" placeholder="Search by ID, name, email, phone or city...">
+            <input class="form-input page-search-input" id="suppliers-search" type="text" placeholder="Search by ID, name, email, street, city or PLZ...">
         </div>
         <div class="stat-pill">Suppliers: <span id="suppliers-stat-total">{{ $suppliers->count() }}</span></div>
         <div class="page-toolbar-spacer"></div>
@@ -50,9 +50,9 @@
                     <col class="col-id">
                     <col class="col-name">
                     <col class="col-email">
-                    <col class="col-phone">
+                    <col class="col-street">
                     <col class="col-city">
-                    <col class="col-pos">
+                    <col class="col-plz">
                     @if($showActions)
                         <col class="col-actions">
                     @endif
@@ -62,9 +62,9 @@
                     <th class="th cell-id" data-sort="id" data-sort-type="number"><span class="table-th-inner"><span>ID</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-name" data-sort="name"><span class="table-th-inner"><span>Name</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-left" data-sort="email"><span class="table-th-inner"><span>Email</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-left" data-sort="phone"><span class="table-th-inner"><span>Phone</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-left" data-sort="street"><span class="table-th-inner"><span>Street</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-left" data-sort="city"><span class="table-th-inner"><span>City</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="th cell-number" data-sort="pos" data-sort-type="number"><span class="table-th-inner"><span>POs</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-left" data-sort="plz" data-sort-type="number"><span class="table-th-inner"><span>PLZ</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     @if($showActions)
                         <th class="cell-actions">Actions</th>
                     @endif
@@ -76,15 +76,15 @@
                         data-sort-id="{{ $supplier->pLiefNr }}"
                         data-sort-name="{{ $supplier->name ?: '' }}"
                         data-sort-email="{{ $supplier->email ?: '' }}"
-                        data-sort-phone="{{ $supplier->telefon ?: '' }}"
+                        data-sort-street="{{ $supplier->strasse ?: '' }}"
                         data-sort-city="{{ $supplier->ort ?: '' }}"
-                        data-sort-pos="{{ $supplier->purchase_orders_count }}">
+                        data-sort-plz="{{ $supplier->plz ?: '' }}">
                         <td class="cell-id">#{{ $supplier->pLiefNr }}</td>
                         <td class="cell-name" title="{{ $supplier->name }}">{{ $supplier->name ?: '—' }}</td>
                         <td class="cell-muted" title="{{ $supplier->email }}">{{ $supplier->email ?: '—' }}</td>
-                        <td title="{{ $supplier->telefon }}">{{ $supplier->telefon ?: '—' }}</td>
-                        <td title="{{ $supplier->ort }}">{{ $supplier->ort ?: '—' }}</td>
-                        <td class="cell-number suppliers-count">{{ $supplier->purchase_orders_count }}</td>
+                        <td class="cell-muted" title="{{ $supplier->strasse }}">{{ $supplier->strasse ?: '—' }}</td>
+                        <td class="cell-muted" title="{{ $supplier->ort }}">{{ $supplier->ort ?: '—' }}</td>
+                        <td class="cell-mono" title="{{ $supplier->plz }}">{{ $supplier->plz ?: '—' }}</td>
                         @if($showActions)
                             <td class="cell-actions">
                                 <div class="table-actions">
@@ -160,12 +160,6 @@
                     <label class="form-label" for="f-ort">City</label>
                     <input class="form-input" id="f-ort" maxlength="50" placeholder="Remscheid">
                     <div class="form-error" id="err-ort"></div>
-                </div>
-
-                <div class="form-group form-full">
-                    <label class="form-label" for="f-telefon">Phone</label>
-                    <input class="form-input" id="f-telefon" maxlength="30" placeholder="+49 2191 555120">
-                    <div class="form-error" id="err-telefon"></div>
                 </div>
             </div>
 

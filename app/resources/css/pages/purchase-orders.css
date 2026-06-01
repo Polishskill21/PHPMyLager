@@ -6,6 +6,22 @@
 /* Up to three row actions: edit, receive delivery, cancel. */
 .purchase-orders-table { --actions-count: 3; }
 
+/* PO detail modal reuses the shared inspect list (components/inspect.css) but adds a
+   Delivered column, so re-map the 6-col grid to 7 columns:
+   Pos | Product ID | Product | Qty | Delivered | Unit EUR | Total EUR */
+.po-view-items .inspect-item-head,
+.po-view-items .inspect-item-row,
+.po-view-items .inspect-total-row {
+    grid-template-columns: 64px 112px minmax(220px, 1fr) 90px 100px 116px 116px;
+    min-width: 760px;
+}
+
+/* Right-align the new Total EUR header (col 7); the shared rule only covers cols 4–6.
+   Row value cells carry `.num`, which the shared component already right-aligns. */
+.po-view-items .inspect-item-head div:nth-child(7) {
+    text-align: right;
+}
+
 .purchase-order-modal {
     --modal-large-width: 900px;
     --purchase-order-item-qty-width: 96px;
