@@ -121,7 +121,7 @@ class DatabaseSeeder extends Seeder
         DB::table('lieferanten')->insertOrIgnore([
             ['pLiefNr' => 5001, 'name' => 'Remscheid Werkzeuge GmbH', 'strasse' => 'Industriepark Nord 4', 'plz' => 42853, 'ort' => 'Remscheid', 'email' => 'vertrieb@remscheid-tools.de'],
             ['pLiefNr' => 5002, 'name' => 'Sheffield Steel Co.', 'strasse' => '22 Ironworks Lane', 'plz' => 54321, 'ort' => 'Sheffield', 'email' => 'orders@sheffieldsteel.co.uk'],
-            ['pLiefNr' => 5003, 'name' => 'Alpen Werkzeuge Import S.A.', 'strasse' => 'Rue du Commerce 77', 'plz' => 1005, 'ort' => 'Lausanne', 'email' => 'info@alpenimport.ch']
+            ['pLiefNr' => 5003, 'name' => 'Alpen Werkzeuge Import S.A.', 'strasse' => 'Rue du Commerce 77', 'plz' => 10050, 'ort' => 'Lausanne', 'email' => 'info@alpenimport.ch']
         ]);
 
         // 8. Seed Bestellkoepfe (Purchase Orders placed to Suppliers)
