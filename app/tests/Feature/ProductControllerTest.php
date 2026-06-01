@@ -6,6 +6,7 @@ use App\Models\Products\Product;
 use App\Models\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -418,5 +419,158 @@ class ProductControllerTest extends TestCase
             ->assertStatus(204);
 
         $this->assertSoftDeleted('artikel', ['pArtikelNr' => $product->pArtikelNr]);
+    }
+
+    // ---------------------------------------------------------------
+    // LAGERPLATZ (storage location) — format /^[A-Z]\d{2}-\d{2}[A-E]$/
+    // ---------------------------------------------------------------
+
+    public function test_can_create_product_with_valid_lagerplatz(): void
+    {
+        $response = $this->actingAs($this->admin)
+                         ->postJson('/api/products', [
+                             'bezeichnung' => 'Located Product',
+                             'fWgNr'       => 4,
+                             'ekPreis'     => 5.00,
+                             'vkPreis'     => 9.00,
+                             'bestand'     => 10,
+                             'meldeBest'   => 2,
+                             'lagerplatz'  => 'A01-03B',
+                         ]);
+
+        $response->assertStatus(201)
+                 ->assertJsonPath('data.lagerplatz', 'A01-03B');
+
+        $this->assertDatabaseHas('artikel', [
+            'bezeichnung' => 'Located Product',
+            'lagerplatz'  => 'A01-03B',
+        ]);
+    }
+
+    public function test_can_create_product_without_lagerplatz(): void
+    {
+        $response = $this->actingAs($this->admin)
+                         ->postJson('/api/products', [
+                             'bezeichnung' => 'No Location',
+                             'fWgNr'       => 4,
+                             'ekPreis'     => 5.00,
+                             'vkPreis'     => 9.00,
+                             'bestand'     => 10,
+                             'meldeBest'   => 2,
+                             'lagerplatz'  => null,
+                         ]);
+
+        $response->assertStatus(201)
+                 ->assertJsonPath('data.lagerplatz', null);
+    }
+
+    #[DataProvider('invalidLagerplatzProvider')]
+    public function test_create_rejects_invalid_lagerplatz(string $bad): void
+    {
+        $response = $this->actingAs($this->admin)
+                         ->postJson('/api/products', [
+                             'bezeichnung' => 'Bad Location',
+                             'fWgNr'       => 4,
+                             'ekPreis'     => 5.00,
+                             'vkPreis'     => 9.00,
+                             'bestand'     => 10,
+                             'meldeBest'   => 2,
+                             'lagerplatz'  => $bad,
+                         ]);
+
+        $response->assertStatus(422)
+                 ->assertJsonValidationErrors(['lagerplatz']);
+    }
+
+    public static function invalidLagerplatzProvider(): array
+    {
+        return [
+            'lowercase zone'        => ['a01-03b'],
+            'missing leading zero'  => ['A1-03B'],
+            'single digit fach'     => ['A01-3B'],
+            'ebene out of range'    => ['A01-03F'],
+            'numeric zone'          => ['101-03B'],
+            'letters in regal'      => ['AA1-03B'],
+            'wrong separator'       => ['A01_03B'],
+            'missing ebene'         => ['A01-03'],
+        ];
+    }
+
+    public function test_can_update_lagerplatz(): void
+    {
+        $product = Product::create([
+            'bezeichnung' => 'Relocatable',
+            'fWgNr'       => 4,
+            'ekPreis'     => 10,
+            'vkPreis'     => 20,
+            'bestand'     => 10,
+            'meldeBest'   => 5,
+            'lagerplatz'  => 'A01-03B',
+        ]);
+
+        $response = $this->actingAs($this->admin)
+                         ->putJson("/api/products/{$product->pArtikelNr}", [
+                             'lagerplatz' => 'Z99-99E',
+                         ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('data.lagerplatz', 'Z99-99E');
+
+        $this->assertDatabaseHas('artikel', [
+            'pArtikelNr' => $product->pArtikelNr,
+            'lagerplatz' => 'Z99-99E',
+        ]);
+    }
+
+    public function test_update_rejects_invalid_lagerplatz(): void
+    {
+        $product = Product::create([
+            'bezeichnung' => 'Stay Put',
+            'fWgNr'       => 4,
+            'ekPreis'     => 10,
+            'vkPreis'     => 20,
+            'bestand'     => 10,
+            'meldeBest'   => 5,
+            'lagerplatz'  => 'A01-03B',
+        ]);
+
+        $this->actingAs($this->admin)
+             ->putJson("/api/products/{$product->pArtikelNr}", [
+                 'lagerplatz' => 'nope',
+             ])
+             ->assertStatus(422)
+             ->assertJsonValidationErrors(['lagerplatz']);
+
+        // Original value untouched.
+        $this->assertDatabaseHas('artikel', [
+            'pArtikelNr' => $product->pArtikelNr,
+            'lagerplatz' => 'A01-03B',
+        ]);
+    }
+
+    public function test_update_can_clear_lagerplatz(): void
+    {
+        $product = Product::create([
+            'bezeichnung' => 'Clearable',
+            'fWgNr'       => 4,
+            'ekPreis'     => 10,
+            'vkPreis'     => 20,
+            'bestand'     => 10,
+            'meldeBest'   => 5,
+            'lagerplatz'  => 'A01-03B',
+        ]);
+
+        $response = $this->actingAs($this->admin)
+                         ->putJson("/api/products/{$product->pArtikelNr}", [
+                             'lagerplatz' => null,
+                         ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('data.lagerplatz', null);
+
+        $this->assertDatabaseHas('artikel', [
+            'pArtikelNr' => $product->pArtikelNr,
+            'lagerplatz' => null,
+        ]);
     }
 }

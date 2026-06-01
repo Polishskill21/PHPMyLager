@@ -16,8 +16,9 @@ use App\Models\PurchaseOrders\PurchaseOrder;
  * @property int|null               $plz         Postal code identifier (Postleitzahl)
  * @property string|null            $ort         City or region location designation
  * @property string|null            $email       Primary B2B contact email address
- * @property \Carbon\Carbon         $created_at  Timestamp when the supplier was registered in the database
- * @property \Carbon\Carbon         $updated_at  Timestamp when supplier records were last altered
+ *
+ * Note: the lieferanten table has no created_at/updated_at columns (only softDeletes),
+ * so timestamps are disabled below.
  */
 
 class Supplier extends Model
@@ -34,6 +35,9 @@ class Supplier extends Model
 
     protected $table      = self::TABLE;
     protected $primaryKey = self::COL_ID;
+
+    // lieferanten has no created_at/updated_at columns (matches the other legacy tables).
+    public $timestamps = false;
 
     protected $hidden = [
         'deleted_at'
