@@ -33,7 +33,7 @@
 .purchase-order-modal .modal-title {
     margin-bottom: .9rem;
     color: var(--color-text-strong);
-    font-size: 1.35rem;
+    font-size: 1.1rem;
 }
 
 #purchase-order-form .purchase-order-form-grid {
@@ -111,7 +111,7 @@
 .purchase-order-receive-modal .modal-title {
     margin-bottom: .5rem;
     color: var(--color-text-strong);
-    font-size: 1.35rem;
+    font-size: 1.1rem;
 }
 
 .receive-subtitle {

@@ -1,31 +1,31 @@
 .page-header {
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
 .page-title {
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     color: var(--color-text-strong);
-    font-size: 30px;
+    font-size: 22px;
     font-weight: 700;
     line-height: 1.08;
 }
 
 .page-subtitle {
-    margin: 6px 0 0 34px;
+    margin: 5px 0 0 30px;
     color: var(--color-text-faint);
-    font-size: 14px;
+    font-size: 12px;
 }
 
 .page-toolbar {
     min-height: var(--control-height);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .page-toolbar-spacer { flex: 1; }
@@ -38,7 +38,7 @@
 
 .page-search-icon {
     position: absolute;
-    left: 12px;
+    left: 10px;
     top: 50%;
     width: 15px;
     height: 15px;
@@ -49,23 +49,24 @@
 
 .page-search-input {
     height: var(--control-height);
-    padding-left: 38px;
+    padding-left: 32px;
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: 12px;
 }
 
 .stat-pill {
     height: var(--control-height);
-    padding: 0 14px;
+    padding: 0 10px;
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-sm);
     background: var(--color-surface-raised);
+    box-shadow: var(--shadow-control);
     color: var(--color-text-muted);
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: 12px;
     white-space: nowrap;
 }
 
@@ -84,7 +85,7 @@
 .table-shell {
     min-width: 0;
     overflow: hidden;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-sm);
     background: var(--color-surface-table);
 }
@@ -156,16 +157,16 @@
 .data-table col.col-phone { width: 160px; }
 
 .data-table thead th {
-    height: 46px;
+    height: 32px;
     padding: 0 10px;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border-strong);
     background: var(--color-surface-table-head);
     color: var(--color-text-strong);
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: .08em;
-    line-height: 46px;
+    line-height: 32px;
     text-align: left;
     text-transform: uppercase;
     vertical-align: middle;
@@ -210,7 +211,11 @@
 
 .data-table tbody tr {
     border-bottom: 1px solid var(--color-border-subtle);
-    transition: background .14s ease;
+    transition: none;
+}
+
+.data-table tbody tr:nth-child(even):not(.table-state-row) {
+    background: var(--color-surface-raised);
 }
 
 .data-table tbody tr:last-child {
@@ -235,7 +240,7 @@
     overflow: hidden;
     color: var(--color-text-soft);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.2;
     text-overflow: ellipsis;
     vertical-align: middle;
@@ -284,7 +289,7 @@
 .data-table tbody td.cell-id {
     color: var(--color-text-faint);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 400;
 }
 
@@ -292,7 +297,7 @@
 .data-table tbody td.cell-customer {
     color: var(--color-text-strong);
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -318,7 +323,7 @@
 .data-table tbody td.td-items,
 .data-table tbody td.td-total {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .data-table thead th.cell-id,
@@ -334,7 +339,7 @@
 .data-table thead th.cell-items {
     color: var(--color-text-strong);
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
 }
 
@@ -349,9 +354,9 @@
 }
 
 .data-table .btn-icon {
-    width: 24px;
-    height: 24px;
-    border: 0;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--color-border);
 }
 
 .status-badge,
@@ -360,8 +365,9 @@
     align-items: center;
     justify-content: center;
     gap: .3rem;
+    border: 1px solid currentColor;
     border-radius: var(--radius-xs);
-    font-size: .72rem;
+    font-size: .68rem;
     font-weight: 700;
 }
 

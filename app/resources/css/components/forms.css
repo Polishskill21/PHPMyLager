@@ -1,7 +1,7 @@
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: .85rem;
+    gap: .75rem;
 }
 
 .form-full { grid-column: 1 / -1; }
@@ -9,7 +9,7 @@
 
 .form-label {
     color: var(--color-text-muted);
-    font-size: .68rem;
+    font-size: .64rem;
     font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
@@ -20,15 +20,16 @@
     width: 100%;
     height: var(--control-height);
     min-height: var(--control-height);
-    padding: .58rem .72rem;
-    border: 1px solid var(--color-border);
+    padding: .32rem .55rem;
+    border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-xs);
-    background: var(--color-surface-raised);
+    background: var(--color-surface);
     color: var(--color-text);
     font-family: var(--font-mono);
-    font-size: .86rem;
+    font-size: .78rem;
     line-height: 1.2;
-    transition: border-color .15s ease, box-shadow .15s ease;
+    box-shadow: var(--shadow-control);
+    transition: none;
 }
 
 .form-input::placeholder {
@@ -39,7 +40,7 @@
 .form-select:focus {
     outline: none;
     border-color: var(--color-border-focus);
-    box-shadow: 0 0 0 1px var(--color-focus-ring);
+    box-shadow: 0 0 0 2px var(--color-focus-ring), var(--shadow-control);
 }
 
 .form-input.invalid,
@@ -102,14 +103,14 @@
 .date-picker {
     position: absolute;
     left: 0;
-    top: calc(100% + 6px);
+    top: calc(100% + 3px);
     z-index: 35;
     width: 100%;
     box-sizing: border-box;
-    padding: .5rem;
-    border: 1px solid var(--color-border);
+    padding: .45rem;
+    border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-xs);
-    background: var(--color-surface-raised);
+    background: var(--color-surface);
     color: var(--color-text);
     box-shadow: var(--shadow-popover);
 }
@@ -148,8 +149,10 @@
 
 .date-picker-nav {
     height: 26px;
-    border-color: var(--color-border);
+    border-color: var(--color-border-strong);
     border-radius: var(--radius-xs);
+    background: var(--color-surface-raised);
+    box-shadow: var(--shadow-control);
 }
 
 .date-picker-nav:hover,
@@ -177,7 +180,7 @@
 .date-picker-day {
     aspect-ratio: 1 / 1;
     border-radius: var(--radius-xs);
-    font-size: .72rem;
+    font-size: .7rem;
     padding: 0;
 }
 
@@ -258,14 +261,15 @@
 
 .number-stepper-controls {
     position: absolute;
-    top: 5px;
-    right: 5px;
-    bottom: 5px;
-    width: 19px;
-    padding-left: 4px;
+    top: 1px;
+    right: 1px;
+    bottom: 1px;
+    width: 20px;
+    padding-left: 0;
     display: grid;
     grid-template-rows: 1fr 1fr;
     border-left: 1px solid var(--color-border);
+    background: var(--color-surface-raised);
 }
 
 .number-stepper-button {
@@ -301,7 +305,8 @@
     background: var(--color-surface-raised);
     color: var(--color-text-muted);
     cursor: pointer;
-    transition: background .15s ease, border-color .15s ease, color .15s ease;
+    box-shadow: var(--shadow-control);
+    transition: none;
 }
 
 .form-row-remove:hover {

@@ -17,13 +17,14 @@
     gap: .5rem;
     border: 1px solid var(--color-border);
     border-left: 3px solid;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     background: var(--color-surface);
+    box-shadow: var(--shadow-popover);
     font-family: var(--font-sans);
     font-size: .82rem;
     font-weight: 600;
     pointer-events: all;
-    animation: slideIn .25s ease;
+    animation: none;
 }
 
 .toast-success { border-left-color: var(--color-success); color: var(--color-success); }
@@ -34,7 +35,7 @@
     margin-bottom: 1rem;
     padding: .75rem 1rem;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     background: var(--color-surface);
     color: var(--color-text-muted);
     font-size: .875rem;
@@ -84,11 +85,6 @@
 .empty-state .icon {
     font-size: 2.5rem;
     opacity: .42;
-}
-
-@keyframes slideIn {
-    from { opacity: 0; transform: translateX(20px); }
-    to { opacity: 1; transform: none; }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }

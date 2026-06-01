@@ -80,7 +80,7 @@
 
 #modal-form .modal-title {
     margin-bottom: .9rem;
-    font-size: 1.35rem;
+    font-size: 1.1rem;
     color: var(--color-text-strong);
 }
 
@@ -185,7 +185,7 @@
 
 #modal-del-overlay .btn-cancel,
 #modal-del-overlay .btn-submit-delete {
-    min-height: 38px;
+    min-height: var(--control-height);
     border-radius: var(--radius-sm);
 }
 

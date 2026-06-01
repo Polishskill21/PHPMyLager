@@ -8,8 +8,8 @@
     visibility: hidden;
     opacity: 0;
     background: var(--color-overlay);
-    backdrop-filter: blur(3px);
-    transition: opacity .2s ease, visibility .2s ease;
+    backdrop-filter: none;
+    transition: none;
 }
 
 .overlay.open {
@@ -20,13 +20,13 @@
 .modal {
     width: 100%;
     max-width: 520px;
-    padding: 1.1rem;
-    border: 1px solid var(--color-border);
+    padding: 1rem;
+    border: 2px solid var(--color-border-strong);
     border-radius: var(--radius-md);
     background: var(--color-surface);
     box-shadow: var(--shadow-modal);
-    transform: translateY(16px) scale(.97);
-    transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+    transform: none;
+    transition: none;
 }
 
 .modal-large-crud {
@@ -34,7 +34,7 @@
     max-width: var(--modal-large-width, 900px);
     height: calc(100vh - 32px);
     max-height: calc(100vh - 32px);
-    padding: 1.1rem 1.1rem 1rem;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -51,19 +51,19 @@
 .overlay.open .modal { transform: none; }
 
 .modal-title {
-    margin-bottom: 1rem;
+    margin-bottom: .8rem;
     display: flex;
     align-items: center;
     gap: .5rem;
     color: var(--color-text-strong);
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: 800;
     line-height: 1.15;
 }
 
 .badge,
 .modal-title .badge {
-    padding: 3px 7px;
+    padding: 2px 6px;
     border: 1px solid var(--color-badge-border);
     border-radius: var(--radius-xs);
     background: var(--color-badge-bg);
@@ -76,8 +76,8 @@
 .modal-footer {
     display: flex;
     justify-content: flex-end;
-    gap: .65rem;
-    margin-top: 1.25rem;
+    gap: .5rem;
+    margin-top: 1rem;
     padding-top: 0;
     border-top: 0;
 }
