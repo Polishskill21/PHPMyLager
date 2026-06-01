@@ -77,20 +77,6 @@ function filterGroupRows() {
 }
 
 // ── PRODUCT GROUP DETAIL ──────────────────────────────────────────────
-function formatPrice(value) {
-    const numeric = Number(value ?? 0);
-    return numeric.toFixed(2);
-}
-
-function stockState(product) {
-    const stock = Number(product.bestand ?? 0);
-    const reorder = Number(product.meldeBest ?? 0);
-
-    if (stock === 0) return 'empty';
-    if (stock <= reorder) return 'warn';
-    return 'ok';
-}
-
 function renderGroupProducts(products) {
     const list = document.getElementById('group-products-list');
     if (!list) return;
@@ -100,22 +86,12 @@ function renderGroupProducts(products) {
         return;
     }
 
-    list.innerHTML = products.map((product) => {
-        const state = stockState(product);
-        const stockIcon = state === 'warn' ? '◐' : '●';
-
-        return `
-            <div class="inspect-item-row">
-                <div>#${esc(product.pArtikelNr)}</div>
-                <div title="${esc(product.bezeichnung || '')}">${esc(product.bezeichnung || '—')}</div>
-                <div class="num">${formatPrice(product.ekPreis)}</div>
-                <div class="num">${formatPrice(product.vkPreis)}</div>
-                <div class="num"><span class="stock-badge stock-${state}">${stockIcon} ${esc(product.bestand ?? '—')}</span></div>
-                <div class="num">${esc(product.meldeBest ?? '—')}</div>
-                <div title="${esc(product.lagerplatz || '')}">${esc(product.lagerplatz || '—')}</div>
-            </div>
-        `;
-    }).join('');
+    list.innerHTML = products.map((product) => `
+        <div class="inspect-item-row">
+            <div>#${esc(product.pArtikelNr)}</div>
+            <div title="${esc(product.bezeichnung || '')}">${esc(product.bezeichnung || '—')}</div>
+        </div>
+    `).join('');
 }
 
 async function openGroupProducts(id, name) {

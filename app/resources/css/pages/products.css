@@ -40,6 +40,55 @@
     resize: vertical;
 }
 
+/* Storage location — segmented Zone · Regal · Fach · Ebene input that assembles
+   into the A01-03B server format. */
+.lagerplatz-fields {
+    display: flex;
+    align-items: flex-start;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+.lagerplatz-part {
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+}
+
+.lagerplatz-part .select-wrap {
+    width: 74px;
+}
+
+.lagerplatz-num .form-input {
+    width: 60px;
+    text-align: center;
+    font-family: var(--font-mono);
+}
+
+.lagerplatz-hint {
+    color: var(--color-text-faint);
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.lagerplatz-sep {
+    height: var(--control-height);
+    display: flex;
+    align-items: center;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+}
+
+/* Invalid state: tint every sub-control's border (the composite wrapper carries
+   the `.invalid` flag since there is no single `.form-input` to mark). */
+.lagerplatz-fields.invalid .form-input,
+.lagerplatz-fields.invalid .form-select {
+    border-color: var(--color-danger);
+}
+
 /* Stock-history inspect modal — re-maps the shared 6-col item grid to:
    Date | User | Old | New | Difference | Reason */
 .products-history-items .inspect-item-head,

@@ -11,42 +11,23 @@
    (col-id / col-actions); the col-name column stays flexible. */
 
 /* Group-products detail modal reuses the shared inspect list (components/inspect.css).
-   Re-map the 6-col grid to this view's 7 columns:
-   ID | Name | Buy € | Sell € | Stock | Reorder | Location */
+   This view lists only ID + product name, so re-map the grid to 2 columns. */
 .warehouse-group-items .inspect-item-head,
 .warehouse-group-items .inspect-item-row {
-    grid-template-columns: 84px minmax(160px, 1.4fr) 84px 84px 104px 88px minmax(120px, 1fr);
-    min-width: 724px;
+    grid-template-columns: 96px minmax(160px, 1fr);
+    min-width: 320px;
 }
 
-/* The shared emphasis rule targets col 3 (a product name elsewhere); here the name is
-   col 2, so promote col 2 and demote col 3 back to muted mono. */
-.warehouse-group-items .inspect-item-row div:nth-child(2) {
-    color: var(--color-text-strong);
-    font-family: var(--font-sans);
-    font-size: .9rem;
-}
-
-.warehouse-group-items .inspect-item-row div:nth-child(3) {
-    color: var(--color-text-muted);
-    font-family: var(--font-mono);
-    font-size: .88rem;
-}
-
-/* Alignment: ID/Name/Location left (reset shared col-1 centering); the four numeric
-   columns Buy/Sell/Stock/Reorder right. */
+/* ID and Name both left-aligned (reset the shared col-1 centering). The shared
+   emphasis rule targets col 3 (a product name elsewhere); here the name is col 2,
+   so promote col 2. */
 .warehouse-group-items .inspect-item-head div,
 .warehouse-group-items .inspect-item-row div {
     text-align: left;
 }
 
-.warehouse-group-items .inspect-item-head div:nth-child(3),
-.warehouse-group-items .inspect-item-head div:nth-child(4),
-.warehouse-group-items .inspect-item-head div:nth-child(5),
-.warehouse-group-items .inspect-item-head div:nth-child(6),
-.warehouse-group-items .inspect-item-row div:nth-child(3),
-.warehouse-group-items .inspect-item-row div:nth-child(4),
-.warehouse-group-items .inspect-item-row div:nth-child(5),
-.warehouse-group-items .inspect-item-row div:nth-child(6) {
-    text-align: right;
+.warehouse-group-items .inspect-item-row div:nth-child(2) {
+    color: var(--color-text-strong);
+    font-family: var(--font-sans);
+    font-size: .9rem;
 }

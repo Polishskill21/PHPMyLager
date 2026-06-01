@@ -141,11 +141,6 @@
             <div class="inspect-item-head">
                 <div>ID</div>
                 <div>Name</div>
-                <div>Buy €</div>
-                <div>Sell €</div>
-                <div>Stock</div>
-                <div>Reorder</div>
-                <div>Location</div>
             </div>
             <div class="inspect-item-list" id="group-products-list"></div>
         </div>

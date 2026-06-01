@@ -52,6 +52,61 @@ function esc(value) {
         .replace(/"/g, '&quot;');
 }
 
+// ── STORAGE LOCATION (lagerplatz) ─────────────────────────────────────
+// Segmented input: Zone [A-Z] · Regal [00-99] · Fach [00-99] · Ebene [A-E]
+// assembling into the server format A01-03B (regex /^[A-Z]\d{2}-\d{2}[A-E]$/).
+const LAGERPLATZ_REGEX = /^[A-Z]\d{2}-\d{2}[A-E]$/;
+
+function lpFields() {
+    return {
+        zone: document.getElementById('f-lp-zone'),
+        regal: document.getElementById('f-lp-regal'),
+        fach: document.getElementById('f-lp-fach'),
+        ebene: document.getElementById('f-lp-ebene'),
+        wrap: document.getElementById('lagerplatz-fields'),
+    };
+}
+
+const pad2 = (v) => (v === '' ? '' : String(v).padStart(2, '0'));
+
+// Returns { ok, value } where value is the assembled string or null (all blank),
+// or { ok:false, error } when the four parts are partially filled / invalid.
+function readLagerplatz() {
+    const f = lpFields();
+    const zone = f.zone.value.trim();
+    const regal = pad2(f.regal.value.replace(/\D/g, ''));
+    const fach = pad2(f.fach.value.replace(/\D/g, ''));
+    const ebene = f.ebene.value.trim();
+
+    const parts = [zone, regal, fach, ebene];
+    if (parts.every((p) => p === '')) return { ok: true, value: null };
+    if (parts.some((p) => p === '')) {
+        return { ok: false, error: 'Complete all four parts (Zone, Regal, Fach, Ebene) or leave the location blank.' };
+    }
+
+    const value = `${zone}${regal}-${fach}${ebene}`;
+    if (!LAGERPLATZ_REGEX.test(value)) {
+        return { ok: false, error: 'The location format must be A01-03B — Zone(A–Z), Regal(01–99), Fach(01–99), Ebene(A–E).' };
+    }
+    return { ok: true, value };
+}
+
+// Parse an existing "A01-03B" back into the four sub-fields (or clear them).
+function writeLagerplatz(value) {
+    const f = lpFields();
+    if (value && LAGERPLATZ_REGEX.test(value)) {
+        f.zone.value = value[0];
+        f.regal.value = value.slice(1, 3);
+        f.fach.value = value.slice(4, 6);
+        f.ebene.value = value[6];
+    } else {
+        f.zone.value = '';
+        f.regal.value = '';
+        f.fach.value = '';
+        f.ebene.value = '';
+    }
+}
+
 // ── SEARCH + FILTERS (client-side row hide) ───────────────────────────
 function filterProductRows() {
     const search = document.getElementById('search');
@@ -109,6 +164,7 @@ async function openEdit(id) {
     document.getElementById('f-ekPreis').value = data.ekPreis ?? '';
     document.getElementById('f-vkPreis').value = data.vkPreis ?? '';
     document.getElementById('f-meldeBest').value = data.meldeBest ?? '';
+    writeLagerplatz(data.lagerplatz || '');
     document.getElementById('f-fWgNr').value = data.fWgNr;
 
     // Stock is not editable here (PUT ignores it) — use Adjust Stock instead.
@@ -127,12 +183,22 @@ async function submitProductForm(event) {
     clearFormErrors();
 
     const id = document.getElementById('f-id').value;
+
+    const loc = readLagerplatz();
+    if (!loc.ok) {
+        setFieldError('lagerplatz', loc.error);
+        lpFields().wrap?.classList.add('invalid');
+        return;
+    }
+
     const payload = {
         bezeichnung: document.getElementById('f-bezeichnung').value.trim(),
         fWgNr: parseInt(document.getElementById('f-fWgNr').value),
         ekPreis: parseFloat(document.getElementById('f-ekPreis').value),
         vkPreis: parseFloat(document.getElementById('f-vkPreis').value),
         meldeBest: parseInt(document.getElementById('f-meldeBest').value),
+        // lagerplatz is optional (nullable on the server); null clears it.
+        lagerplatz: loc.value,
     };
 
     // Stock is only set on creation; updates go through the Adjust Stock flow.
@@ -299,20 +365,26 @@ async function openHistory(id) {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────
+function setFieldError(key, msg) {
+    const err = document.getElementById('err-' + key);
+    if (err) err.textContent = msg;
+}
+
 function applyValidationErrors(data) {
     Object.entries(data?.errors || {}).forEach(([key, messages]) => {
         const msg = Array.isArray(messages) ? messages[0] : String(messages);
-        const err = document.getElementById('err-' + key);
+        setFieldError(key, msg);
         const field = document.getElementById('f-' + key);
-
-        if (err) err.textContent = msg;
         if (field) field.classList.add('invalid');
+        // lagerplatz is a composite control — highlight its wrapper instead.
+        if (key === 'lagerplatz') lpFields().wrap?.classList.add('invalid');
     });
 }
 
 function clearFormErrors() {
     document.querySelectorAll('.form-error').forEach((el) => { el.textContent = ''; });
     document.querySelectorAll('.form-input.invalid, .form-select.invalid').forEach((el) => el.classList.remove('invalid'));
+    document.getElementById('lagerplatz-fields')?.classList.remove('invalid');
 }
 
 function closeModal(id) {
@@ -330,6 +402,14 @@ function initProductsPage() {
     document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
     document.getElementById('modal-del-confirm')?.addEventListener('click', confirmDelete);
     document.getElementById('adjust-form')?.addEventListener('submit', submitAdjust);
+
+    // Storage-location Regal/Fach: digits only, zero-pad to 2 on blur.
+    ['f-lp-regal', 'f-lp-fach'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', () => { el.value = el.value.replace(/\D/g, '').slice(0, 2); });
+        el.addEventListener('blur', () => { if (el.value.length === 1) el.value = el.value.padStart(2, '0'); });
+    });
     document.getElementById('modal-adjust-cancel')?.addEventListener('click', () => closeModal('modal-adjust-overlay'));
     document.getElementById('modal-history-close')?.addEventListener('click', () => closeModal('modal-history-overlay'));
 

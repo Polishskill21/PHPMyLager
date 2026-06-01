@@ -77,6 +77,7 @@
                     <col class="col-sell">
                     <col class="col-stock">
                     <col class="col-reorder">
+                    <col class="col-location">
                     <col class="col-actions">
                 </colgroup>
                 <thead>
@@ -88,6 +89,7 @@
                     <th class="th cell-money" data-sort="sell" data-sort-type="number"><span class="table-th-inner"><span>Sell €</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-status" data-sort="stock" data-sort-type="number"><span class="table-th-inner"><span>Stock</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-number" data-sort="reorder" data-sort-type="number"><span class="table-th-inner"><span>Reorder</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
+                    <th class="th cell-left" data-sort="location"><span class="table-th-inner"><span>Location</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="cell-actions">Actions</th>
                 </tr>
                 </thead>
@@ -106,6 +108,7 @@
                         data-sort-sell="{{ $product->vkPreis }}"
                         data-sort-stock="{{ $product->bestand }}"
                         data-sort-reorder="{{ $product->meldeBest }}"
+                        data-sort-location="{{ $product->lagerplatz ?: '' }}"
                         data-filter-stock="{{ $state }}"
                         data-filter-wg="{{ $product->fWgNr }}">
                         <td class="cell-id">#{{ $product->pArtikelNr }}</td>
@@ -115,6 +118,7 @@
                         <td class="cell-money">{{ number_format($product->vkPreis, 2) }}</td>
                         <td class="cell-status"><span class="stock-badge stock-{{ $state }}">{{ $stockIcon }} {{ $product->bestand }}</span></td>
                         <td class="cell-number">{{ $product->meldeBest }}</td>
+                        <td class="cell-mono" title="{{ $product->lagerplatz }}">{{ $product->lagerplatz ?: '—' }}</td>
                         <td class="cell-actions">
                             <div class="table-actions">
                                 @if($canWrite)
@@ -142,11 +146,11 @@
                     </tr>
                 @empty
                     <tr class="table-state-row">
-                        <td class="table-state-cell" colspan="8"><div class="empty-state">No products found.</div></td>
+                        <td class="table-state-cell" colspan="9"><div class="empty-state">No products found.</div></td>
                     </tr>
                 @endforelse
                 <tr class="table-state-row" id="products-empty-filter-row" hidden>
-                    <td class="table-state-cell" colspan="8"><div class="empty-state">No products match your filters.</div></td>
+                    <td class="table-state-cell" colspan="9"><div class="empty-state">No products match your filters.</div></td>
                 </tr>
                 </tbody>
             </table>
@@ -241,6 +245,45 @@
                         </div>
                     </div>
                     <div class="form-error" id="err-meldeBest"></div>
+                </div>
+                <div class="form-group form-full">
+                    <span class="form-label">Storage Location</span>
+                    <div class="lagerplatz-fields" id="lagerplatz-fields">
+                        <div class="lagerplatz-part">
+                            <div class="select-wrap">
+                                <select class="form-select" id="f-lp-zone" aria-label="Zone (A–Z)">
+                                    <option value="">–</option>
+                                    @foreach(range('A', 'Z') as $z)
+                                        <option value="{{ $z }}">{{ $z }}</option>
+                                    @endforeach
+                                </select>
+                                <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
+                            </div>
+                            <span class="lagerplatz-hint">Zone</span>
+                        </div>
+                        <div class="lagerplatz-part lagerplatz-num">
+                            <input class="form-input" id="f-lp-regal" inputmode="numeric" maxlength="2" placeholder="01" aria-label="Regal (01–99)">
+                            <span class="lagerplatz-hint">Regal</span>
+                        </div>
+                        <span class="lagerplatz-sep" aria-hidden="true">–</span>
+                        <div class="lagerplatz-part lagerplatz-num">
+                            <input class="form-input" id="f-lp-fach" inputmode="numeric" maxlength="2" placeholder="03" aria-label="Fach (01–99)">
+                            <span class="lagerplatz-hint">Fach</span>
+                        </div>
+                        <div class="lagerplatz-part">
+                            <div class="select-wrap">
+                                <select class="form-select" id="f-lp-ebene" aria-label="Ebene (A–E)">
+                                    <option value="">–</option>
+                                    @foreach(range('A', 'E') as $e)
+                                        <option value="{{ $e }}">{{ $e }}</option>
+                                    @endforeach
+                                </select>
+                                <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
+                            </div>
+                            <span class="lagerplatz-hint">Ebene</span>
+                        </div>
+                    </div>
+                    <div class="form-error" id="err-lagerplatz"></div>
                 </div>
             </div>
             <div class="modal-footer">
