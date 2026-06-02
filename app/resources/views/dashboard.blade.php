@@ -26,7 +26,9 @@
     </header>
 
     <div class="dashboard-centerpiece">
-        <p class="dashboard-greeting">Good Afternoon, Sandbrink</p>
+        @if(Auth::user()->isAdmin())
+            <p class="dashboard-greeting">Good Afternoon, Mr. Sandbrink</p>
+        @endif
 
         <div class="dashboard-grid">
             <a href="{{ route('products') }}" class="dashboard-card dashboard-card-link">
