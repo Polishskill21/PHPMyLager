@@ -12,7 +12,7 @@ use App\Http\Controllers\Suppliers\SupplierController;
 Route::get('/status', [SystemController::class, 'status']);
 
 //auth:sanctum could be used later
-Route::middleware('auth')->group(function () {
+Route::middleware(['web', 'auth'])->group(function () {
 
     // All roles can read
     Route::get('products',                     [ProductController::class, 'index'])->name('products.index');
