@@ -12,7 +12,14 @@ if [ ! -d vendor ]; then
 fi
 
 if [ -f .env ] && ! grep -q '^APP_KEY=base64:' .env; then
-  php artisan key:generate --force
+  if [ "${APP_ENV}" = "local" ]; then
+    echo "Notice: APP_KEY missing. Generating one for local environment..."
+    php artisan key:generate --force
+  else
+    echo "CRITICAL ERROR: APP_KEY is missing in your production .env file!"
+    echo "Do not generate this randomly in production. Add your persistent APP_KEY to the .env file."
+    exit 1
+  fi
 fi
 
 if [ "${WAIT_FOR_DB}" = "true" ]; then
@@ -24,7 +31,7 @@ if [ "${WAIT_FOR_DB}" = "true" ]; then
       echo "Database connection timeout."
       exit 1
     fi
-    sleep 2
+    sleep 1
   done
 fi
 
@@ -47,6 +54,14 @@ fi
 find storage bootstrap/cache -type d -exec chmod 775 {} + || true
 find storage bootstrap/cache -type f -exec chmod 664 {} + || true
 
+# Cache config, routes and views for production.
+if [ "${APP_ENV}" = "production" ]; then
+  echo "Caching Laravel config, routes and views..."
+  php artisan config:cache
+  php artisan route:cache
+  php artisan view:cache
+fi
+
 # if [ "${RUN_MIGRATIONS}" = "true" ]; then
 #     php artisan migrate --force
 # fi
@@ -56,5 +71,5 @@ find storage bootstrap/cache -type f -exec chmod 664 {} + || true
 # fi
 
 
-### run this instead one time: docker exec -it phpmylager_app php artisan migrate:fresh --seed
+### run this instead one time: docker exec -it phpmylager_app_prod php artisan migrate:fresh --seed
 exec "$@"
