@@ -5,6 +5,9 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use App\Models\Auth\User;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,25 +18,26 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
 
+        // 1. Seed Users
         $users = [
-            ['name' => 'Admin User',   'email' => 'admin@example.com',  'role' => 'admin'],
-            ['name' => 'Writer User',  'email' => 'writer@example.com', 'role' => 'writer'],
-            ['name' => 'Viewer User',  'email' => 'viewer@example.com', 'role' => 'viewer'],
+            [User::COL_NAME => 'Admin User',   User::COL_EMAIL => 'admin@example.com',  User::COL_ROLE => 'admin'],
+            [User::COL_NAME => 'Writer User',  User::COL_EMAIL => 'writer@example.com', User::COL_ROLE => 'writer'],
+            [User::COL_NAME => 'Viewer User',  User::COL_EMAIL => 'viewer@example.com', User::COL_ROLE => 'viewer'],
         ];
 
         foreach ($users as $userData) {
-            if (!\App\Models\Auth\User::where('email', $userData['email'])->exists()) {
-                \App\Models\Auth\User::factory()->create($userData);
+            if (!User::where(User::COL_EMAIL, $userData[User::COL_EMAIL])->exists()) {
+                User::create([
+                    User::COL_NAME => $userData[User::COL_NAME],
+                    User::COL_EMAIL => $userData[User::COL_EMAIL],
+                    User::COL_ROLE => $userData[User::COL_ROLE],
+                    User::COL_EMAIL_VERIFIED_AT => now(),
+                    User::COL_PASSWORD => Hash::make(env('SEEDER_PASSWORD', 'password')),
+                    User::COL_REMEMBER_TOKEN => Str::random(10),
+                ]);
             }
         }
-
-        // DB::table('users')->insert([
-        //     ['id' => 1, 'username' => 'root', 'password' => Hash::make('superLager123'), 'role' => 'admin'],
-        //     ['id' => 2, 'username' => 'user_viewer', 'password' => Hash::make('lager1'), 'role' => 'viewer'],
-        //     ['id' => 3, 'username' => 'user_editor', 'password' => Hash::make('lager1'), 'role' => 'editor'],
-        // ]);
 
         // 2. Seed Warengruppe
         DB::table('warengruppe')->insertOrIgnore([
