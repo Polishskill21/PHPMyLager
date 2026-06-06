@@ -1,0 +1,7 @@
+app/vendor
+app/node_modules
+app/public/build
+app/tests
+.env
+.github
+.git
