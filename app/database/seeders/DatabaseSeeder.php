@@ -19,6 +19,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
 
+        $envPassword = env('SEEDER_PASSWORD');
+        $plainPassword = (is_string($envPassword) && trim($envPassword) !== '') ? trim($envPassword) : 'password';
+        $hashedPassword = Hash::make($plainPassword);
+
         // 1. Seed Users
         $users = [
             [User::COL_NAME => 'Admin User',   User::COL_EMAIL => 'admin@example.com',  User::COL_ROLE => 'admin'],
@@ -33,7 +37,7 @@ class DatabaseSeeder extends Seeder
                     User::COL_EMAIL => $userData[User::COL_EMAIL],
                     User::COL_ROLE => $userData[User::COL_ROLE],
                     User::COL_EMAIL_VERIFIED_AT => now(),
-                    User::COL_PASSWORD => Hash::make(env('SEEDER_PASSWORD', 'password')),
+                    User::COL_PASSWORD => $hashedPassword,
                     User::COL_REMEMBER_TOKEN => Str::random(10),
                 ]);
             }
