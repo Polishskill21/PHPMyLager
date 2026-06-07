@@ -35,6 +35,8 @@ class Supplier extends Model
     protected $table      = self::TABLE;
     protected $primaryKey = self::COL_ID;
 
+    public $timestamps = false;
+
     protected $hidden = [
         'deleted_at'
     ];
