@@ -16,7 +16,6 @@ services:
       APP_KEY: ${APP_KEY}
       DB_CONNECTION: mysql
       DB_HOST: db
-      DB_PORT: ${DB_PORT:-3306}
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -35,7 +34,7 @@ services:
     container_name: phpmylager_web_prod
     restart: unless-stopped
     ports:
-      - "8000:80"
+      - "${WEB_PORT:-8000}:80"
     volumes:
       - prod_public:/var/www/html/public:ro
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
