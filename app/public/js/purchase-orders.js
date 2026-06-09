@@ -176,7 +176,7 @@ function normalizePurchaseOrder(data) {
         fLiefNr: info.fLiefNr,
         bestDat: info.bestDat || '',
         erwLieferDat: info.erwLieferDat || '',
-        status: info.status || 'offen',
+        status: info.status || 'open',
         items: Array.isArray(data?.items) ? data.items : [],
     };
 }
@@ -358,7 +358,7 @@ async function openInspect(id) {
     document.getElementById('po-view-expected').textContent = fmtDate(info.erwLieferDat);
 
     const statusEl = document.getElementById('po-view-status');
-    const status = info.status || 'offen';
+    const status = info.status || 'open';
     statusEl.textContent = status;
     statusEl.className = `status-badge status-${status}`;
     statusEl.hidden = false;
@@ -659,7 +659,7 @@ function filterPurchaseOrderRows() {
 }
 
 function initPurchaseOrdersPage() {
-    ensureLookups();
+    // ensureLookups();
 
     document.getElementById('purchase-orders-search')?.addEventListener('input', filterPurchaseOrderRows);
     document.getElementById('btn-add-purchase-order')?.addEventListener('click', openAdd);

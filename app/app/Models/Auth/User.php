@@ -41,7 +41,7 @@ class User extends Authenticatable
         self::COL_NAME, 
         self::COL_EMAIL, 
         self::COL_PASSWORD, 
-        self::COL_ROLE
+        // self::COL_ROLE
     ];
 
     protected function casts(): array

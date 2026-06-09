@@ -4,10 +4,48 @@
 
 Before launching the application, you must configure local environment variables to ensure the system is secure and correctly connected to database.
 
-1.  **Create .env file:** Copy the provided example template to create active configuration file: `cp .env.example .env`
-2.  **Update Variables:** Open the `.env` file and set your desired credentials. 
-    > **⚠️ Warning:** If you skip this step, the system will use the default password `"password"`.
+## Local Development Run
 
+1. **Create the `.env` File** Copy the provided example template to create your active configuration file:  
+   ```bash
+   cp app/.env.example app/.env
+   ```
+2. **Update Environment Variables** Open the `.env` file and set your desired credentials (database names, passwords, etc.).  
+   > ⚠️ **Warning:** If you skip modifying the passwords, the system will default to using `"password"`.
+3. **Launch the Containers** Start up the docker services in the background:  
+   ```bash
+   docker compose up -d --build
+   ```
+4. **Initialize the Database** Run the migrations and populate the database with initial development test data:  
+   ```bash
+   docker exec -it phpmylager_app php artisan migrate:fresh --seed
+   ```
+5. **Access the Application** Open your browser and navigate to: **[http://localhost:8000](http://localhost:8000)**
+
+
+## Production Deployment Run
+
+1. **Create the Production `.env` File** Copy the example template on your server setup:  
+   ```bash
+   cp app/.env.example app/.env
+   ```
+2. **Generate a Secure App Encryption Key** Run this command once to generate a secure, cryptographically isolated `APP_KEY`:  
+   ```bash
+   docker run --rm php:8.4-fpm-alpine php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
+   ```
+   Copy the output string and paste it into your production `.env` file as `APP_KEY=base64:...` (make sure there are no spaces around the `=` sign).
+3. **Update Production Credentials** Change all default database passwords, usernames, and secret variables to strong, unique values.
+   > ⚠️ **Warning:** If you skip modifying the passwords, the system will default to using `"password"`.
+4. **Build and Start Production Services** Launch the production container configuration:  
+   ```bash
+   docker compose -f docker-compose.prod.yaml up --build -d
+   ```
+5. **Run Production Migrations Safely** Apply your database schema and initial data seeds using the safe production flags:  
+   ```bash
+   docker exec -it phpmylager_app_prod php artisan migrate --force
+   docker exec -it phpmylager_app_prod php artisan db:seed --force
+   ```
+6. **Access the Application** Open your browser and navigate to: **[http://localhost:8000](http://localhost:8000)**
 ---
 
 ## 2. Database Management

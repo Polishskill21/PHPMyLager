@@ -125,6 +125,8 @@ nav {
 .form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); }
 .form-input.invalid { border-color: var(--red); }
 .form-error { font-size: .72rem; color: var(--red); min-height: 1em; }
+.char-counter { font-size: .72rem; color: var(--muted); text-align: right; min-height: 1em; }
+.char-counter.over { color: var(--red); font-weight: 600; }
 
 .modal-footer {
     display: flex; justify-content: flex-end; gap: .65rem;

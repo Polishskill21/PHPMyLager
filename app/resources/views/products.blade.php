@@ -344,7 +344,8 @@
                 </div>
                 <div class="form-group form-full">
                     <label class="form-label" for="f-adjust-reason">Reason <em class="required-marker">*</em></label>
-                    <textarea class="form-input adjust-reason" id="f-adjust-reason" rows="3" maxlength="255" placeholder="e.g. Stocktake correction, damaged goods, returns"></textarea>
+                    <textarea class="form-input adjust-reason" id="f-adjust-reason" rows="3" placeholder="e.g. Stocktake correction, damaged goods, returns"></textarea>
+                    <div class="char-counter" id="adjust-reason-count">0 / 255</div>
                     <div class="form-error" id="err-adjust-reason"></div>
                 </div>
             </div>

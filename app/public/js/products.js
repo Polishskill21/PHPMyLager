@@ -266,8 +266,19 @@ function openAdjust(id, name, stock) {
     document.getElementById('adjust-current-stock').textContent = stock ?? '—';
     document.getElementById('f-adjust-bestand').value = stock ?? '';
     document.getElementById('f-adjust-reason').value = '';
+    updateReasonCounter();
     document.getElementById('modal-adjust-overlay').classList.add('open');
     document.getElementById('f-adjust-bestand')?.focus();
+}
+
+// Live character counter for the Reason field (limit mirrors backend max:255).
+function updateReasonCounter() {
+    const field = document.getElementById('f-adjust-reason');
+    const counter = document.getElementById('adjust-reason-count');
+    if (!field || !counter) return;
+    const len = field.value.length;
+    counter.textContent = `${len} / 255`;
+    counter.classList.toggle('over', len > 255);
 }
 
 async function submitAdjust(event) {
@@ -285,6 +296,10 @@ async function submitAdjust(event) {
     }
     if (reason.length < 5) {
         setAdjustError('reason', 'Reason must be at least 5 characters.');
+        valid = false;
+    }
+    if (reason.length > 255) {
+        setAdjustError('reason', 'Reason must be 255 characters or fewer.');
         valid = false;
     }
     if (!valid) return;
@@ -402,6 +417,7 @@ function initProductsPage() {
     document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
     document.getElementById('modal-del-confirm')?.addEventListener('click', confirmDelete);
     document.getElementById('adjust-form')?.addEventListener('submit', submitAdjust);
+    document.getElementById('f-adjust-reason')?.addEventListener('input', updateReasonCounter);
 
     // Storage-location Regal/Fach: digits only, zero-pad to 2 on blur.
     ['f-lp-regal', 'f-lp-fach'].forEach((id) => {
