@@ -229,3 +229,154 @@
         width: 100%;
     }
 }
+
+/* Print styles for order receipt */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    :root {
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface2: #ffffff;
+        --border: #cccccc;
+        --border2: #cccccc;
+        --text: #000000;
+        --muted: #000000;
+    }
+
+    .overlay.open,
+    .overlay.open * {
+        visibility: visible;
+        color: #000000 !important;
+    }
+
+    .overlay.open {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: auto;
+        background: transparent;
+        padding: 0;
+    }
+
+    .overlay.open .modal {
+        position: relative;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0; 
+        border: none;
+        box-shadow: none;
+        transform: none !important;
+        background: white;
+        padding: 2cm 0.75cm !important;
+    }
+
+    .overlay.open .modal,
+    .inspect-item-list,
+    .receive-item-list,
+    .purchase-order-items-list {
+        overflow: visible !important;
+        max-height: none !important;
+        height: auto !important;
+    }
+
+    .inspect-heading {
+        border-bottom: 2px solid black;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .inspect-title {
+        font-size: 20pt;
+    }
+
+    .badge.inspect-badge {
+        font-size: 14pt !important;
+        padding: 4px 12px;
+        border: 2px solid black;
+        color: black !important;
+        background: transparent !important;
+    }
+
+    .inspect-subtitle {
+        display: none !important; 
+    }
+
+    .inspect-meta {
+        display: flex;
+        gap: 3rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid black;
+        padding-bottom: 1rem;
+    }
+
+    .inspect-label {
+        font-size: 9pt;
+        font-weight: bold;
+    }
+
+    .inspect-value {
+        font-size: 12pt;
+    }
+
+    .inspect-item-head, 
+    .inspect-item-row, 
+    .inspect-total-row {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        border-bottom: 1px solid #aaa;
+    }
+    
+    .inspect-item-head {
+        border-bottom: 2px solid black;
+        font-weight: bold;
+    }
+
+    .po-view-items .inspect-item-head,
+    .po-view-items .inspect-item-row,
+    .po-view-items .inspect-total-row,
+    .inspect-item-head,
+    .inspect-item-row,
+    .inspect-total-row {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .po-view-items .inspect-item-head,
+    .po-view-items .inspect-item-row,
+    .po-view-items .inspect-total-row {
+        grid-template-columns: 45px 80px 1fr 65px 75px 85px 85px !important;
+        gap: 0.25rem !important;
+    }
+
+    .inspect-item-head,
+    .inspect-item-row,
+    .inspect-total-row {
+        grid-template-columns: 45px 80px 1fr 65px 85px 85px !important;
+        gap: 0.25rem !important;
+    }
+
+    .inspect-item-list {
+        font-size: 9.5pt !important;
+    }
+
+    .modal-footer,
+    #toast-area {
+        display: none !important;
+    }
+
+    ::-webkit-scrollbar { 
+        display: none !important; 
+    }
+
+    @page {
+        margin: 0;
+    }
+}

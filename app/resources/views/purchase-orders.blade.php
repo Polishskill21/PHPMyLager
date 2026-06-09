@@ -238,6 +238,7 @@
             <div class="inspect-item-list" id="po-view-items"></div>
         </div>
         <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="window.print()">Print Order</button>
             <button type="button" class="btn btn-secondary btn-cancel" id="modal-purchase-order-view-close">Close</button>
         </div>
     </div>
