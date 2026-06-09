@@ -1,0 +1,382 @@
+.status-open { background: var(--color-info-soft); color: var(--color-info); }
+.status-ordered { background: var(--color-warning-soft); color: var(--color-warning); }
+.status-delivered { background: var(--color-success-soft); color: var(--color-success); }
+.status-cancelled { background: var(--color-danger-soft); color: var(--color-danger); }
+
+/* Up to three row actions: edit, receive delivery, cancel. */
+.purchase-orders-table { --actions-count: 3; }
+
+/* PO detail modal reuses the shared inspect list (components/inspect.css) but adds a
+   Delivered column, so re-map the 6-col grid to 7 columns:
+   Pos | Product ID | Product | Qty | Delivered | Unit EUR | Total EUR */
+.po-view-items .inspect-item-head,
+.po-view-items .inspect-item-row,
+.po-view-items .inspect-total-row {
+    grid-template-columns: 64px 112px minmax(220px, 1fr) 90px 100px 116px 116px;
+    min-width: 760px;
+}
+
+/* Right-align the new Total EUR header (col 7); the shared rule only covers cols 4–6.
+   Row value cells carry `.num`, which the shared component already right-aligns. */
+.po-view-items .inspect-item-head div:nth-child(7) {
+    text-align: right;
+}
+
+.purchase-order-modal {
+    --modal-large-width: 900px;
+    --purchase-order-item-qty-width: 96px;
+    --purchase-order-item-value-width: 120px;
+    --purchase-order-item-remove-width: var(--control-height);
+    --purchase-order-item-gap: .55rem;
+}
+
+.purchase-order-modal .modal-title {
+    margin-bottom: .9rem;
+    color: var(--color-text-strong);
+    font-size: 1.35rem;
+}
+
+#purchase-order-form .purchase-order-form-grid {
+    min-height: 0;
+    display: grid;
+    flex: 1;
+    gap: .72rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+#purchase-order-form .modal-footer {
+    flex-shrink: 0;
+    margin-top: .95rem;
+}
+
+.purchase-order-items-wrap {
+    grid-column: 1 / -1;
+    min-height: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0;
+    margin-top: .5rem;
+    padding-top: .2rem;
+}
+
+.purchase-order-items-head {
+    flex-shrink: 0;
+    margin-bottom: .55rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .75rem;
+}
+
+#btn-add-purchase-order-item {
+    width: calc(var(--purchase-order-item-gap) + var(--purchase-order-item-value-width) + var(--purchase-order-item-gap) + var(--purchase-order-item-remove-width));
+}
+
+.purchase-order-items-list {
+    min-height: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: .5rem;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.purchase-order-item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--purchase-order-item-qty-width) var(--purchase-order-item-value-width) var(--purchase-order-item-remove-width);
+    gap: var(--purchase-order-item-gap);
+    align-items: end;
+}
+
+.purchase-order-item-field {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+}
+
+.purchase-order-item-remove {
+    --form-row-remove-size: var(--purchase-order-item-remove-width);
+    margin-bottom: 0;
+}
+
+/* Receive Delivery modal */
+.purchase-order-receive-modal {
+    --modal-large-width: 760px;
+}
+
+.purchase-order-receive-modal .modal-title {
+    margin-bottom: .5rem;
+    color: var(--color-text-strong);
+    font-size: 1.35rem;
+}
+
+.receive-subtitle {
+    margin: 0 0 1rem;
+    color: var(--color-text-muted);
+    font-size: .88rem;
+    line-height: 1.35;
+}
+
+.receive-items {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.receive-item-head,
+.receive-item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 84px 92px 100px 132px;
+    align-items: center;
+    gap: .5rem;
+}
+
+.receive-item-head {
+    padding: .5rem .15rem;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.receive-item-list {
+    display: flex;
+    flex-direction: column;
+    max-height: min(48vh, 420px);
+    overflow-y: auto;
+}
+
+.receive-item-row {
+    padding: .55rem .15rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.receive-item-row:last-child { border-bottom: 0; }
+
+.receive-item-name {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--color-text-strong);
+    font-size: .9rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.receive-item-row .num {
+    color: var(--color-text-soft);
+    font-family: var(--font-mono);
+    font-size: .88rem;
+    text-align: right;
+}
+
+.receive-item-head .num { text-align: right; }
+
+#err-receive-items { margin-top: .6rem; }
+
+@media (max-width: 560px) {
+    .receive-item-head { display: none; }
+
+    .receive-item-row {
+        grid-template-columns: 1fr 1fr;
+        gap: .35rem .5rem;
+    }
+
+    .receive-item-name { grid-column: 1 / -1; }
+}
+
+@media (max-width: 700px) {
+    .purchase-order-modal {
+        --purchase-order-item-qty-width: 80px;
+        --purchase-order-item-value-width: 100px;
+        --purchase-order-item-remove-width: var(--control-height);
+        --purchase-order-item-gap: .45rem;
+        width: min(100%, calc(100vw - 14px));
+        height: calc(100vh - 14px);
+        max-height: calc(100vh - 14px);
+        padding: .9rem;
+    }
+
+    .purchase-order-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #btn-add-purchase-order-item {
+        width: calc(var(--purchase-order-item-qty-width) + var(--purchase-order-item-gap) + var(--purchase-order-item-value-width) + var(--purchase-order-item-gap) + var(--purchase-order-item-remove-width));
+    }
+}
+
+@media (max-width: 560px) {
+    .purchase-order-items-head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    #btn-add-purchase-order-item {
+        width: 100%;
+    }
+
+    .purchase-order-item-row {
+        grid-template-columns: 1fr;
+    }
+
+    .purchase-order-item-remove {
+        width: 100%;
+    }
+}
+
+/* Print styles for order receipt */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    :root {
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface2: #ffffff;
+        --border: #cccccc;
+        --border2: #cccccc;
+        --text: #000000;
+        --muted: #000000;
+    }
+
+    .overlay.open,
+    .overlay.open * {
+        visibility: visible;
+        color: #000000 !important;
+    }
+
+    .overlay.open {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: auto;
+        background: transparent;
+        padding: 0;
+    }
+
+    .overlay.open .modal {
+        position: relative;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0; 
+        border: none;
+        box-shadow: none;
+        transform: none !important;
+        background: white;
+        padding: 2cm 0.75cm !important;
+    }
+
+    .overlay.open .modal,
+    .inspect-item-list,
+    .receive-item-list,
+    .purchase-order-items-list {
+        overflow: visible !important;
+        max-height: none !important;
+        height: auto !important;
+    }
+
+    .inspect-heading {
+        border-bottom: 2px solid black;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .inspect-title {
+        font-size: 20pt;
+    }
+
+    .badge.inspect-badge {
+        font-size: 14pt !important;
+        padding: 4px 12px;
+        border: 2px solid black;
+        color: black !important;
+        background: transparent !important;
+    }
+
+    .inspect-subtitle {
+        display: none !important; 
+    }
+
+    .inspect-meta {
+        display: flex;
+        gap: 3rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid black;
+        padding-bottom: 1rem;
+    }
+
+    .inspect-label {
+        font-size: 9pt;
+        font-weight: bold;
+    }
+
+    .inspect-value {
+        font-size: 12pt;
+    }
+
+    .inspect-item-head, 
+    .inspect-item-row, 
+    .inspect-total-row {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        border-bottom: 1px solid #aaa;
+    }
+    
+    .inspect-item-head {
+        border-bottom: 2px solid black;
+        font-weight: bold;
+    }
+
+    .po-view-items .inspect-item-head,
+    .po-view-items .inspect-item-row,
+    .po-view-items .inspect-total-row,
+    .inspect-item-head,
+    .inspect-item-row,
+    .inspect-total-row {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .po-view-items .inspect-item-head,
+    .po-view-items .inspect-item-row,
+    .po-view-items .inspect-total-row {
+        grid-template-columns: 45px 80px 1fr 65px 75px 85px 85px !important;
+        gap: 0.25rem !important;
+    }
+
+    .inspect-item-head,
+    .inspect-item-row,
+    .inspect-total-row {
+        grid-template-columns: 45px 80px 1fr 65px 85px 85px !important;
+        gap: 0.25rem !important;
+    }
+
+    .inspect-item-list {
+        font-size: 9.5pt !important;
+    }
+
+    .modal-footer,
+    #toast-area {
+        display: none !important;
+    }
+
+    ::-webkit-scrollbar { 
+        display: none !important; 
+    }
+
+    @page {
+        margin: 0;
+    }
+}

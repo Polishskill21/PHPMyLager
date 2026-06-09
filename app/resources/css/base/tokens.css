@@ -1,0 +1,62 @@
+:root {
+    --color-bg: #06080d;
+    --color-sidebar: #111319;
+    --color-surface: #111319;
+    --color-surface-raised: #12151d;
+    --color-surface-soft: #151923;
+    --color-surface-table: #090b11;
+    --color-surface-table-head: #0b0e15;
+    --color-hover: #1a1e28;
+
+    --color-border: #242a36;
+    --color-border-subtle: #1c212d;
+    --color-border-strong: #2b3140;
+    --color-border-focus: #3a4356;
+
+    --color-text: #e5e7eb;
+    --color-text-strong: #f3f4f6;
+    --color-text-soft: #d8dbe2;
+    --color-text-muted: #9aa2b1;
+    --color-text-faint: #707783;
+
+    --color-primary-bg: #eceff3;
+    --color-primary-hover: #ffffff;
+    --color-primary-text: #141923;
+    --color-accent: #818ba0;
+
+    --color-danger: #ef4444;
+    --color-danger-hover: #ff5a5a;
+    --color-danger-soft: rgba(239, 68, 68, 0.12);
+    --color-success: #4ade80;
+    --color-success-soft: rgba(74, 222, 128, 0.12);
+    --color-warning: #facc15;
+    --color-warning-soft: rgba(250, 204, 21, 0.12);
+    --color-info: #60a5fa;
+    --color-info-soft: rgba(96, 165, 250, 0.12);
+    --color-overlay: rgba(6, 8, 13, 0.78);
+    --color-focus-ring: rgba(58, 67, 86, 0.28);
+    --color-danger-text: #ffffff;
+    --color-badge-bg: #242833;
+    --color-badge-border: #343a49;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+    --sidebar-width: 220px;
+    --control-height: 38px;
+    --row-height: 56px;
+    --sort-icon-size: 14px;
+    --sort-icon-gap: 6px;
+    --radius-xs: 4px;
+    --radius-sm: 5px;
+    --radius-md: 7px;
+    --radius-lg: 12px;
+    --shadow-modal: 0 24px 48px rgba(0, 0, 0, 0.5);
+    --shadow-card: 0 18px 40px rgba(0, 0, 0, 0.22);
+    --shadow-popover: 0 16px 34px rgba(0, 0, 0, 0.46);
+
+    --icon-filter-muted: brightness(0) saturate(100%) invert(66%) sepia(8%) saturate(358%) hue-rotate(184deg) brightness(90%) contrast(89%);
+    --icon-filter-strong: brightness(0) saturate(100%) invert(95%) sepia(5%) saturate(318%) hue-rotate(178deg) brightness(112%) contrast(92%);
+    --icon-filter-dark: brightness(0) saturate(100%) invert(11%) sepia(13%) saturate(1138%) hue-rotate(185deg) brightness(93%) contrast(91%);
+    --icon-filter-danger: brightness(0) saturate(100%) invert(25%) sepia(89%) saturate(2913%) hue-rotate(343deg) brightness(104%) contrast(95%);
+}

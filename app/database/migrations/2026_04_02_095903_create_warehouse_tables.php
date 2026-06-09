@@ -12,11 +12,13 @@ return new class extends Migration
     */
     public function up(): void
     {
+        // ─── 1. Product groups ──────────────────────────────────────────────────
         Schema::create('warengruppe', function (Blueprint $table) {
             $table->increments('pWgNr');
             $table->string('warengruppe', 50)->nullable();
         });
 
+        // ─── 2. Products ──────────────────────────────────────────────────
         Schema::create('artikel', function (Blueprint $table) {
             $table->increments('pArtikelNr');
             $table->string('bezeichnung', 35)->nullable();
@@ -25,14 +27,15 @@ return new class extends Migration
             
             $table->decimal('ekPreis', 8, 2)->nullable();
             $table->decimal('vkPreis', 8, 2)->nullable();
-            $table->integer('bestand')->nullable();
-            $table->integer('meldeBest')->nullable();
+            $table->integer('bestand')->default(0);
+            $table->integer('meldeBest')->default(0);
 
             $table->softDeletes();
             
             $table->foreign('fWgNr')->references('pWgNr')->on('warengruppe');
         });
 
+        // ─── 3. Customers ──────────────────────────────────────────────────
         Schema::create('kunden', function (Blueprint $table) {
             $table->increments('pKdNr');
             $table->string('name', 50)->nullable();
@@ -44,6 +47,7 @@ return new class extends Migration
             $table->softDeletes();
         });
 
+        // ─── 4. Customer-order headers ─────────────────────────────────────
         Schema::create('auftragskoepfe', function (Blueprint $table) {
             $table->increments('pAufNr');
             $table->dateTime('aufDat')->nullable();
@@ -55,6 +59,7 @@ return new class extends Migration
             $table->foreign('fKdNr')->references('pKdNr')->on('kunden');
         });
 
+        // ─── 5. Customer-order line items ───────────────────────────────────
         Schema::create('auftragspositionen', function (Blueprint $table) {
             $table->id('pAufPosNr');
             

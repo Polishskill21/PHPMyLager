@@ -1,0 +1,123 @@
+.products-search {
+    width: min(340px, 100%);
+    flex-basis: 340px;
+}
+
+/* Up to four row actions: edit, adjust stock, history, discontinue. */
+.products-table { --actions-count: 4; }
+
+.products-toolbar .filter-select {
+    width: 170px;
+    flex: 0 0 170px;
+}
+
+.stat-low-value { color: var(--color-warning); }
+
+/* Adjust-stock modal */
+.adjust-subtitle {
+    margin: -.35rem 0 .9rem;
+    color: var(--color-text-muted);
+    font-size: .85rem;
+}
+
+.adjust-readonly {
+    min-height: var(--control-height);
+    display: flex;
+    align-items: center;
+    padding: 0 .65rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-soft);
+    color: var(--color-text-strong);
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.adjust-reason {
+    min-height: 72px;
+    padding-top: .5rem;
+    line-height: 1.4;
+    resize: vertical;
+}
+
+/* Storage location — segmented Zone · Regal · Fach · Ebene input that assembles
+   into the A01-03B server format. */
+.lagerplatz-fields {
+    display: flex;
+    align-items: flex-start;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+.lagerplatz-part {
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+}
+
+.lagerplatz-part .select-wrap {
+    width: 74px;
+}
+
+.lagerplatz-num .form-input {
+    width: 60px;
+    text-align: center;
+    font-family: var(--font-mono);
+}
+
+.lagerplatz-hint {
+    color: var(--color-text-faint);
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.lagerplatz-sep {
+    height: var(--control-height);
+    display: flex;
+    align-items: center;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+}
+
+/* Invalid state: tint every sub-control's border (the composite wrapper carries
+   the `.invalid` flag since there is no single `.form-input` to mark). */
+.lagerplatz-fields.invalid .form-input,
+.lagerplatz-fields.invalid .form-select {
+    border-color: var(--color-danger);
+}
+
+/* Stock-history inspect modal — re-maps the shared 6-col item grid to:
+   Date | User | Old | New | Difference | Reason */
+.products-history-items .inspect-item-head,
+.products-history-items .inspect-item-row {
+    grid-template-columns: 116px minmax(120px, 1fr) 64px 64px 92px minmax(160px, 1.6fr);
+    min-width: 748px;
+}
+
+/* Reset shared per-position styling (col 3 is a number here, not a product name;
+   all columns left-aligned except the three numeric ones). */
+.products-history-items .inspect-item-head div,
+.products-history-items .inspect-item-row div {
+    text-align: left;
+}
+
+.products-history-items .inspect-item-row div:nth-child(3) {
+    color: var(--color-text-soft);
+    font-family: var(--font-mono);
+    font-size: .88rem;
+}
+
+.products-history-items .inspect-item-head div:nth-child(3),
+.products-history-items .inspect-item-head div:nth-child(4),
+.products-history-items .inspect-item-head div:nth-child(5),
+.products-history-items .inspect-item-row div:nth-child(3),
+.products-history-items .inspect-item-row div:nth-child(4),
+.products-history-items .inspect-item-row div:nth-child(5) {
+    text-align: right;
+}
+
+.products-history-items .delta-up { color: var(--color-success); }
+.products-history-items .delta-down { color: var(--color-danger); }

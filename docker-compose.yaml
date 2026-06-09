@@ -1,4 +1,12 @@
 services:
+  node:
+    image: node:22-alpine
+    container_name: phpmylager_node
+    working_dir: /app
+    volumes:
+      - ./app:/app
+    command: sh -c "npm ci && npm run build"
+
   app:
     build:
       context: .
@@ -14,17 +22,18 @@ services:
       APP_URL: http://localhost:${APP_PORT:-8000}
       DB_CONNECTION: mysql
       DB_HOST: db
-      DB_PORT: 3306
       DB_DATABASE: ${DB_DATABASE:-warehouse_storage}
       DB_USERNAME: ${DB_USERNAME:-laravel}
       DB_PASSWORD: ${DB_PASSWORD:-laravel}
       WAIT_FOR_DB: "true"
       # RUN_MIGRATIONS: "true"
       # RUN_SEEDERS: "true"
-      SEEDER_PASSWORD: ${SEEDER_PASSWORD}
+      SEEDER_PASSWORD: ${SEEDER_PASSWORD:-password}
     depends_on:
       db:
         condition: service_healthy
+      node:
+        condition: service_completed_successfully
     networks:
       - phpmylager_net
 
@@ -47,7 +56,7 @@ services:
     container_name: warehouse_db
     restart: unless-stopped
     ports:
-      - "${DB_PORT:-33060}:3306"
+      - "33060:3306"
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-warehouse_storage}
       MYSQL_USER: ${DB_USERNAME:-laravel}

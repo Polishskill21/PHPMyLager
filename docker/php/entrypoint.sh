@@ -12,19 +12,26 @@ if [ ! -d vendor ]; then
 fi
 
 if [ -f .env ] && ! grep -q '^APP_KEY=base64:' .env; then
-  php artisan key:generate --force
+  if [ "${APP_ENV}" = "local" ]; then
+    echo "Notice: APP_KEY missing. Generating one for local environment..."
+    php artisan key:generate --force
+  else
+    echo "CRITICAL ERROR: APP_KEY is missing in your production .env file!"
+    echo "Do not generate this randomly in production. Add your persistent APP_KEY to the .env file."
+    exit 1
+  fi
 fi
 
 if [ "${WAIT_FOR_DB}" = "true" ]; then
   echo "Waiting for database connection..."
   ATTEMPTS=30
-  until php -r "new PDO('mysql:host=' . getenv('DB_HOST') . ';port=' . getenv('DB_PORT') . ';dbname=' . getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'));" >/dev/null 2>&1; do
+  until php -r "new PDO('mysql:host=' . getenv('DB_HOST') . ';port=3306;dbname=' . getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'));" >/dev/null 2>&1; do
     ATTEMPTS=$((ATTEMPTS - 1))
     if [ $ATTEMPTS -le 0 ]; then
       echo "Database connection timeout."
       exit 1
     fi
-    sleep 2
+    sleep 1
   done
 fi
 
@@ -36,13 +43,24 @@ mkdir -p \
   bootstrap/cache
 
 # Keep local bind-mounted files owned by the host user.
+chown -R www-data:www-data storage bootstrap/cache || true
+
+# Only in non-local: chown the source files too (no bind mount in prod)
 if [ "${APP_ENV}" != "local" ]; then
-  chown -R www-data:www-data storage bootstrap/cache || true
+  chown -R www-data:www-data . || true
 fi
 
 # Directories need execute bits for traversal; regular files do not.
 find storage bootstrap/cache -type d -exec chmod 775 {} + || true
 find storage bootstrap/cache -type f -exec chmod 664 {} + || true
+
+# Cache config, routes and views for production.
+if [ "${APP_ENV}" = "production" ]; then
+  echo "Caching Laravel config, routes and views..."
+  php artisan config:cache
+  php artisan route:cache
+  php artisan view:cache
+fi
 
 # if [ "${RUN_MIGRATIONS}" = "true" ]; then
 #     php artisan migrate --force
@@ -53,5 +71,5 @@ find storage bootstrap/cache -type f -exec chmod 664 {} + || true
 # fi
 
 
-### run this instead one time: docker exec -it phpmylager_app php artisan migrate:fresh --seed
+### run this instead one time: docker exec -it phpmylager_app_prod php artisan migrate:fresh --seed
 exec "$@"
