@@ -56,7 +56,7 @@ class PurchaseOrderCreateTest extends TestCase
         $response = $this->actingAs($this->writer)->postJson('/api/purchase-orders', $payload);
 
         $response->assertStatus(201)
-                 ->assertJsonPath('data.order_info.' . PurchaseOrder::COL_STATUS, PurchaseOrderStatus::Open->value)
+                 ->assertJsonPath('data.order_info.' . PurchaseOrder::COL_STATUS, PurchaseOrderStatus::Open->toEnglish())
                  ->assertJsonPath('data.total_ordered', 10);
 
         $this->assertDatabaseHas((new PurchaseOrder)->getTable(), [
