@@ -352,6 +352,10 @@ class PurchaseOrderController extends Controller
         $totalValue     = $items->sum(
             fn ($i) => (float) ($i->{PurchaseOrderItem::COL_EK_PREIS} ?? 0) * (int) $i->{PurchaseOrderItem::COL_BEST_MENGE}
         );
+        $rawStatus = $order->{PurchaseOrder::COL_STATUS};
+        $statusEnum = $rawStatus instanceof PurchaseOrderStatus 
+            ? $rawStatus 
+            : PurchaseOrderStatus::tryFrom($rawStatus);
 
         return [
             'order_info' => [
@@ -361,7 +365,7 @@ class PurchaseOrderController extends Controller
                 'is_supplier_deleted'           => $order->supplier?->trashed() ?? false,
                 PurchaseOrder::COL_BEST_DAT     => $order->{PurchaseOrder::COL_BEST_DAT},
                 PurchaseOrder::COL_ERW_LIEF_DAT => $order->{PurchaseOrder::COL_ERW_LIEF_DAT},
-                PurchaseOrder::COL_STATUS       => $order->{PurchaseOrder::COL_STATUS},
+                PurchaseOrder::COL_STATUS       => $statusEnum ? $statusEnum->toEnglish() : 'unknown',
             ],
             'items' => $items->map(fn ($item) => [
                 PurchaseOrderItem::COL_ID                 => $item->{PurchaseOrderItem::COL_ID},

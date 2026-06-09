@@ -1,7 +1,7 @@
-.status-offen { background: var(--color-info-soft); color: var(--color-info); }
-.status-bestellt { background: var(--color-warning-soft); color: var(--color-warning); }
-.status-geliefert { background: var(--color-success-soft); color: var(--color-success); }
-.status-storniert { background: var(--color-danger-soft); color: var(--color-danger); }
+.status-open { background: var(--color-info-soft); color: var(--color-info); }
+.status-ordered { background: var(--color-warning-soft); color: var(--color-warning); }
+.status-delivered { background: var(--color-success-soft); color: var(--color-success); }
+.status-cancelled { background: var(--color-danger-soft); color: var(--color-danger); }
 
 /* Up to three row actions: edit, receive delivery, cancel. */
 .purchase-orders-table { --actions-count: 3; }

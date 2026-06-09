@@ -77,10 +77,10 @@
                     @php
                         $totalValue = $order->items->sum(fn ($item) => (float) ($item->ekPreis ?? 0) * (int) $item->bestMenge);
                         // status is cast to the PurchaseOrderStatus enum — normalise to its string value
-                        $status = $order->status instanceof \BackedEnum ? $order->status->value : ($order->status ?: 'offen');
-                        $isEditable = in_array($status, ['offen', 'bestellt'], true);
+                        $status = $order->status instanceof \App\Enums\PurchaseOrderStatus ? $order->status->toEnglish() : strtolower($order->status ?: 'open');
+                        $isEditable = in_array($status, ['open', 'ordered'], true);
                         // Receivable while not yet fully delivered or cancelled; a partial receive promotes offen → bestellt.
-                        $isReceivable = in_array($status, ['offen', 'bestellt'], true);
+                        $isReceivable = in_array($status, ['open', 'ordered'], true);
                     @endphp
                     <tr class="row-clickable purchase-order-row" data-sort-row
                         data-id="{{ $order->pBestNr }}"
