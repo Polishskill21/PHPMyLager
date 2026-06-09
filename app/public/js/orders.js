@@ -13,6 +13,7 @@ let products = [];
 let customerMap = {};
 let productMap = {};
 let pendingDeleteId = null;
+let lookupPromise = null;
 
 // ── API HELPERS ───────────────────────────────────────────────────────
 async function api(method, path, body = null) {
@@ -63,6 +64,11 @@ function toast(msg, type = 'info') {
 }
 
 // ── LOOKUPS ───────────────────────────────────────────────────────────
+function ensureLookups() {
+    if (!lookupPromise) lookupPromise = loadLookups();
+    return lookupPromise;
+}
+
 async function loadLookups() {
     const [customersRes, productsRes] = await Promise.all([
         api('GET', '/customers'),
@@ -190,7 +196,8 @@ function filterOrderRows() {
 }
 
 // ── FORM / MODALS ─────────────────────────────────────────────────────
-function openAdd() {
+async function openAdd() {
+    await ensureLookups();
     clearFormErrors();
     document.getElementById('f-id').value = '';
     document.getElementById('order-form').reset();
@@ -213,6 +220,7 @@ function openAdd() {
 }
 
 async function openEdit(orderId) {
+    await ensureLookups();
     clearFormErrors();
 
     const { ok, data, message } = await api('GET', `/orders/${orderId}`);
@@ -581,6 +589,6 @@ function initOrdersPage() {
 }
 
 if (document.querySelector('.orders-page')) {
-    loadLookups();
+    // loadLookups();
     initOrdersPage();
 }

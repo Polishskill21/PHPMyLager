@@ -659,7 +659,7 @@ function filterPurchaseOrderRows() {
 }
 
 function initPurchaseOrdersPage() {
-    ensureLookups();
+    // ensureLookups();
 
     document.getElementById('purchase-orders-search')?.addEventListener('input', filterPurchaseOrderRows);
     document.getElementById('btn-add-purchase-order')?.addEventListener('click', openAdd);
