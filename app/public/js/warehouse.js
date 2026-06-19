@@ -35,24 +35,8 @@ async function api(method, path, body = null) {
     };
 }
 
-function toast(msg, type = 'info') {
-    const area = document.getElementById('toast-area');
-    if (!area) return;
-
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${esc(msg)}`;
-    area.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
-
-function esc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
+// toast(), flashToast() and esc() are provided globally by public/js/feedback.js
+// (loaded in layouts/app.blade.php before this script).
 
 // ── SEARCH FILTER ─────────────────────────────────────────────────────
 function filterGroupRows() {
@@ -166,7 +150,7 @@ async function submitGroupForm(event) {
     }
 
     closeModal('modal-group-form-overlay');
-    toast(message || (id ? 'Product group updated.' : 'Product group created.'), 'success');
+    flashToast(message || (id ? 'Product group updated.' : 'Product group created.'), 'success');
     window.location.reload();
 }
 

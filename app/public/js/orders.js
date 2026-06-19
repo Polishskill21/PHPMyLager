@@ -52,16 +52,8 @@ async function api(method, path, body = null) {
     };
 }
 
-function toast(msg, type = 'info') {
-    const area = document.getElementById('toast-area');
-    if (!area) return;
-
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${msg}`;
-    area.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
+// toast(), flashToast() and esc() are provided globally by public/js/feedback.js
+// (loaded in layouts/app.blade.php before this script).
 
 // ── LOOKUPS ───────────────────────────────────────────────────────────
 function ensureLookups() {
@@ -132,8 +124,11 @@ function normalizeOrder(entry) {
     const info = entry?.order_info || {};
     const items = Array.isArray(entry?.items) ? entry.items : [];
 
+    // Prefer the name the backend already resolved (order_info.customer_name);
+    // fall back to the lookup map, which is only populated after the add/edit
+    // flow has loaded it.
     const customer = customerMap[Number(info.fKdNr)] || null;
-    const customerName = customer?.name || 'Unknown customer';
+    const customerName = info.customer_name || customer?.name || 'Unknown customer';
 
     const itemNames = items
         .map((item) => item?.bezeichnung || `#${item?.fArtikelNr ?? ''}`)
@@ -396,7 +391,7 @@ async function submitOrderForm(e) {
     }
 
     closeModal('modal-form-overlay');
-    toast(message || (id ? 'Order updated.' : 'Order created.'), 'success');
+    flashToast(message || (id ? 'Order updated.' : 'Order created.'), 'success');
     window.location.reload();
 }
 
@@ -472,7 +467,7 @@ async function confirmDelete() {
     closeModal('modal-del-overlay');
 
     if (ok) {
-        toast(message || 'Order deleted.', 'success');
+        flashToast(message || 'Order deleted.', 'success');
         window.location.reload();
     } else {
         toast(message || data?.error || 'Delete failed.', 'error');
@@ -536,13 +531,6 @@ function setDateFieldValue(id, value) {
 function formatDateValue(date) {
     const pad = (n) => String(n).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function esc(s) {
-    return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
 }
 
 // ── EVENTS / INIT ─────────────────────────────────────────────────────

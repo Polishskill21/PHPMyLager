@@ -37,16 +37,8 @@ async function api(method, path, body = null) {
     };
 }
 
-function toast(msg, type = 'info') {
-    const area = document.getElementById('toast-area');
-    if (!area) return;
-
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${esc(msg)}`;
-    area.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
+// toast(), flashToast() and esc() are provided globally by public/js/feedback.js
+// (loaded in layouts/app.blade.php before this script).
 
 function openAdd() {
     clearFormErrors();
@@ -122,7 +114,7 @@ async function submitSupplierForm(event) {
     }
 
     closeModal('modal-supplier-form-overlay');
-    toast(message || (id ? 'Supplier updated.' : 'Supplier created.'), 'success');
+    flashToast(message || (id ? 'Supplier updated.' : 'Supplier created.'), 'success');
     window.location.reload();
 }
 
@@ -147,7 +139,7 @@ async function confirmDelete() {
     closeModal('modal-supplier-del-overlay');
 
     if (ok) {
-        toast(message || 'Supplier deleted.', 'success');
+        flashToast(message || 'Supplier deleted.', 'success');
         window.location.reload();
     } else {
         toast(message || data?.error || 'Delete failed.', 'error');
@@ -174,14 +166,6 @@ function clearFormErrors() {
 
 function closeModal(id) {
     document.getElementById(id)?.classList.remove('open');
-}
-
-function esc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
 }
 
 function filterSupplierRows() {

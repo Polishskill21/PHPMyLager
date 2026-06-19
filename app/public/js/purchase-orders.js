@@ -42,16 +42,8 @@ async function api(method, path, body = null) {
     };
 }
 
-function toast(msg, type = 'info') {
-    const area = document.getElementById('toast-area');
-    if (!area) return;
-
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${esc(msg)}`;
-    area.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
+// toast(), flashToast() and esc() are provided globally by public/js/feedback.js
+// (loaded in layouts/app.blade.php before this script).
 
 function ensureLookups() {
     if (!lookupPromise) lookupPromise = loadLookups();
@@ -338,7 +330,7 @@ async function submitPurchaseOrderForm(event) {
     }
 
     closeModal('modal-purchase-order-form-overlay');
-    toast(message || (id ? 'Purchase order updated.' : 'Purchase order created.'), 'success');
+    flashToast(message || (id ? 'Purchase order updated.' : 'Purchase order created.'), 'success');
     window.location.reload();
 }
 
@@ -538,7 +530,7 @@ async function submitReceive(event) {
     }
 
     closeModal('modal-purchase-order-receive-overlay');
-    toast(message || 'Delivery registered.', 'success');
+    flashToast(message || 'Delivery registered.', 'success');
     window.location.reload();
 }
 
@@ -562,7 +554,7 @@ async function confirmDelete() {
     closeModal('modal-purchase-order-del-overlay');
 
     if (ok) {
-        toast(message || 'Purchase order cancelled.', 'success');
+        flashToast(message || 'Purchase order cancelled.', 'success');
         window.location.reload();
     } else {
         toast(message || data?.error || 'Cancellation failed.', 'error');
@@ -621,14 +613,6 @@ function toDateInput(value) {
 function moneyInput(value) {
     if (value === null || value === undefined || value === '') return '';
     return Number(value).toFixed(2);
-}
-
-function esc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
 }
 
 function filterPurchaseOrderRows() {

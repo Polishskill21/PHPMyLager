@@ -38,24 +38,8 @@ async function api(method, path, body = null) {
     };
 }
 
-function toast(msg, type = 'info') {
-    const area = document.getElementById('toast-area');
-    if (!area) return;
-
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${esc(msg)}`;
-    area.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
-
-function esc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
+// toast(), flashToast() and esc() are provided globally by public/js/feedback.js
+// (loaded in layouts/app.blade.php before this script).
 
 // ── SEARCH FILTER ─────────────────────────────────────────────────────
 function filterCustomerRows() {
@@ -152,7 +136,7 @@ async function submitCustomerForm(event) {
     }
 
     closeModal('modal-form-overlay');
-    toast(message || (id ? 'Customer updated.' : 'Customer created.'), 'success');
+    flashToast(message || (id ? 'Customer updated.' : 'Customer created.'), 'success');
     window.location.reload();
 }
 
@@ -178,7 +162,7 @@ async function confirmDelete() {
     closeModal('modal-del-overlay');
 
     if (ok) {
-        toast(message || 'Customer archived.', 'success');
+        flashToast(message || 'Customer archived.', 'success');
         window.location.reload();
     } else {
         toast(message || data?.error || 'Archive failed.', 'error');
