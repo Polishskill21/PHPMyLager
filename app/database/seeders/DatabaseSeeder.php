@@ -19,11 +19,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
 
-        $envPassword = env('SEEDER_PASSWORD');
-        $plainPassword = (is_string($envPassword) && trim($envPassword) !== '') ? trim($envPassword) : 'password';
-        $hashedPassword = Hash::make($plainPassword);
-
-        // 1. Seed Users
+        // 1. Seed Users — each role gets its own password from the environment
+        //    (SEEDER_ADMIN_PASSWORD / SEEDER_WRITER_PASSWORD / SEEDER_VIEWER_PASSWORD),
+        //    falling back to SEEDER_PASSWORD and finally 'password'.
         $users = [
             [User::COL_NAME => 'Admin User',   User::COL_EMAIL => 'admin@example.com',  User::COL_ROLE => 'admin'],
             [User::COL_NAME => 'Writer User',  User::COL_EMAIL => 'writer@example.com', User::COL_ROLE => 'writer'],
@@ -37,7 +35,7 @@ class DatabaseSeeder extends Seeder
                     User::COL_EMAIL => $userData[User::COL_EMAIL],
                     User::COL_ROLE => $userData[User::COL_ROLE],
                     User::COL_EMAIL_VERIFIED_AT => now(),
-                    User::COL_PASSWORD => $hashedPassword,
+                    User::COL_PASSWORD => $this->rolePassword($userData[User::COL_ROLE]),
                     User::COL_REMEMBER_TOKEN => Str::random(10),
                 ]);
             }
@@ -149,5 +147,28 @@ class DatabaseSeeder extends Seeder
             ['pBestPosNr' => 105, 'fBestNr' => 80003, 'fArtikelNr' => 10086, 'bestMenge' => 30, 'gelieferteMenge' => 0, 'ekPreis' => 38.50],
             ['pBestPosNr' => 106, 'fBestNr' => 80003, 'fArtikelNr' => 71001, 'bestMenge' => 15, 'gelieferteMenge' => 0, 'ekPreis' => 60.00]
         ]);
+    }
+
+    /**
+     * Resolve the hashed seed password for a role.
+     *
+     * Resolution order: SEEDER_<ROLE>_PASSWORD → SEEDER_PASSWORD → 'password'.
+     */
+    private function rolePassword(string $role): string
+    {
+        $candidates = [
+            env('SEEDER_' . strtoupper($role) . '_PASSWORD'),
+            env('SEEDER_PASSWORD'),
+        ];
+
+        $plain = 'password';
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                $plain = trim($candidate);
+                break;
+            }
+        }
+
+        return Hash::make($plain);
     }
 }
