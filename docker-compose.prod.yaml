@@ -20,11 +20,20 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       SEEDER_PASSWORD: ${SEEDER_PASSWORD}
+      SEEDER_ADMIN_PASSWORD: ${SEEDER_ADMIN_PASSWORD:-}
+      SEEDER_WRITER_PASSWORD: ${SEEDER_WRITER_PASSWORD:-}
+      SEEDER_VIEWER_PASSWORD: ${SEEDER_VIEWER_PASSWORD:-}
+      CACHE_STORE: redis
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       WAIT_FOR_DB: "true"
     volumes:
       - prod_public:/var/www/html/public
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - phpmylager_net
@@ -63,6 +72,20 @@ services:
     networks:
       - phpmylager_net
 
+  redis:
+    image: redis:7-alpine
+    container_name: phpmylager_redis_prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - phpmylager_net
+
 networks:
   phpmylager_net:
     driver: bridge
@@ -70,3 +93,4 @@ networks:
 volumes:
   db_data_prod:
   prod_public:
+  redis_data_prod:

@@ -3,9 +3,16 @@ services:
     image: node:22-alpine
     container_name: phpmylager_node
     working_dir: /app
+    restart: unless-stopped
     volumes:
       - ./app:/app
-    command: sh -c "npm ci && npm run build"
+    command: sh -c "npm install && npm run build -- --watch"
+    healthcheck:
+      test: ["CMD", "test", "-f", "public/build/manifest.json"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
 
   app:
     build:
@@ -29,11 +36,20 @@ services:
       # RUN_MIGRATIONS: "true"
       # RUN_SEEDERS: "true"
       SEEDER_PASSWORD: ${SEEDER_PASSWORD:-password}
+      SEEDER_ADMIN_PASSWORD: ${SEEDER_ADMIN_PASSWORD:-}
+      SEEDER_WRITER_PASSWORD: ${SEEDER_WRITER_PASSWORD:-}
+      SEEDER_VIEWER_PASSWORD: ${SEEDER_VIEWER_PASSWORD:-}
+      CACHE_STORE: redis
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
       db:
         condition: service_healthy
       node:
-        condition: service_completed_successfully
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - phpmylager_net
 
@@ -70,6 +86,18 @@ services:
       start_period: 20s
     volumes:
       - db_data:/var/lib/mysql
+    networks:
+      - phpmylager_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: phpmylager_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks:
       - phpmylager_net
 
