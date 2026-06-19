@@ -13,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use App\Enums\PurchaseOrderStatus;
+use App\Support\DomainCache;
 
 
 class PurchaseOrderController extends Controller
@@ -24,11 +25,14 @@ class PurchaseOrderController extends Controller
     /** GET /purchase-orders */
     public function index(): JsonResponse
     {
-        $orders = PurchaseOrder::with('items.product', 'supplier')->get();
- 
-        return $this->ok(
-            $orders->map(fn (PurchaseOrder $o) => $this->formatOrder($o))
+        $orders = DomainCache::remember(
+            DomainCache::PURCHASE_ORDERS,
+            'purchase-orders:index',
+            fn () => PurchaseOrder::with('items.product', 'supplier')->get()
+                                  ->map(fn (PurchaseOrder $o) => $this->formatOrder($o))
         );
+
+        return $this->ok($orders);
     }
 
     /** GET /purchase-orders/{order} */
@@ -72,7 +76,8 @@ class PurchaseOrderController extends Controller
  
             return $order->load('items.product', 'supplier');
         });
- 
+        DomainCache::flush(DomainCache::PURCHASE_ORDERS);
+
         return $this->created($this->formatOrder($order), 'Purchase order created successfully.');
     }
 
@@ -148,7 +153,8 @@ class PurchaseOrderController extends Controller
  
             return $purchaseOrder->fresh(['items.product', 'supplier']);
         });
- 
+        DomainCache::flush(DomainCache::PURCHASE_ORDERS);
+
         return $this->ok($this->formatOrder($purchaseOrder), 'Purchase order updated successfully.');
     }
 
@@ -224,7 +230,8 @@ class PurchaseOrderController extends Controller
  
             return $purchaseOrder->fresh(['items.product', 'supplier']);
         });
- 
+        DomainCache::flush(DomainCache::PURCHASE_ORDERS, DomainCache::PRODUCTS);
+
         return $this->ok($this->formatOrder($purchaseOrder), 'Delivery received successfully.');
     }
     
@@ -280,7 +287,8 @@ class PurchaseOrderController extends Controller
  
                 $purchaseOrder->update([PurchaseOrder::COL_STATUS => PurchaseOrderStatus::Cancelled]);
             });
- 
+            DomainCache::flush(DomainCache::PURCHASE_ORDERS, DomainCache::PRODUCTS);
+
             return $this->noContent();
 
         } catch (ValidationException $e) {

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
+use App\Support\DomainCache;
 
 class SupplierController extends Controller
 {
@@ -17,7 +18,11 @@ class SupplierController extends Controller
 
     public function index(): JsonResponse
     {
-        $suppliers = Supplier::all()->map(fn (Supplier $s) => $this->formatSupplier($s));
+        $suppliers = DomainCache::remember(
+            DomainCache::SUPPLIERS,
+            'suppliers:index',
+            fn () => Supplier::all()->map(fn (Supplier $s) => $this->formatSupplier($s))
+        );
         return $this->ok($suppliers);
     }
 
@@ -39,6 +44,7 @@ class SupplierController extends Controller
 
         try {
             $supplier = DB::transaction(fn () => Supplier::create($validated));
+            DomainCache::flush(DomainCache::SUPPLIERS);
 
             return $this->created($this->formatSupplier($supplier->fresh()), 'Supplier created successfully.');
         } catch (\Exception $e) {
@@ -63,6 +69,7 @@ class SupplierController extends Controller
                 $supplier->update($validated);
                 return $supplier->fresh();
             });
+            DomainCache::flush(DomainCache::SUPPLIERS);
 
             return $this->ok($this->formatSupplier($supplier), 'Supplier updated successfully.');
         } catch (\Exception $e) {
@@ -79,7 +86,8 @@ class SupplierController extends Controller
     {
         try {
             DB::transaction(fn () => $supplier->delete());
- 
+            DomainCache::flush(DomainCache::SUPPLIERS);
+
             return $this->noContent();
         } catch (\Exception $e) {
             report($e);

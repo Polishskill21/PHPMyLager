@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Models\Customers\Customer;
+use App\Support\DomainCache;
 
 
 class OrderController extends Controller
@@ -25,8 +26,12 @@ class OrderController extends Controller
      */
     public function index(): JsonResponse
     {
-        $orders = Order::with(['items.product', 'customer'])->get() 
-                       ->map(fn (Order $o) => $this->formatOrder($o));
+        $orders = DomainCache::remember(
+            DomainCache::ORDERS,
+            'orders:index',
+            fn () => Order::with(['items.product', 'customer'])->get()
+                          ->map(fn (Order $o) => $this->formatOrder($o))
+        );
 
         return $this->ok($orders);
     }
@@ -83,6 +88,7 @@ class OrderController extends Controller
 
                 return $order->load('items.product');
             });
+            DomainCache::flush(DomainCache::ORDERS, DomainCache::PRODUCTS);
 
             return $this->created($this->formatOrder($order), 'Order created successfully.');
 
@@ -199,6 +205,7 @@ class OrderController extends Controller
 
                 return $order->fresh(['items.product']);
             });
+            DomainCache::flush(DomainCache::ORDERS, DomainCache::PRODUCTS);
 
             return $this->ok($this->formatOrder($order), 'Order updated successfully.');
 
@@ -234,6 +241,7 @@ class OrderController extends Controller
                 $order->items()->delete();
                 $order->delete();
             });
+            DomainCache::flush(DomainCache::ORDERS, DomainCache::PRODUCTS);
 
             return $this->noContent();
         } catch (\Exception $e) {

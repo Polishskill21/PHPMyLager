@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Support\DomainCache;
 
 class WarehouseGroupController extends Controller
 {
@@ -20,7 +21,13 @@ class WarehouseGroupController extends Controller
      */
     public function index(): JsonResponse
     {
-        return $this->ok(WarehouseGroup::all());
+        $groups = DomainCache::remember(
+            DomainCache::WAREHOUSE_GROUPS,
+            'warehouse-groups:index',
+            fn () => WarehouseGroup::all()
+        );
+
+        return $this->ok($groups);
     }
 
     /**
@@ -48,7 +55,11 @@ class WarehouseGroupController extends Controller
             return $this->notFound("Warehouse group {$id} not found.");
         }
 
-        $products = Product::where(Product::COL_WG_ID, $id)->get();
+        $products = DomainCache::remember(
+            DomainCache::PRODUCTS,
+            "products:by-group:{$id}",
+            fn () => Product::where(Product::COL_WG_ID, $id)->get()
+        );
 
         return $this->ok($products);
     }
@@ -69,6 +80,7 @@ class WarehouseGroupController extends Controller
 
         try {
             $group = DB::transaction(fn () => WarehouseGroup::create($validated));
+            DomainCache::flush(DomainCache::WAREHOUSE_GROUPS, DomainCache::PRODUCTS);
 
             return $this->created($group, 'Warehouse group created successfully.');
         } catch (\Exception $e) {
@@ -102,6 +114,7 @@ class WarehouseGroupController extends Controller
                 $group->update($validated);
                 return $group->fresh();
             });
+            DomainCache::flush(DomainCache::WAREHOUSE_GROUPS, DomainCache::PRODUCTS);
 
             return $this->noContent();
         } catch (\Exception $e) {

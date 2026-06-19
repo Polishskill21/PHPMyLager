@@ -10,6 +10,7 @@ use App\Models\Products\InventoryLog;
 use Illuminate\Support\Facades\Auth;
 use App\Models\PurchaseOrders\PurchaseOrderItem;
 use App\Http\Controllers\Controller;
+use App\Support\DomainCache;
 
 class ProductController extends Controller
 {
@@ -38,7 +39,9 @@ class ProductController extends Controller
      */
     public function index(): JsonResponse
     {
-        return $this->ok(Product::all(), 'Products retrieved successfully.');
+        $products = DomainCache::remember(DomainCache::PRODUCTS, 'products:index', fn () => Product::all());
+
+        return $this->ok($products, 'Products retrieved successfully.');
     }
 
     /**
@@ -76,6 +79,7 @@ class ProductController extends Controller
 
         try {
             $product = DB::transaction(fn () => Product::create($validated));
+            DomainCache::flush(DomainCache::PRODUCTS);
 
             return $this->created($product, 'Product created successfully.');
         } catch (\Exception $e) {
@@ -105,6 +109,7 @@ class ProductController extends Controller
                 $product->update($validated);
                 return $product->fresh();
             });
+            DomainCache::flush(DomainCache::PRODUCTS);
 
             return $this->ok($product, 'Product updated successfully.');
         } catch (\Exception $e) {
@@ -148,6 +153,7 @@ class ProductController extends Controller
 
                 return $product->fresh();
             });
+            DomainCache::flush(DomainCache::PRODUCTS);
 
             return $this->ok($product, 'Product stock level manually adjusted successfully.');
         } catch (\Exception $e) {
@@ -184,7 +190,8 @@ class ProductController extends Controller
  
         try {
             DB::transaction(fn () => $product->delete());
- 
+            DomainCache::flush(DomainCache::PRODUCTS);
+
             return $this->noContent();
         } catch (\Exception $e) {
             report($e);

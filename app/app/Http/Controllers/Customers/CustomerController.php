@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
+use App\Support\DomainCache;
 
 class CustomerController extends Controller
 {
@@ -20,7 +21,11 @@ class CustomerController extends Controller
      */
     public function index(): JsonResponse
     {
-        $customers = Customer::all()->map(fn (Customer $c) => $this->formatCustomer($c));
+        $customers = DomainCache::remember(
+            DomainCache::CUSTOMERS,
+            'customers:index',
+            fn () => Customer::all()->map(fn (Customer $c) => $this->formatCustomer($c))
+        );
 
         return $this->ok($customers);
     }
@@ -49,6 +54,7 @@ class CustomerController extends Controller
 
         try {
             $customer = DB::transaction(fn () => Customer::create($validated));
+            DomainCache::flush(DomainCache::CUSTOMERS);
 
             return $this->created($this->formatCustomer($customer->fresh()), 'Customer created successfully.');
         } catch (\Exception $e) {
@@ -76,6 +82,7 @@ class CustomerController extends Controller
                 $customer->update($validated);
                 return $customer->fresh();
             });
+            DomainCache::flush(DomainCache::CUSTOMERS);
 
             return $this->ok($this->formatCustomer($customer), 'Customer updated successfully.');
         } catch (\Exception $e) {
@@ -97,6 +104,7 @@ class CustomerController extends Controller
         try {
             $id = $customer->{Customer::COL_ID};
             DB::transaction(fn () => $customer->delete());
+            DomainCache::flush(DomainCache::CUSTOMERS);
 
             return $this->noContent();
         } catch (\Exception $e) {
