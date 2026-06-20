@@ -123,6 +123,24 @@ class CustomerCreateTest extends TestCase
                  ->assertJsonValidationErrors([Customer::COL_PLZ, Customer::COL_EMAIL]);
     }
 
+    public function test_store_preserves_leading_zero_in_plz(): void
+    {
+        $payload = $this->validPayload([
+            Customer::COL_PLZ   => '01067',   // Dresden — must not be truncated to 1067 or octal 567
+            Customer::COL_EMAIL => 'dresden.leadingzero@example.com',
+        ]);
+
+        $response = $this->actingAs($this->writer)->postJson('/api/customers', $payload);
+
+        $response->assertStatus(201)
+                 ->assertJsonPath('data.' . Customer::COL_PLZ, '01067');
+
+        $this->assertDatabaseHas(Customer::TABLE, [
+            Customer::COL_EMAIL => 'dresden.leadingzero@example.com',
+            Customer::COL_PLZ   => '01067',
+        ]);
+    }
+
     public function test_store_rejects_duplicate_email(): void
     {
         $existing = $this->createCustomer([Customer::COL_EMAIL => 'already@used.com']);
