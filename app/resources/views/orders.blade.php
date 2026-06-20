@@ -16,7 +16,6 @@
 @php
     $canWrite = Auth::user()->canWrite();
     $canDelete = Auth::user()->canDelete();
-    $ordersTotalEur = $orders->sum(fn ($o) => $o->items->sum(fn ($i) => $i->aufMenge * $i->kaufPreis));
 @endphp
 <section class="orders-page">
     <header class="page-header orders-header">
@@ -30,10 +29,10 @@
     <div class="page-toolbar orders-toolbar">
         <div class="page-search orders-search">
             <img class="page-search-icon" src="{{ asset('icons/lucide/search.png') }}" alt="">
-            <input id="search" class="form-input page-search-input" type="text" placeholder="Search by order or customer ID...">
+            <input id="search" class="form-input page-search-input" type="text" placeholder="Search by order or customer ID..." data-list-search>
         </div>
 
-        <div class="stat-pill">Total Orders: <span id="stat-total">{{ $orders->count() }}</span></div>
+        <div class="stat-pill">Total Orders: <span id="list-total">{{ $meta['total'] }}</span></div>
         <div class="stat-pill">Total EUR: <span id="stat-total-eur">{{ number_format($ordersTotalEur, 2) }}</span></div>
 
         <div class="page-toolbar-spacer"></div>
@@ -48,7 +47,13 @@
 
     <div class="table-shell orders-table-shell">
         <div class="table-wrap orders-table-wrap">
-            <table class="data-table orders-table" id="orders-table" data-static-sort>
+            <table class="data-table orders-table" id="orders-table"
+                   data-list-endpoint="/orders/page"
+                   data-list-per-page="{{ $meta['perPage'] }}"
+                   data-list-page="{{ $meta['page'] }}"
+                   data-list-has-more="{{ $meta['hasMore'] ? '1' : '0' }}"
+                   data-list-total="{{ $meta['total'] }}"
+                   data-list-empty="No orders match your search.">
                 <colgroup>
                     <col class="col-id">
                     <col class="col-customer">
@@ -70,53 +75,19 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($orders as $order)
-                    @php
-                        $itemCount = $order->items->count();
-                        $orderTotal = $order->items->sum(fn ($i) => $i->aufMenge * $i->kaufPreis);
-                        $customerName = $order->customer?->name ?: 'Unknown customer';
-                        $created = $order->aufDat ? \Illuminate\Support\Carbon::parse($order->aufDat)->format('Y-m-d') : '';
-                        $delivery = $order->aufTermin ? \Illuminate\Support\Carbon::parse($order->aufTermin)->format('Y-m-d') : '';
-                    @endphp
-                    <tr class="row-clickable order-row" data-sort-row
-                        data-id="{{ $order->pAufNr }}"
-                        data-sort-id="{{ $order->pAufNr }}"
-                        data-sort-customer="{{ $customerName }}"
-                        data-sort-created="{{ $created }}"
-                        data-sort-delivery="{{ $delivery }}"
-                        data-sort-items="{{ $itemCount }}"
-                        data-sort-total="{{ $orderTotal }}">
-                        <td class="cell-id">#{{ $order->pAufNr }}</td>
-                        <td class="cell-customer" title="{{ $customerName }}">{{ $customerName }}</td>
-                        <td class="cell-date">{{ $created ?: '—' }}</td>
-                        <td class="cell-date">{{ $delivery ?: '—' }}</td>
-                        <td class="cell-number td-items">{{ $itemCount }}</td>
-                        <td class="cell-money td-total">€{{ number_format($orderTotal, 2) }}</td>
-                        <td class="cell-actions">
-                            <div class="orders-actions">
-                                @if($canWrite)
-                                    <button class="btn-icon order-edit" title="Edit" data-id="{{ $order->pAufNr }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
-                                    </button>
-                                @endif
-                                @if($canDelete)
-                                    <button class="btn-icon del order-delete" title="Delete" data-id="{{ $order->pAufNr }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Delete">
-                                    </button>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
+                @forelse($firstRows as $row)
+                    @include('partials.rows.orders-row', ['row' => $row])
                 @empty
                     <tr class="table-state-row">
                         <td class="table-state-cell" colspan="7"><div class="empty-state">No orders found.</div></td>
                     </tr>
                 @endforelse
-                <tr class="table-state-row" id="orders-empty-filter-row" hidden>
-                    <td class="table-state-cell" colspan="7"><div class="empty-state">No orders match your search.</div></td>
-                </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="list-more">
+            <button class="btn btn-secondary" id="btn-load-more" data-list-more @if(!$meta['hasMore']) hidden @endif>Load more</button>
+            <span class="list-more-status">Showing <span id="list-shown">{{ count($firstRows) }}</span> of <span id="list-total-status">{{ $meta['total'] }}</span></span>
         </div>
     </div>
 </section>
@@ -247,6 +218,6 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/list-sort.js') }}?v={{ filemtime(public_path('js/list-sort.js')) }}"></script>
+    <script src="{{ asset('js/list-loadmore.js') }}?v={{ filemtime(public_path('js/list-loadmore.js')) }}"></script>
     <script src="{{ asset('js/orders.js') }}?v={{ filemtime(public_path('js/orders.js')) }}"></script>
 @endpush

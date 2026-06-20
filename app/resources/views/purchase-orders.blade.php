@@ -31,9 +31,9 @@
     <div class="page-toolbar purchase-orders-toolbar">
         <div class="page-search purchase-orders-search">
             <img class="page-search-icon" src="{{ asset('icons/lucide/search.png') }}" alt="">
-            <input class="form-input page-search-input" id="purchase-orders-search" type="text" placeholder="Search by ID, supplier, status or date...">
+            <input class="form-input page-search-input" id="purchase-orders-search" type="text" placeholder="Search by ID, supplier or status..." data-list-search>
         </div>
-        <div class="stat-pill">Purchase Orders: <span id="purchase-orders-stat-total">{{ $purchaseOrders->count() }}</span></div>
+        <div class="stat-pill">Purchase Orders: <span id="list-total">{{ $meta['total'] }}</span></div>
         <div class="page-toolbar-spacer"></div>
         @if($canWrite)
             <button class="btn btn-primary" id="btn-add-purchase-order">
@@ -45,7 +45,13 @@
 
     <div class="table-shell">
         <div class="table-wrap">
-            <table class="data-table purchase-orders-table" data-static-sort>
+            <table class="data-table purchase-orders-table" id="purchase-orders-table"
+                   data-list-endpoint="/purchase-orders/page"
+                   data-list-per-page="{{ $meta['perPage'] }}"
+                   data-list-page="{{ $meta['page'] }}"
+                   data-list-has-more="{{ $meta['hasMore'] ? '1' : '0' }}"
+                   data-list-total="{{ $meta['total'] }}"
+                   data-list-empty="No purchase orders match your search.">
                 <colgroup>
                     <col class="col-id">
                     <col class="col-supplier">
@@ -73,53 +79,8 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($purchaseOrders as $order)
-                    @php
-                        $totalValue = $order->items->sum(fn ($item) => (float) ($item->ekPreis ?? 0) * (int) $item->bestMenge);
-                        // status is cast to the PurchaseOrderStatus enum — normalise to its string value
-                        $status = $order->status instanceof \App\Enums\PurchaseOrderStatus ? $order->status->toEnglish() : strtolower($order->status ?: 'open');
-                        $isEditable = in_array($status, ['open', 'ordered'], true);
-                        // Receivable while not yet fully delivered or cancelled; a partial receive promotes offen → bestellt.
-                        $isReceivable = in_array($status, ['open', 'ordered'], true);
-                    @endphp
-                    <tr class="row-clickable purchase-order-row" data-sort-row
-                        data-id="{{ $order->pBestNr }}"
-                        data-sort-id="{{ $order->pBestNr }}"
-                        data-sort-supplier="{{ $order->supplier?->name ?: '' }}"
-                        data-sort-status="{{ $status }}"
-                        data-sort-ordered="{{ $order->bestDat ? substr((string) $order->bestDat, 0, 10) : '' }}"
-                        data-sort-expected="{{ $order->erwLieferDat ? substr((string) $order->erwLieferDat, 0, 10) : '' }}"
-                        data-sort-items="{{ $order->items->count() }}"
-                        data-sort-value="{{ $totalValue }}">
-                        <td class="cell-id">#{{ $order->pBestNr }}</td>
-                        <td class="cell-name" title="{{ $order->supplier?->name }}">{{ $order->supplier?->name ?: '—' }}</td>
-                        <td class="cell-status purchase-orders-status"><span class="status-badge status-{{ $status }}">{{ $status }}</span></td>
-                        <td class="cell-date purchase-orders-date">{{ $order->bestDat ? substr((string) $order->bestDat, 0, 10) : '—' }}</td>
-                        <td class="cell-date purchase-orders-date">{{ $order->erwLieferDat ? substr((string) $order->erwLieferDat, 0, 10) : '—' }}</td>
-                        <td class="cell-number">{{ $order->items->count() }}</td>
-                        <td class="cell-money">€{{ number_format($totalValue, 2) }}</td>
-                        @if($showActions)
-                            <td class="cell-actions">
-                                <div class="table-actions">
-                                    @if($canWrite && $isEditable)
-                                        <button class="btn-icon purchase-order-edit" title="Edit" data-id="{{ $order->pBestNr }}">
-                                            <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
-                                        </button>
-                                    @endif
-                                    @if($canWrite && $isReceivable)
-                                        <button class="btn-icon purchase-order-receive" title="Receive delivery" data-id="{{ $order->pBestNr }}">
-                                            <img class="action-icon" src="{{ asset('icons/lucide/list-checks.png') }}" alt="Receive delivery">
-                                        </button>
-                                    @endif
-                                    @if($canDelete && $isEditable)
-                                        <button class="btn-icon del purchase-order-delete" title="Cancel" data-id="{{ $order->pBestNr }}">
-                                            <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Cancel">
-                                        </button>
-                                    @endif
-                                </div>
-                            </td>
-                        @endif
-                    </tr>
+                @forelse($firstRows as $row)
+                    @include('partials.rows.purchase-orders-row', ['row' => $row])
                 @empty
                     <tr class="table-state-row">
                         <td class="table-state-cell" colspan="{{ $showActions ? 8 : 7 }}">
@@ -127,13 +88,12 @@
                         </td>
                     </tr>
                 @endforelse
-                <tr class="table-state-row" id="purchase-orders-empty-filter-row" hidden>
-                    <td class="table-state-cell" colspan="{{ $showActions ? 8 : 7 }}">
-                        <div class="empty-state">No purchase orders match your search.</div>
-                    </td>
-                </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="list-more">
+            <button class="btn btn-secondary" id="btn-load-more" data-list-more @if(!$meta['hasMore']) hidden @endif>Load more</button>
+            <span class="list-more-status">Showing <span id="list-shown">{{ count($firstRows) }}</span> of <span id="list-total-status">{{ $meta['total'] }}</span></span>
         </div>
     </div>
 </section>
@@ -291,6 +251,6 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/list-sort.js') }}?v={{ filemtime(public_path('js/list-sort.js')) }}"></script>
+    <script src="{{ asset('js/list-loadmore.js') }}?v={{ filemtime(public_path('js/list-loadmore.js')) }}"></script>
     <script src="{{ asset('js/purchase-orders.js') }}?v={{ filemtime(public_path('js/purchase-orders.js')) }}"></script>
 @endpush

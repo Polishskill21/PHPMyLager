@@ -31,9 +31,9 @@
     <div class="page-toolbar warehouse-toolbar">
         <div class="page-search warehouse-search">
             <img class="page-search-icon" src="{{ asset('icons/lucide/search.png') }}" alt="">
-            <input class="form-input page-search-input" id="warehouse-search" type="text" placeholder="Search by ID or name...">
+            <input class="form-input page-search-input" id="warehouse-search" type="text" placeholder="Search by ID or name..." data-list-search>
         </div>
-        <div class="stat-pill">Groups: <span id="warehouse-stat-total">{{ $groups->count() }}</span></div>
+        <div class="stat-pill">Groups: <span id="list-total">{{ $meta['total'] }}</span></div>
         <div class="page-toolbar-spacer"></div>
         @if($canWrite)
             <button class="btn btn-primary" id="btn-add-group">
@@ -45,7 +45,13 @@
 
     <div class="table-shell">
         <div class="table-wrap">
-            <table class="data-table warehouse-table" data-static-sort>
+            <table class="data-table warehouse-table" id="warehouse-table"
+                   data-list-endpoint="/warehouse-groups/page"
+                   data-list-per-page="{{ $meta['perPage'] }}"
+                   data-list-page="{{ $meta['page'] }}"
+                   data-list-has-more="{{ $meta['hasMore'] ? '1' : '0' }}"
+                   data-list-total="{{ $meta['total'] }}"
+                   data-list-empty="No product groups match your search.">
                 <colgroup>
                     <col class="col-id">
                     <col class="col-name">
@@ -63,25 +69,8 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($groups as $group)
-                    <tr class="row-clickable"
-                        data-sort-row
-                        data-group-id="{{ $group->pWgNr }}"
-                        data-group-name="{{ $group->warengruppe ?: ('Group '.$group->pWgNr) }}"
-                        data-sort-id="{{ $group->pWgNr }}"
-                        data-sort-name="{{ $group->warengruppe ?: '' }}">
-                        <td class="cell-id">#{{ $group->pWgNr }}</td>
-                        <td class="cell-name" title="{{ $group->warengruppe }}">{{ $group->warengruppe ?: '—' }}</td>
-                        @if($showActions)
-                            <td class="cell-actions">
-                                <div class="table-actions">
-                                    <button class="btn-icon group-edit" title="Edit" data-id="{{ $group->pWgNr }}" data-name="{{ $group->warengruppe }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
-                                    </button>
-                                </div>
-                            </td>
-                        @endif
-                    </tr>
+                @forelse($firstRows as $row)
+                    @include('partials.rows.warehouse-row', ['row' => $row])
                 @empty
                     <tr class="table-state-row">
                         <td class="table-state-cell" colspan="{{ $colspan }}">
@@ -89,13 +78,12 @@
                         </td>
                     </tr>
                 @endforelse
-                <tr class="table-state-row" id="warehouse-empty-filter-row" hidden>
-                    <td class="table-state-cell" colspan="{{ $colspan }}">
-                        <div class="empty-state">No product groups match your search.</div>
-                    </td>
-                </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="list-more">
+            <button class="btn btn-secondary" id="btn-load-more" data-list-more @if(!$meta['hasMore']) hidden @endif>Load more</button>
+            <span class="list-more-status">Showing <span id="list-shown">{{ count($firstRows) }}</span> of <span id="list-total-status">{{ $meta['total'] }}</span></span>
         </div>
     </div>
 </section>
@@ -153,6 +141,6 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/list-sort.js') }}?v={{ filemtime(public_path('js/list-sort.js')) }}"></script>
+    <script src="{{ asset('js/list-loadmore.js') }}?v={{ filemtime(public_path('js/list-loadmore.js')) }}"></script>
     <script src="{{ asset('js/warehouse.js') }}?v={{ filemtime(public_path('js/warehouse.js')) }}"></script>
 @endpush

@@ -29,10 +29,10 @@
     <div class="page-toolbar customers-toolbar">
         <div class="page-search customers-search">
             <img class="page-search-icon" src="{{ asset('icons/lucide/search.png') }}" alt="">
-            <input id="search" class="form-input page-search-input" type="text" placeholder="Search by ID, name, email, street, city or PLZ…">
+            <input id="search" class="form-input page-search-input" type="text" placeholder="Search by ID, name, email, street, city or PLZ…" data-list-search>
         </div>
 
-        <div class="stat-pill">Customers: <span id="customers-stat-total">{{ $customers->count() }}</span></div>
+        <div class="stat-pill">Customers: <span id="list-total">{{ $meta['total'] }}</span></div>
 
         <div class="page-toolbar-spacer"></div>
 
@@ -46,7 +46,13 @@
 
     <div class="table-shell">
         <div class="table-wrap">
-            <table class="data-table customers-table" id="customers-table" data-static-sort>
+            <table class="data-table customers-table" id="customers-table"
+                   data-list-endpoint="/customers/page"
+                   data-list-per-page="{{ $meta['perPage'] }}"
+                   data-list-page="{{ $meta['page'] }}"
+                   data-list-has-more="{{ $meta['hasMore'] ? '1' : '0' }}"
+                   data-list-total="{{ $meta['total'] }}"
+                   data-list-empty="No customers match your search.">
                 <colgroup>
                     <col class="col-id">
                     <col class="col-name">
@@ -68,45 +74,19 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($customers as $customer)
-                    <tr data-sort-row
-                        data-sort-id="{{ $customer->pKdNr }}"
-                        data-sort-name="{{ $customer->name ?: '' }}"
-                        data-sort-email="{{ $customer->email ?: '' }}"
-                        data-sort-street="{{ $customer->strasse ?: '' }}"
-                        data-sort-city="{{ $customer->ort ?: '' }}"
-                        data-sort-plz="{{ $customer->plz ?: '' }}">
-                        <td class="cell-id">#{{ $customer->pKdNr }}</td>
-                        <td class="cell-name" title="{{ $customer->name }}">{{ $customer->name ?: '—' }}</td>
-                        <td class="cell-muted" title="{{ $customer->email }}">{{ $customer->email ?: '—' }}</td>
-                        <td title="{{ $customer->strasse }}">{{ $customer->strasse ?: '—' }}</td>
-                        <td title="{{ $customer->ort }}">{{ $customer->ort ?: '—' }}</td>
-                        <td class="cell-number">{{ $customer->plz ?: '—' }}</td>
-                        <td class="cell-actions">
-                            <div class="table-actions">
-                                @if($canWrite)
-                                    <button class="btn-icon customer-edit" title="Edit" data-id="{{ $customer->pKdNr }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
-                                    </button>
-                                @endif
-                                @if($canDelete)
-                                    <button class="btn-icon del customer-delete" title="Archive" data-id="{{ $customer->pKdNr }}" data-name="{{ $customer->name }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Archive">
-                                    </button>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
+                @forelse($firstRows as $row)
+                    @include('partials.rows.customers-row', ['row' => $row])
                 @empty
                     <tr class="table-state-row">
                         <td class="table-state-cell" colspan="7"><div class="empty-state">No customers found.</div></td>
                     </tr>
                 @endforelse
-                <tr class="table-state-row" id="customers-empty-filter-row" hidden>
-                    <td class="table-state-cell" colspan="7"><div class="empty-state">No customers match your search.</div></td>
-                </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="list-more">
+            <button class="btn btn-secondary" id="btn-load-more" data-list-more @if(!$meta['hasMore']) hidden @endif>Load more</button>
+            <span class="list-more-status">Showing <span id="list-shown">{{ count($firstRows) }}</span> of <span id="list-total-status">{{ $meta['total'] }}</span></span>
         </div>
     </div>
 </section>
@@ -177,6 +157,6 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/list-sort.js') }}?v={{ filemtime(public_path('js/list-sort.js')) }}"></script>
+    <script src="{{ asset('js/list-loadmore.js') }}?v={{ filemtime(public_path('js/list-loadmore.js')) }}"></script>
     <script src="{{ asset('js/customers.js') }}?v={{ filemtime(public_path('js/customers.js')) }}"></script>
 @endpush

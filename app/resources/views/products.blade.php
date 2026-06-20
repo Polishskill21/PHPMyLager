@@ -16,7 +16,6 @@
 @php
     $canWrite = Auth::user()->canWrite();
     $canDelete = Auth::user()->canDelete();
-    $lowCount = $products->filter(fn ($p) => $p->bestand > 0 && $p->bestand <= $p->meldeBest)->count();
 @endphp
 <section class="list-page products-page">
     <header class="page-header">
@@ -30,11 +29,11 @@
     <div class="page-toolbar products-toolbar">
         <div class="page-search products-search">
             <img class="page-search-icon" src="{{ asset('icons/lucide/search.png') }}" alt="">
-            <input id="search" class="form-input page-search-input" type="text" placeholder="Search by name or ID…">
+            <input id="search" class="form-input page-search-input" type="text" placeholder="Search by name or ID…" data-list-search>
         </div>
 
         <div class="select-wrap filter-select">
-            <select id="filter-stock" class="form-select">
+            <select id="filter-stock" class="form-select" data-list-filter="stock">
                 <option value="all">All stock</option>
                 <option value="ok">In stock</option>
                 <option value="warn">Low stock</option>
@@ -44,7 +43,7 @@
         </div>
 
         <div class="select-wrap filter-select">
-            <select id="filter-wg" class="form-select">
+            <select id="filter-wg" class="form-select" data-list-filter="wg">
                 <option value="all">All groups</option>
                 @foreach($groups as $group)
                     <option value="{{ $group->pWgNr }}">{{ $group->warengruppe ?: ('Group '.$group->pWgNr) }}</option>
@@ -53,7 +52,7 @@
             <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
         </div>
 
-        <div class="stat-pill">Total: <span id="stat-total">{{ $products->count() }}</span></div>
+        <div class="stat-pill">Total: <span id="list-total">{{ $meta['total'] }}</span></div>
         <div class="stat-pill">Low: <span id="stat-low" class="stat-low-value">{{ $lowCount }}</span></div>
 
         <div class="page-toolbar-spacer"></div>
@@ -68,7 +67,13 @@
 
     <div class="table-shell">
         <div class="table-wrap">
-            <table class="data-table products-table" id="products-table" data-static-sort>
+            <table class="data-table products-table" id="products-table"
+                   data-list-endpoint="/products/page"
+                   data-list-per-page="{{ $meta['perPage'] }}"
+                   data-list-page="{{ $meta['page'] }}"
+                   data-list-has-more="{{ $meta['hasMore'] ? '1' : '0' }}"
+                   data-list-total="{{ $meta['total'] }}"
+                   data-list-empty="No products match your filters.">
                 <colgroup>
                     <col class="col-id">
                     <col class="col-name">
@@ -94,66 +99,19 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($products as $product)
-                    @php
-                        $state = $product->bestand == 0 ? 'empty' : ($product->bestand <= $product->meldeBest ? 'warn' : 'ok');
-                        $stockIcon = $state === 'warn' ? '◐' : '●';
-                        $groupName = $product->warengruppe?->warengruppe ?: ($product->fWgNr ?? '—');
-                    @endphp
-                    <tr data-sort-row
-                        data-sort-id="{{ $product->pArtikelNr }}"
-                        data-sort-name="{{ $product->bezeichnung ?: '' }}"
-                        data-sort-group="{{ $groupName }}"
-                        data-sort-buy="{{ $product->ekPreis }}"
-                        data-sort-sell="{{ $product->vkPreis }}"
-                        data-sort-stock="{{ $product->bestand }}"
-                        data-sort-reorder="{{ $product->meldeBest }}"
-                        data-sort-location="{{ $product->lagerplatz ?: '' }}"
-                        data-filter-stock="{{ $state }}"
-                        data-filter-wg="{{ $product->fWgNr }}">
-                        <td class="cell-id">#{{ $product->pArtikelNr }}</td>
-                        <td class="cell-name" title="{{ $product->bezeichnung }}">{{ $product->bezeichnung ?: '—' }}</td>
-                        <td class="cell-muted" title="{{ $groupName }}">{{ $groupName }}</td>
-                        <td class="cell-money">{{ number_format($product->ekPreis, 2) }}</td>
-                        <td class="cell-money">{{ number_format($product->vkPreis, 2) }}</td>
-                        <td class="cell-status"><span class="stock-badge stock-{{ $state }}">{{ $stockIcon }} {{ $product->bestand }}</span></td>
-                        <td class="cell-number">{{ $product->meldeBest }}</td>
-                        <td class="cell-mono" title="{{ $product->lagerplatz }}">{{ $product->lagerplatz ?: '—' }}</td>
-                        <td class="cell-actions">
-                            <div class="table-actions">
-                                @if($canWrite)
-                                    <button class="btn-icon product-edit" title="Edit" data-id="{{ $product->pArtikelNr }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
-                                    </button>
-                                @endif
-                                @if($canDelete)
-                                    <button class="btn-icon product-adjust" title="Adjust stock" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}" data-stock="{{ $product->bestand }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/list-checks.png') }}" alt="Adjust stock">
-                                    </button>
-                                @endif
-                                @if($product->has_stock_history)
-                                    <button class="btn-icon product-history" title="Stock history" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/clipboard-clock.png') }}" alt="Stock history">
-                                    </button>
-                                @endif
-                                @if($canDelete)
-                                    <button class="btn-icon del product-delete" title="Discontinue" data-id="{{ $product->pArtikelNr }}" data-name="{{ $product->bezeichnung }}">
-                                        <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Discontinue">
-                                    </button>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
+                @forelse($firstRows as $row)
+                    @include('partials.rows.products-row', ['row' => $row])
                 @empty
                     <tr class="table-state-row">
                         <td class="table-state-cell" colspan="9"><div class="empty-state">No products found.</div></td>
                     </tr>
                 @endforelse
-                <tr class="table-state-row" id="products-empty-filter-row" hidden>
-                    <td class="table-state-cell" colspan="9"><div class="empty-state">No products match your filters.</div></td>
-                </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="list-more">
+            <button class="btn btn-secondary" id="btn-load-more" data-list-more @if(!$meta['hasMore']) hidden @endif>Load more</button>
+            <span class="list-more-status">Showing <span id="list-shown">{{ count($firstRows) }}</span> of <span id="list-total-status">{{ $meta['total'] }}</span></span>
         </div>
     </div>
 </section>
@@ -385,6 +343,6 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/list-sort.js') }}?v={{ filemtime(public_path('js/list-sort.js')) }}"></script>
+    <script src="{{ asset('js/list-loadmore.js') }}?v={{ filemtime(public_path('js/list-loadmore.js')) }}"></script>
     <script src="{{ asset('js/products.js') }}?v={{ filemtime(public_path('js/products.js')) }}"></script>
 @endpush
