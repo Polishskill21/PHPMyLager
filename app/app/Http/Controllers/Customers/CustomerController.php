@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Customers;
 
 use App\Models\Customers\Customer;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,34 @@ class CustomerController extends Controller
         );
 
         return $this->ok($customers);
+    }
+
+    /**
+     * GET /customers/page
+     * One load-more chunk of the customers list, with server-side search/sort.
+     */
+    public function page(Request $request): JsonResponse
+    {
+        return $this->renderListChunk(
+            DomainCache::CUSTOMERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (Customer $c) => $this->formatRow($c),
+            'partials.rows.customers-row',
+            $request,
+        );
+    }
+
+    /** First chunk for the server-rendered /customers page. */
+    public function firstChunk(Request $request): array
+    {
+        return $this->listChunkData(
+            DomainCache::CUSTOMERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (Customer $c) => $this->formatRow($c),
+            $request,
+        );
     }
 
     /**
@@ -111,6 +140,52 @@ class CustomerController extends Controller
             report($e);
             return $this->serverError();
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Browse / list helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private const SORTABLE = [
+        'id'     => Customer::COL_ID,
+        'name'   => Customer::COL_NAME,
+        'email'  => Customer::COL_EMAIL,
+        'street' => Customer::COL_STRASSE,
+        'city'   => Customer::COL_ORT,
+        'plz'    => Customer::COL_PLZ,
+    ];
+
+    private function browseQuery(Request $request): Builder
+    {
+        $query = Customer::query();
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $like = "%{$search}%";
+            $query->where(fn (Builder $q) => $q
+                ->where(Customer::COL_ID, $search)
+                ->orWhere(Customer::COL_NAME, 'like', $like)
+                ->orWhere(Customer::COL_EMAIL, 'like', $like)
+                ->orWhere(Customer::COL_STRASSE, 'like', $like)
+                ->orWhere(Customer::COL_ORT, 'like', $like)
+                ->orWhere(Customer::COL_PLZ, 'like', $like));
+        }
+
+        $sort = (string) $request->query('sort');
+        $query->orderBy(self::SORTABLE[$sort] ?? Customer::COL_ID, $this->sortDirection($request));
+
+        return $query;
+    }
+
+    private function formatRow(Customer $customer): array
+    {
+        return [
+            'id'     => $customer->{Customer::COL_ID},
+            'name'   => $customer->{Customer::COL_NAME},
+            'email'  => $customer->{Customer::COL_EMAIL},
+            'street' => $customer->{Customer::COL_STRASSE},
+            'city'   => $customer->{Customer::COL_ORT},
+            'plz'    => $customer->{Customer::COL_PLZ},
+        ];
     }
 
     // ─────────────────────────────────────────────────────────────────────────

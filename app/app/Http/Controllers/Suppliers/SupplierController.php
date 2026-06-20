@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Suppliers;
 
 use App\Models\Suppliers\Supplier;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,34 @@ class SupplierController extends Controller
     public function show(Supplier $supplier): JsonResponse
     {
         return $this->ok($this->formatSupplier($supplier));
+    }
+
+    /**
+     * GET /suppliers/page
+     * One load-more chunk of the suppliers list, with server-side search/sort.
+     */
+    public function page(Request $request): JsonResponse
+    {
+        return $this->renderListChunk(
+            DomainCache::SUPPLIERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (Supplier $s) => $this->formatRow($s),
+            'partials.rows.suppliers-row',
+            $request,
+        );
+    }
+
+    /** First chunk for the server-rendered /suppliers page. */
+    public function firstChunk(Request $request): array
+    {
+        return $this->listChunkData(
+            DomainCache::SUPPLIERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (Supplier $s) => $this->formatRow($s),
+            $request,
+        );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -95,6 +124,52 @@ class SupplierController extends Controller
         }
     }
 
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Browse / list helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private const SORTABLE = [
+        'id'     => Supplier::COL_ID,
+        'name'   => Supplier::COL_NAME,
+        'email'  => Supplier::COL_EMAIL,
+        'street' => Supplier::COL_STRASSE,
+        'city'   => Supplier::COL_ORT,
+        'plz'    => Supplier::COL_PLZ,
+    ];
+
+    private function browseQuery(Request $request): Builder
+    {
+        $query = Supplier::query();
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $like = "%{$search}%";
+            $query->where(fn (Builder $q) => $q
+                ->where(Supplier::COL_ID, $search)
+                ->orWhere(Supplier::COL_NAME, 'like', $like)
+                ->orWhere(Supplier::COL_EMAIL, 'like', $like)
+                ->orWhere(Supplier::COL_STRASSE, 'like', $like)
+                ->orWhere(Supplier::COL_ORT, 'like', $like)
+                ->orWhere(Supplier::COL_PLZ, 'like', $like));
+        }
+
+        $sort = (string) $request->query('sort');
+        $query->orderBy(self::SORTABLE[$sort] ?? Supplier::COL_ID, $this->sortDirection($request));
+
+        return $query;
+    }
+
+    private function formatRow(Supplier $supplier): array
+    {
+        return [
+            'id'     => $supplier->{Supplier::COL_ID},
+            'name'   => $supplier->{Supplier::COL_NAME},
+            'email'  => $supplier->{Supplier::COL_EMAIL},
+            'street' => $supplier->{Supplier::COL_STRASSE},
+            'city'   => $supplier->{Supplier::COL_ORT},
+            'plz'    => $supplier->{Supplier::COL_PLZ},
+        ];
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Validation rule sets

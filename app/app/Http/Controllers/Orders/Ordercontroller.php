@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Orders;
 use App\Models\Orders\Order;
 use App\Models\Orders\OrderItem;
 use App\Models\Products\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -34,6 +35,34 @@ class OrderController extends Controller
         );
 
         return $this->ok($orders);
+    }
+
+    /**
+     * GET /orders/page
+     * One load-more chunk of the orders list, with server-side search/sort.
+     */
+    public function page(Request $request): JsonResponse
+    {
+        return $this->renderListChunk(
+            DomainCache::ORDERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (Order $o) => $this->formatRow($o),
+            'partials.rows.orders-row',
+            $request,
+        );
+    }
+
+    /** First chunk for the server-rendered /orders page. */
+    public function firstChunk(Request $request): array
+    {
+        return $this->listChunkData(
+            DomainCache::ORDERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (Order $o) => $this->formatRow($o),
+            $request,
+        );
     }
 
     /**
@@ -248,6 +277,76 @@ class OrderController extends Controller
             report($e);
             return $this->serverError();
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Browse / list helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Base browse query with eager loads, server-side search and sort.
+     * Derived columns (customer name, item count, total) sort via correlated
+     * subqueries so pagination stays a simple LIMIT/OFFSET.
+     */
+    private function browseQuery(Request $request): Builder
+    {
+        $query = Order::query()->with(['customer', 'items']);
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $query->where(function (Builder $q) use ($search) {
+                $q->where(Order::COL_ID, $search)
+                  ->orWhere(Order::COL_F_KD_NR, $search)
+                  ->orWhereHas('customer', fn (Builder $c) => $c->where(Customer::COL_NAME, 'like', "%{$search}%"));
+            });
+        }
+
+        $dir = $this->sortDirection($request);
+        switch ($request->query('sort')) {
+            case 'id':       $query->orderBy(Order::COL_ID, $dir); break;
+            case 'created':  $query->orderBy(Order::COL_AUF_DAT, $dir); break;
+            case 'delivery': $query->orderBy(Order::COL_AUF_TERMIN, $dir); break;
+            case 'customer':
+                $query->orderBy(
+                    Customer::query()->select(Customer::COL_NAME)
+                        ->whereColumn(Customer::COL_ID, Order::TABLE . '.' . Order::COL_F_KD_NR),
+                    $dir
+                );
+                break;
+            case 'items':
+                $query->orderBy(
+                    OrderItem::query()->selectRaw('COUNT(*)')
+                        ->whereColumn(OrderItem::COL_F_AUF_NR, Order::TABLE . '.' . Order::COL_ID),
+                    $dir
+                );
+                break;
+            case 'total':
+                $query->orderBy(
+                    OrderItem::query()->selectRaw('COALESCE(SUM(' . OrderItem::COL_AUF_MENGE . ' * ' . OrderItem::COL_KAUF_PREIS . '), 0)')
+                        ->whereColumn(OrderItem::COL_F_AUF_NR, Order::TABLE . '.' . Order::COL_ID),
+                    $dir
+                );
+                break;
+            default:
+                $query->orderByDesc(Order::COL_AUF_DAT);
+        }
+
+        return $query;
+    }
+
+    /** Map an order to the array consumed by partials/rows/orders-row. */
+    private function formatRow(Order $order): array
+    {
+        $items = $order->items;
+        $total = $items->sum(fn (OrderItem $i) => (int) $i->{OrderItem::COL_AUF_MENGE} * (float) $i->{OrderItem::COL_KAUF_PREIS});
+
+        return [
+            'id'         => $order->{Order::COL_ID},
+            'customer'   => $order->customer?->{Customer::COL_NAME} ?: 'Unknown customer',
+            'created'    => $order->{Order::COL_AUF_DAT} ? substr((string) $order->{Order::COL_AUF_DAT}, 0, 10) : '',
+            'delivery'   => $order->{Order::COL_AUF_TERMIN} ? substr((string) $order->{Order::COL_AUF_TERMIN}, 0, 10) : '',
+            'item_count' => $items->count(),
+            'total'      => round($total, 2),
+        ];
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -89,6 +89,10 @@ class Product extends Model
 
     public function getHasStockHistoryAttribute(): bool
     {
+        if (array_key_exists('inventory_logs_exists', $this->attributes)) {
+            return (bool) $this->attributes['inventory_logs_exists'];
+        }
+
         return $this->inventoryLogs()->exists();
     }
 

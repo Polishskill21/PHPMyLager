@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Products;
 
 use App\Models\Products\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,9 +40,49 @@ class ProductController extends Controller
      */
     public function index(): JsonResponse
     {
-        $products = DomainCache::remember(DomainCache::PRODUCTS, 'products:index', fn () => Product::all());
+        // Eager-load warengruppe + the stock-history existence flag so serialising
+        // the collection (which appends warengruppe_name / has_stock_history) does
+        // not fire one query per product.
+        $products = DomainCache::remember(
+            DomainCache::PRODUCTS,
+            'products:index',
+            fn () => Product::with('warengruppe')->withExists('inventoryLogs')->get()
+        );
 
         return $this->ok($products, 'Products retrieved successfully.');
+    }
+
+    /**
+     * GET /products/page
+     * One load-more chunk (rendered rows + meta) for the products list, with
+     * server-side search / stock filter / warehouse-group filter / sort.
+     */
+    public function page(Request $request): JsonResponse
+    {
+        return $this->renderListChunk(
+            DomainCache::PRODUCTS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request, ['stock', 'wg']),
+            fn (Product $p) => $this->formatRow($p),
+            'partials.rows.products-row',
+            $request,
+        );
+    }
+
+    /**
+     * First chunk for the server-rendered /products page (cached default view).
+     *
+     * @return array{rows: array<int, array>, meta: array}
+     */
+    public function firstChunk(Request $request): array
+    {
+        return $this->listChunkData(
+            DomainCache::PRODUCTS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request, ['stock', 'wg']),
+            fn (Product $p) => $this->formatRow($p),
+            $request,
+        );
     }
 
     /**
@@ -200,6 +241,81 @@ class ProductController extends Controller
     }
 
 
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Browse / list helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Sortable columns exposed to the client, keyed by their data-sort value. */
+    private const SORTABLE = [
+        'id'       => Product::COL_ID,
+        'name'     => Product::COL_NAME,
+        'buy'      => Product::COL_EK_PREIS,
+        'sell'     => Product::COL_VK_PREIS,
+        'stock'    => Product::COL_BESTAND,
+        'reorder'  => Product::COL_MELDE_BEST,
+        'location' => Product::COL_LAGERPLATZ,
+    ];
+
+    /**
+     * Base browse query with eager loads, server-side search/filter, and sort.
+     */
+    private function browseQuery(Request $request): Builder
+    {
+        $query = Product::query()
+            ->with('warengruppe')
+            ->withExists('inventoryLogs');
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $query->where(function (Builder $q) use ($search) {
+                $q->where(Product::COL_NAME, 'like', "%{$search}%")
+                  ->orWhere(Product::COL_ID, $search);
+            });
+        }
+
+        switch ($request->query('stock')) {
+            case 'empty':
+                $query->where(Product::COL_BESTAND, 0);
+                break;
+            case 'warn':
+                $query->where(Product::COL_BESTAND, '>', 0)
+                      ->whereColumn(Product::COL_BESTAND, '<=', Product::COL_MELDE_BEST);
+                break;
+            case 'ok':
+                $query->whereColumn(Product::COL_BESTAND, '>', Product::COL_MELDE_BEST);
+                break;
+        }
+
+        if ($wg = $request->query('wg')) {
+            $query->where(Product::COL_WG_ID, $wg);
+        }
+
+        $sort = (string) $request->query('sort');
+        $query->orderBy(self::SORTABLE[$sort] ?? Product::COL_ID, $this->sortDirection($request));
+
+        return $query;
+    }
+
+    /** Map a product to the array consumed by partials/rows/products-row. */
+    private function formatRow(Product $product): array
+    {
+        $bestand = (int) $product->{Product::COL_BESTAND};
+        $melde   = (int) $product->{Product::COL_MELDE_BEST};
+        $state   = $bestand === 0 ? 'empty' : ($bestand <= $melde ? 'warn' : 'ok');
+
+        return [
+            'id'          => $product->{Product::COL_ID},
+            'name'        => $product->{Product::COL_NAME},
+            'group_name'  => $product->warengruppe_name ?: ($product->{Product::COL_WG_ID} ?? '—'),
+            'ek'          => (float) $product->{Product::COL_EK_PREIS},
+            'vk'          => (float) $product->{Product::COL_VK_PREIS},
+            'bestand'     => $bestand,
+            'melde'       => $melde,
+            'state'       => $state,
+            'lagerplatz'  => $product->{Product::COL_LAGERPLATZ},
+            'has_history' => (bool) $product->has_stock_history,
+        ];
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Validation rule sets

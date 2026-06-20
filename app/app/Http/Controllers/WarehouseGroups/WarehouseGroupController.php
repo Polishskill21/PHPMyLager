@@ -4,6 +4,7 @@ namespace App\Http\Controllers\WarehouseGroups;
 
 use App\Models\WarehouseGroups\WarehouseGroup;
 use App\Models\Products\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,35 @@ class WarehouseGroupController extends Controller
         );
 
         return $this->ok($groups);
+    }
+
+    /**
+     * GET /warehouse-groups/page
+     * One load-more chunk of the product-groups list, with server-side
+     * search/sort.
+     */
+    public function page(Request $request): JsonResponse
+    {
+        return $this->renderListChunk(
+            DomainCache::WAREHOUSE_GROUPS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (WarehouseGroup $g) => $this->formatRow($g),
+            'partials.rows.warehouse-row',
+            $request,
+        );
+    }
+
+    /** First chunk for the server-rendered /warehouse page. */
+    public function firstChunk(Request $request): array
+    {
+        return $this->listChunkData(
+            DomainCache::WAREHOUSE_GROUPS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (WarehouseGroup $g) => $this->formatRow($g),
+            $request,
+        );
     }
 
     /**
@@ -58,7 +88,8 @@ class WarehouseGroupController extends Controller
         $products = DomainCache::remember(
             DomainCache::PRODUCTS,
             "products:by-group:{$id}",
-            fn () => Product::where(Product::COL_WG_ID, $id)->get()
+            fn () => Product::with('warengruppe')->withExists('inventoryLogs')
+                ->where(Product::COL_WG_ID, $id)->get()
         );
 
         return $this->ok($products);
@@ -143,6 +174,34 @@ class WarehouseGroupController extends Controller
     //         return $this->serverError();
     //     }
     // }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Browse / list helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function browseQuery(Request $request): Builder
+    {
+        $query = WarehouseGroup::query();
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $query->where(fn (Builder $q) => $q
+                ->where(WarehouseGroup::COL_ID, $search)
+                ->orWhere(WarehouseGroup::COL_NAME, 'like', "%{$search}%"));
+        }
+
+        $column = $request->query('sort') === 'name' ? WarehouseGroup::COL_NAME : WarehouseGroup::COL_ID;
+        $query->orderBy($column, $this->sortDirection($request));
+
+        return $query;
+    }
+
+    private function formatRow(WarehouseGroup $group): array
+    {
+        return [
+            'id'   => $group->{WarehouseGroup::COL_ID},
+            'name' => $group->{WarehouseGroup::COL_NAME},
+        ];
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Validation
