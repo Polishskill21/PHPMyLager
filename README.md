@@ -34,9 +34,6 @@ To protect the application against brute-force attempts and request floods, the 
 The limiters are defined in `app/app/Providers/AppServiceProvider.php`
 
 ### Optionale Funktionen
-- [ ] Optionale Funktion 1
-- [ ] Optionale Funktion 2
-- [ ] Optionale Funktion 3
 
 ### Nicht umgesetzt / bewusst ausgelassen
 - [x] No standalone product group deletion
