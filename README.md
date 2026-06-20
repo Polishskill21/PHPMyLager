@@ -79,25 +79,30 @@ The limiters are defined in `app/app/Providers/AppServiceProvider.php`
    cd your-repo
    ```
 
-2. **Generate a Secure App Encryption Key** Run this command once to generate a secure, cryptographically isolated `APP_KEY`:  
+2. **Initialize Environment Configuration** Copy the production environment example file to create your active production configuration file:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Generate a Secure App Encryption Key** Run this command once to generate a secure, cryptographically isolated `APP_KEY`:  
    ```bash
    docker run --rm php:8.4-fpm-alpine php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
    ```
-   Copy the output string and paste it into your production `.env` file as `APP_KEY=base64:...` (make sure there are no spaces around the `=` sign).
+   Copy the output string and paste it into your production `.env` file as `APP_KEY=base64:AsHgqwr...` (make sure there are no spaces around the `=` sign).
 
-3. **Update Production Credentials** Change all default database passwords, usernames, and secret variables to strong, unique values.
+4. **Update Production Credentials** Change all default database passwords, usernames, and secret variables to strong, unique values.
    > ⚠️ **Warning:** If you skip modifying the passwords, the system will default to using `"password"`.
 
-4. **Build and Start Production Services** Launch the production container configuration:  
+5. **Build and Start Production Services** Launch the production container configuration:  
    ```bash
    docker compose -f docker-compose.prod.yaml up --build -d
    ```
 
-5. **Run Production Migrations Safely** Apply your database schema and initial data seeds using the safe production flags:  
+6. **Run Production Migrations Safely** Apply your database schema and initial data seeds using the safe production flags:  
    ```bash
    docker exec -it phpmylager_app_prod php artisan migrate --force && docker exec -it phpmylager_app_prod php artisan db:seed --force
    ```
-6. **Access the Application** Open your browser and navigate to: **[http://localhost:8000](http://localhost:8000)**
+7. **Access the Application** Open your browser and navigate to: **[http://localhost:8000](http://localhost:8000)**
 
 While running `docker compose -f docker-compose.prod.yaml up --build -d`, the following services are launched automatically within the isolated `phpmylager_net` network:
 
@@ -230,7 +235,7 @@ Verifying Core API Endpoints and those API Endpoint test also include RBAC valid
 
 ## Bekannte Einschränkungen
 - Welche Punkte sind noch offen?
-   - **Session-based API:** The API is authenticated via the session cookie (no Sanctum/token layer), so it is intended for the bundled same-origin frontend only — there is no stateless token API for external clients.
+   - **Session-based API:** The API is authenticated via the session cookie (no Sanctum/token layer) there is no stateless token API for external clients.
    - **No standalone product group deletion:** Warehouse-group deletion is intentionally disabled to protect referential integrity (products reference their group).
    - **Database-backed cache:** Caching uses the database store (no Redis). Only the default, unfiltered list view is cached; any search/filter/sort runs live, and writes flush the affected domain.
 
