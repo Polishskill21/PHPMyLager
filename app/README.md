@@ -103,11 +103,63 @@ All API routes are protected. Access is granted based on the user's assigned rol
 
 ---
 
+### List Pagination — `/page` (load-more chunks)
+
+The list pages (Products, Orders, Purchase Orders, Customers, Suppliers, Product
+Groups) are not loaded all at once. Each resource exposes a **`GET /api/<resource>/page`**
+endpoint that returns **one chunk** of the list (default **50 rows**) as ready-to-insert
+table rows, plus pagination metadata. This is what powers the "Load more" button and the
+server-side search / filter / sort on every list.
+
+**How it fits together (SSR first chunk + API load-more):**
+
+- When you open a list page (e.g. `GET /products`), the server renders **only the first
+  chunk** server-side. The controller method behind this is `firstChunk()` — it is *not*
+  an HTTP endpoint, it just returns the page-1 rows + `meta` that the Blade view prints.
+- Every chunk after the first (and every search/filter/sort) is fetched by the frontend
+  (`public/js/list-loadmore.js`) from the **`/page`** endpoint and appended to the table.
+- The first chunk and the `/page` endpoint share the **same query + cache key**, so the
+  first paint and an API page-1 request hit the same cached data.
+
+**Query parameters** (all optional):
+
+| Param | Meaning |
+| :--- | :--- |
+| `page` | 1-based chunk number (default `1`). |
+| `search` | Free-text search across that resource's key columns. |
+| `sort` | Column key to sort by (e.g. `id`, `name`, `created`, `total`). Unknown keys fall back to the default order. |
+| `dir` | `asc` (default) or `desc`. |
+| `stock`, `wg` | **Products only** — stock-state filter (`ok`/`warn`/`empty`) and warehouse-group filter. |
+
+**Response shape** — `data.html` is the rendered `<tr>…</tr>` rows for the chunk
+(role-aware action buttons are rendered per request), `data.meta` drives the counter and
+the "Load more" button:
+
+```json
+{
+  "data": {
+    "html": "<tr data-row>…</tr><tr data-row>…</tr>",
+    "meta": { "page": 1, "perPage": 50, "total": 1240, "hasMore": true }
+  },
+  "message": ""
+}
+```
+
+**Caching:** the **default view** (no search/filter/sort) is cached per page via
+`DomainCache` on the `database` cache store, and the total count is cached once. Any write
+to that resource bumps the domain's cache version (`DomainCache::flush`), so every cached
+chunk is invalidated at the next request. Searched/filtered/sorted views run live (they are
+already cheap under the `LIMIT`). The rendered HTML itself is never cached — only the read
+data — so role-gated buttons always reflect the current user.
+
+---
+
 ### Product Endpoints (Produkte)
 
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
-| **GET** | `/api/products` | List all active products | `viewer` |
+| **GET** | `/api/products` | List all active products (full, used by dropdown lookups) | `viewer` |
+| **GET** | `/api/products/page` | One load-more chunk with search/filter/sort (see [List Pagination](#list-pagination--page-load-more-chunks)) | `viewer` |
 | **GET** | `/api/products/{id}` | View a specific product | `viewer` |
 | **GET** | `/api/products/{id}/stock-history` | View audit trail of manual stock adjustments | `viewer` |
 | **POST** | `/api/products` | Create a new product | `writer` |
@@ -284,6 +336,7 @@ Soft-deletes the product. The record is retained in the database and still appea
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
 | **GET** | `/api/warehouse-groups` | List all warehouse groups | `viewer` |
+| **GET** | `/api/warehouse-groups/page` | One load-more chunk with search/sort (see [List Pagination](#list-pagination--page-load-more-chunks)) | `viewer` |
 | **GET** | `/api/warehouse-groups/{id}` | View a specific warehouse group | `viewer` |
 | **GET** | `/api/warehouse-groups/{id}/products` | List all products to a specific warehouse group | `viewer` |
 | **POST** | `/api/warehouse-groups` | Create a new warehouse group | `writer` |
@@ -370,6 +423,7 @@ Soft-deletes the product. The record is retained in the database and still appea
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
 | **GET** | `/api/customers` | List all active customers | `all roles` |
+| **GET** | `/api/customers/page` | One load-more chunk with search/sort (see [List Pagination](#list-pagination--page-load-more-chunks)) | `all roles` |
 | **GET** | `/api/customers/{id}` | View a specific customer | `all roles` |
 | **POST** | `/api/customers` | Create a new customer | `admin, writer` |
 | **PUT** | `/api/customers/{id}` | Update an existing customer | `admin, writer` |
@@ -494,6 +548,7 @@ Suppliers represent the wholesale vendors and manufacturers that fulfill your in
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
 | **GET** | `/api/suppliers` | List all registered suppliers | `viewer` |
+| **GET** | `/api/suppliers/page` | One load-more chunk with search/sort (see [List Pagination](#list-pagination--page-load-more-chunks)) | `viewer` |
 | **GET** | `/api/suppliers/{id}` | View a specific supplier profile | `viewer` |
 | **POST** | `/api/suppliers` | Register a new supplier | `writer` |
 | **PUT** | `/api/suppliers/{id}` | Update supplier contact details | `writer` |
@@ -598,6 +653,7 @@ Outbound orders **decrease** the warehouse stock levels when created.
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
 | **GET** | `/api/orders` | List all orders | `viewer` |
+| **GET** | `/api/orders/page` | One load-more chunk with search/sort (see [List Pagination](#list-pagination--page-load-more-chunks)) | `viewer` |
 | **GET** | `/api/orders/{id}` | View a specific order | `viewer` |
 | **POST** | `/api/orders` | Create a new order | `writer` |
 | **PUT** | `/api/orders/{id}` | Update an order (requires full item list) | `writer` |
@@ -782,6 +838,7 @@ Purchase orders manage stock restocking. Stock is **only increased** when a deli
 | Method | Path | Action | Min. Role |
 | :--- | :--- | :--- | :--- |
 | **GET** | `/api/purchase-orders` | List all supplier orders | `viewer` |
+| **GET** | `/api/purchase-orders/page` | One load-more chunk with search/sort (see [List Pagination](#list-pagination--page-load-more-chunks)) | `viewer` |
 | **GET** | `/api/purchase-orders/{id}` | View a specific supplier order | `viewer` |
 | **POST** | `/api/purchase-orders` | Draft a new purchase order | `writer` |
 | **PUT** | `/api/purchase-orders/{id}` | Update draft/sent order | `writer` |
