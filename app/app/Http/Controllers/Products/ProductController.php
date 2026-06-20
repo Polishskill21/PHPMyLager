@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Products;
 
 use App\Models\Products\Product;
+use App\Models\WarehouseGroups\WarehouseGroup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -290,8 +291,21 @@ class ProductController extends Controller
             $query->where(Product::COL_WG_ID, $wg);
         }
 
+        $dir  = $this->sortDirection($request);
         $sort = (string) $request->query('sort');
-        $query->orderBy(self::SORTABLE[$sort] ?? Product::COL_ID, $this->sortDirection($request));
+
+        if ($sort === 'group') {
+            // Group name lives on the related warengruppe table — sort via a
+            // correlated subquery so pagination stays a plain LIMIT/OFFSET.
+            $query->orderBy(
+                WarehouseGroup::query()
+                    ->select(WarehouseGroup::COL_NAME)
+                    ->whereColumn(WarehouseGroup::COL_ID, Product::TABLE . '.' . Product::COL_WG_ID),
+                $dir
+            );
+        } else {
+            $query->orderBy(self::SORTABLE[$sort] ?? Product::COL_ID, $dir);
+        }
 
         return $query;
     }
