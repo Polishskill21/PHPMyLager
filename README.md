@@ -244,7 +244,7 @@ Verifying Core API Endpoints and those API Endpoint test also include RBAC valid
    - **Pagination:** List pages use offset-based "load more" rather than cursor pagination.
 
 - Was würde man in einer nächsten Version verbessern?
-   - **Next version:** Add an orchestration layer such as Kubernetes for cloud deployment. Add the possibility for API token authentication.
+   - **Next version:** Implement Kubernetes orchestration for seamless cloud deployment. Add a token-authenticated API endpoint to allow automated, remote order placement from external sources.
 
 ## Contributors
 <!--
