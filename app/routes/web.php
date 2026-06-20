@@ -1,13 +1,18 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
-use App\Models\PurchaseOrders\PurchaseOrder;
-use App\Models\Suppliers\Supplier;
+use App\Http\Controllers\Products\ProductController;
+use App\Http\Controllers\Orders\Ordercontroller;
+use App\Http\Controllers\Customers\CustomerController;
+use App\Http\Controllers\Suppliers\SupplierController;
+use App\Http\Controllers\PurchaseOrders\PurchaseOrderController;
+use App\Http\Controllers\WarehouseGroups\WarehouseGroupController;
 use App\Models\WarehouseGroups\WarehouseGroup;
-use App\Models\Customers\Customer;
 use App\Models\Products\Product;
-use App\Models\Orders\Order;
+use App\Models\Orders\OrderItem;
+use App\Support\DomainCache;
 
 // Redirect root to login
 Route::get('/', fn() => redirect()->route('login'));
@@ -21,39 +26,72 @@ Route::middleware('guest')->group(function () {
 // Protected routes (must be logged in)
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard',  fn() => view('dashboard'))->name('dashboard');
-    Route::get('/products', function () {
+    Route::get('/products', function (Request $request) {
+        $chunk = app(ProductController::class)->firstChunk($request);
+
         return view('products', [
-            'products' => Product::with('warengruppe')->orderBy('pArtikelNr')->get(),
-            'groups'   => WarehouseGroup::orderBy('pWgNr')->get(),
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
+            'groups'    => WarehouseGroup::orderBy('pWgNr')->get(),
+            'lowCount'  => DomainCache::remember(
+                DomainCache::PRODUCTS,
+                'products:low-count',
+                fn () => Product::where(Product::COL_BESTAND, '>', 0)
+                    ->whereColumn(Product::COL_BESTAND, '<=', Product::COL_MELDE_BEST)
+                    ->count()
+            ),
         ]);
     })->name('products');
 
-    Route::get('/orders', function () {
+    Route::get('/orders', function (Request $request) {
+        $chunk = app(Ordercontroller::class)->firstChunk($request);
+
         return view('orders', [
-            'orders' => Order::with(['customer', 'items'])->orderByDesc('aufDat')->get(),
+            'firstRows'      => $chunk['rows'],
+            'meta'           => $chunk['meta'],
+            'ordersTotalEur' => DomainCache::remember(
+                DomainCache::ORDERS,
+                'orders:total-eur',
+                fn () => (float) OrderItem::query()
+                    ->selectRaw('COALESCE(SUM(' . OrderItem::COL_AUF_MENGE . ' * ' . OrderItem::COL_KAUF_PREIS . '), 0) as total')
+                    ->value('total')
+            ),
         ]);
     })->name('orders');
 
-    Route::get('/customers', function () {
+    Route::get('/customers', function (Request $request) {
+        $chunk = app(CustomerController::class)->firstChunk($request);
+
         return view('customers', [
-            'customers' => Customer::orderBy('pKdNr')->get(),
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
         ]);
     })->name('customers');
-    Route::get('/warehouse', function () {
+
+    Route::get('/warehouse', function (Request $request) {
+        $chunk = app(WarehouseGroupController::class)->firstChunk($request);
+
         return view('warehouse', [
-            'groups' => WarehouseGroup::orderBy('pWgNr')->get(),
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
         ]);
     })->name('warehouse');
 
-    Route::get('/purchase-orders', function () {
+    Route::get('/purchase-orders', function (Request $request) {
+        $chunk = app(PurchaseOrderController::class)->firstChunk($request);
+
         return view('purchase-orders', [
-            'purchaseOrders' => PurchaseOrder::with('supplier', 'items')->orderByDesc('bestDat')->get(),
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
         ]);
     })->name('purchase-orders');
 
-    Route::get('/suppliers', function () {
+    Route::get('/suppliers', function (Request $request) {
+        $chunk = app(SupplierController::class)->firstChunk($request);
+
         return view('suppliers', [
-            'suppliers' => Supplier::orderBy('pLiefNr')->get(),
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
         ]);
     })->name('suppliers');
 
