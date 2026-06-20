@@ -16,23 +16,29 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // All roles can read
     Route::get('products',                     [ProductController::class, 'index'])->name('products.index');
+    Route::get('products/page',                [ProductController::class, 'page'])->name('products.page');
     Route::get('products/{product}',           [ProductController::class, 'show'])->name('products.show');
     Route::get('products/{product}/stock-history', [ProductController::class, 'stockHistory']);
 
     Route::get('warehouse-groups',             [WarehouseGroupController::class, 'index'])->name('warehouse-groups.index');
+    Route::get('warehouse-groups/page',        [WarehouseGroupController::class, 'page'])->name('warehouse-groups.page');
     Route::get('warehouse-groups/{id}',        [WarehouseGroupController::class, 'show'])->name('warehouse-groups.show');
     Route::get('warehouse-groups/{id}/products', [WarehouseGroupController::class, 'products']);
 
     Route::get('orders',                       [OrderController::class, 'index'])->name('orders.index');
+    Route::get('orders/page',                  [OrderController::class, 'page'])->name('orders.page');
     Route::get('orders/{order}',               [OrderController::class, 'show'])->name('orders.show');
 
     Route::get('customers',                    [CustomerController::class, 'index'])->name('customers.index');
+    Route::get('customers/page',               [CustomerController::class, 'page'])->name('customers.page');
     Route::get('customers/{customer}',         [CustomerController::class, 'show'])->name('customers.show');
 
     Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
+    Route::get('purchase-orders/page', [PurchaseOrderController::class, 'page'])->name('purchase-orders.page');
     Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->name('purchase-orders.show');
 
     Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+    Route::get('suppliers/page', [SupplierController::class, 'page'])->name('suppliers.page');
     Route::get('suppliers/{supplier}', [SupplierController::class, 'show'])->name('suppliers.show');
 
     // Admin + writer can create and update
