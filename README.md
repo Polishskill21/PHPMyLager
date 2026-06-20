@@ -22,6 +22,17 @@ Access to the features listed above is strictly governed by the assigned user ro
 * **Writer:** Authorized to view, create, and update records (C, R, U).
 * **Viewer:** Restricted to read-only access across the entire system (R).
 
+#### Rate Limiting
+To protect the application against brute-force attempts and request floods, the routes are rate limited. Limits are keyed per authenticated user (falling back to the client IP for guests), so one user's activity never throttles another. When a limit is exceeded the server responds with HTTP `429 Too Many Requests` — a JSON message for API calls, a styled error page for browser requests — including the standard `Retry-After` / `X-RateLimit-*` headers.
+
+| Scope | Limit | Keyed by | Applies to |
+| :--- | :---: | :--- | :--- |
+| **API** | 120 req / min | User ID (or IP for guests) | All authenticated `/api/*` endpoints |
+| **Login** | 5 attempts / min | Email + IP | `POST /login` (brute-force guard) |
+| **Status** | 30 req / min | IP | Public `GET /api/status` health check |
+
+The limiters are defined in `app/app/Providers/AppServiceProvider.php`
+
 ### Optionale Funktionen
 - [ ] Optionale Funktion 1
 - [ ] Optionale Funktion 2
