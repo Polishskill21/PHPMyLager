@@ -36,7 +36,7 @@ The limiters are defined in `app/app/Providers/AppServiceProvider.php`
 ### Optionale Funktionen
 
 ### Nicht umgesetzt / bewusst ausgelassen
-- [x] No standalone product group deletion
+- [x] No standalone warehouse group deletion
 
 ## Eingesetzte Technologien
 - Frontend: Blade templates, Tailwind CSS 4, Vite 8 (asset bundling)
@@ -207,8 +207,8 @@ Verifying Core API Endpoints and those API Endpoint test also include RBAC valid
 
 > Note: If the application production compose is running, RBAC validation checks will fail because the bypass script is disabled in that environment.
   
-- Welche Randfälle wurden berücksichtigt? \
-Foreign Key Constraint, Soft Deletes and Atomic Transactions.
+- Welche Randfälle wurden berücksichtigt?
+   - Foreign Key Constraint, Soft Deletes and Atomic Transactions.
 
 ### Wie wurde getestet?
 - Manuell getestet:
