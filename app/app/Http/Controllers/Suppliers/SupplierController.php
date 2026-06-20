@@ -17,6 +17,9 @@ class SupplierController extends Controller
     // READ
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * GET /suppliers
+     */
     public function index(): JsonResponse
     {
         $suppliers = DomainCache::remember(
@@ -27,6 +30,9 @@ class SupplierController extends Controller
         return $this->ok($suppliers);
     }
 
+    /**
+     * GET /suppliers/{supplier}
+     */
     public function show(Supplier $supplier): JsonResponse
     {
         return $this->ok($this->formatSupplier($supplier));
@@ -64,6 +70,9 @@ class SupplierController extends Controller
     // CREATE
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * POST /suppliers
+     */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate(
@@ -86,6 +95,9 @@ class SupplierController extends Controller
     // UPDATE
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * PUT /suppliers/{supplier}
+     */
     public function update(Request $request, Supplier $supplier): JsonResponse
     {
         $validated = $request->validate(
@@ -111,6 +123,9 @@ class SupplierController extends Controller
     // DELETE
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * DELETE /suppliers/{supplier}
+     */
     public function destroy(Supplier $supplier): JsonResponse
     {
         try {

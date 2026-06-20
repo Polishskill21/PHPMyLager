@@ -83,7 +83,7 @@ class PurchaseOrderController extends Controller
      * Creates a new purchase order with status "offen".
      * Stock is NOT touched yet — that happens on receive.
      */
-        public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
         $validated = $request->validate($this->storeRules(), $this->customMessages());
  
