@@ -128,10 +128,12 @@
    city / group / phone) are intentionally left to `auto` so they absorb the remaining
    width. Keyed on the `col-*` classes carried by each table's <colgroup>. */
 .data-table col.col-id { width: 84px; }
-/* Width scales with the number of action icons: each .btn-icon is 28px, the
-   .table-actions gap is 9px, +48px for cell padding + buffer. 2→113, 3→150, 4→187. */
+/* Width scales tightly with the number of action icons: each .btn-icon is 24px, the
+   .table-actions gap is 9px, +24px for cell padding + a small buffer. 2→81, 3→114,
+   4→147. Kept lean so wider pages (Products = 4 icons) don't leave a large empty gap
+   before the right-aligned icons and the free width goes to the flexible name column. */
 .data-table col.col-actions {
-    width: calc(var(--actions-count) * 28px + (var(--actions-count) - 1) * 9px + 48px);
+    width: calc(var(--actions-count) * 24px + (var(--actions-count) - 1) * 9px + 24px);
 }
 .data-table col.col-status { width: 124px; }
 
@@ -269,7 +271,6 @@
 .data-table .cell-number,
 .data-table .cell-num,
 .data-table .td-actions,
-.data-table .cell-actions,
 .data-table .cell-items,
 .data-table .td-items,
 .data-table .cell-date { text-align: left; }
@@ -281,7 +282,6 @@
 .data-table thead th.cell-number,
 .data-table thead th.cell-num,
 .data-table thead th.cell-status,
-.data-table thead th.cell-actions,
 .data-table thead th.cell-items {
     text-align: left;
 }
@@ -289,9 +289,20 @@
 .data-table .cell-money,
 .data-table .cell-total,
 .data-table .td-total,
+.data-table .cell-actions,
 .data-table thead th.cell-money,
-.data-table thead th.cell-total {
+.data-table thead th.cell-total,
+.data-table thead th.cell-actions {
     text-align: right;
+}
+
+/* Read-only viewers have no actions column, so the final column becomes a data column
+   (total / value / PLZ / location). Give it a comfortable right-edge gutter so its
+   content isn't flush against the table edge. The actions column itself keeps the base
+   10px padding so the right-aligned icons hug the same edge on every page. */
+.data-table thead th:last-child:not(.cell-actions),
+.data-table tbody td:last-child:not(.table-state-cell):not(.cell-actions) {
+    padding-right: 24px;
 }
 
 .data-table tbody td.cell-id {
@@ -357,7 +368,7 @@
     width: auto;
     display: inline-flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 9px;
 }
 
