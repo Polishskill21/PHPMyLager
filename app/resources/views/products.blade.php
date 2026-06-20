@@ -14,8 +14,9 @@
 
 @section('content')
 @php
-    $canWrite = Auth::user()->canWrite();
-    $canDelete = Auth::user()->canDelete();
+    $canWrite    = Auth::user()->canWrite();
+    $canDelete   = Auth::user()->canDelete();
+    $showActions = $canWrite || $canDelete;
 @endphp
 <section class="list-page products-page">
     <header class="page-header">
@@ -83,7 +84,9 @@
                     <col class="col-stock">
                     <col class="col-reorder">
                     <col class="col-location">
-                    <col class="col-actions">
+                    @if($showActions)
+                        <col class="col-actions">
+                    @endif
                 </colgroup>
                 <thead>
                 <tr>
@@ -95,7 +98,9 @@
                     <th class="th cell-status" data-sort="stock" data-sort-type="number"><span class="table-th-inner"><span>Stock</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-number" data-sort="reorder" data-sort-type="number"><span class="table-th-inner"><span>Reorder</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-left" data-sort="location"><span class="table-th-inner"><span>Location</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="cell-actions">Actions</th>
+                    @if($showActions)
+                        <th class="cell-actions">Actions</th>
+                    @endif
                 </tr>
                 </thead>
                 <tbody>
@@ -103,7 +108,7 @@
                     @include('partials.rows.products-row', ['row' => $row])
                 @empty
                     <tr class="table-state-row">
-                        <td class="table-state-cell" colspan="9"><div class="empty-state">No products found.</div></td>
+                        <td class="table-state-cell" colspan="{{ $showActions ? 9 : 8 }}"><div class="empty-state">No products found.</div></td>
                     </tr>
                 @endforelse
                 </tbody>

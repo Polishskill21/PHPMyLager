@@ -14,8 +14,9 @@
 
 @section('content')
 @php
-    $canWrite = Auth::user()->canWrite();
-    $canDelete = Auth::user()->canDelete();
+    $canWrite    = Auth::user()->canWrite();
+    $canDelete   = Auth::user()->canDelete();
+    $showActions = $canWrite || $canDelete;
 @endphp
 <section class="orders-page">
     <header class="page-header orders-header">
@@ -61,7 +62,9 @@
                     <col class="col-delivery">
                     <col class="col-items">
                     <col class="col-total">
-                    <col class="col-actions">
+                    @if($showActions)
+                        <col class="col-actions">
+                    @endif
                 </colgroup>
                 <thead>
                 <tr>
@@ -71,7 +74,9 @@
                     <th class="th cell-date" data-sort="delivery"><span class="table-th-inner"><span>Delivery</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th td-items cell-number" data-sort="items" data-sort-type="number"><span class="table-th-inner"><span>Items</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th td-total cell-money" data-sort="total" data-sort-type="number"><span class="table-th-inner"><span>Total EUR</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="cell-actions">Actions</th>
+                    @if($showActions)
+                        <th class="cell-actions">Actions</th>
+                    @endif
                 </tr>
                 </thead>
                 <tbody>
@@ -79,7 +84,7 @@
                     @include('partials.rows.orders-row', ['row' => $row])
                 @empty
                     <tr class="table-state-row">
-                        <td class="table-state-cell" colspan="7"><div class="empty-state">No orders found.</div></td>
+                        <td class="table-state-cell" colspan="{{ $showActions ? 7 : 6 }}"><div class="empty-state">No orders found.</div></td>
                     </tr>
                 @endforelse
                 </tbody>

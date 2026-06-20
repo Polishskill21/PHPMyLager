@@ -14,8 +14,9 @@
 
 @section('content')
 @php
-    $canWrite = Auth::user()->canWrite();
-    $canDelete = Auth::user()->canDelete();
+    $canWrite    = Auth::user()->canWrite();
+    $canDelete   = Auth::user()->canDelete();
+    $showActions = $canWrite || $canDelete;
 @endphp
 <section class="list-page customers-page">
     <header class="page-header">
@@ -60,7 +61,9 @@
                     <col class="col-street">
                     <col class="col-city">
                     <col class="col-plz">
-                    <col class="col-actions">
+                    @if($showActions)
+                        <col class="col-actions">
+                    @endif
                 </colgroup>
                 <thead>
                 <tr>
@@ -70,7 +73,9 @@
                     <th class="th cell-left" data-sort="street"><span class="table-th-inner"><span>Street</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-left" data-sort="city"><span class="table-th-inner"><span>City</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
                     <th class="th cell-number" data-sort="plz" data-sort-type="number"><span class="table-th-inner"><span>PLZ</span><span class="sort-arrow" aria-hidden="true">↕</span></span></th>
-                    <th class="cell-actions">Actions</th>
+                    @if($showActions)
+                        <th class="cell-actions">Actions</th>
+                    @endif
                 </tr>
                 </thead>
                 <tbody>
@@ -78,7 +83,7 @@
                     @include('partials.rows.customers-row', ['row' => $row])
                 @empty
                     <tr class="table-state-row">
-                        <td class="table-state-cell" colspan="7"><div class="empty-state">No customers found.</div></td>
+                        <td class="table-state-cell" colspan="{{ $showActions ? 7 : 6 }}"><div class="empty-state">No customers found.</div></td>
                     </tr>
                 @endforelse
                 </tbody>

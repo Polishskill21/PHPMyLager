@@ -1,6 +1,7 @@
 @php
-    $canWrite  = Auth::user()->canWrite();
-    $canDelete = Auth::user()->canDelete();
+    $canWrite    = Auth::user()->canWrite();
+    $canDelete   = Auth::user()->canDelete();
+    $showActions = $canWrite || $canDelete;
 @endphp
 <tr data-row>
     <td class="cell-id">#{{ $row['id'] }}</td>
@@ -9,6 +10,7 @@
     <td title="{{ $row['street'] }}">{{ $row['street'] ?: '—' }}</td>
     <td title="{{ $row['city'] }}">{{ $row['city'] ?: '—' }}</td>
     <td class="cell-number">{{ $row['plz'] ?: '—' }}</td>
+    @if($showActions)
     <td class="cell-actions">
         <div class="table-actions">
             @if($canWrite)
@@ -23,4 +25,5 @@
             @endif
         </div>
     </td>
+    @endif
 </tr>

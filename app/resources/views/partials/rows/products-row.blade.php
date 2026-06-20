@@ -1,7 +1,8 @@
 @php
-    $canWrite  = Auth::user()->canWrite();
-    $canDelete = Auth::user()->canDelete();
-    $stockIcon = $row['state'] === 'warn' ? '◐' : '●';
+    $canWrite    = Auth::user()->canWrite();
+    $canDelete   = Auth::user()->canDelete();
+    $showActions = $canWrite || $canDelete;
+    $stockIcon   = $row['state'] === 'warn' ? '◐' : '●';
 @endphp
 <tr data-row>
     <td class="cell-id">#{{ $row['id'] }}</td>
@@ -12,6 +13,7 @@
     <td class="cell-status"><span class="stock-badge stock-{{ $row['state'] }}">{{ $stockIcon }} {{ $row['bestand'] }}</span></td>
     <td class="cell-number">{{ $row['melde'] }}</td>
     <td class="cell-mono" title="{{ $row['lagerplatz'] }}">{{ $row['lagerplatz'] ?: '—' }}</td>
+    @if($showActions)
     <td class="cell-actions">
         <div class="table-actions">
             @if($canWrite)
@@ -36,4 +38,5 @@
             @endif
         </div>
     </td>
+    @endif
 </tr>
