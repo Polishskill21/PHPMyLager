@@ -121,7 +121,7 @@
 
                 <div class="form-group">
                     <label class="form-label" for="f-plz">PLZ <em class="required-marker">*</em></label>
-                    <input class="form-input" id="f-plz" maxlength="5" placeholder="80331">
+                    <input class="form-input" id="f-plz" maxlength="5" inputmode="numeric" placeholder="80331">
                     <div class="form-error" id="err-plz"></div>
                 </div>
 

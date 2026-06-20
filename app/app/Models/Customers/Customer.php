@@ -16,7 +16,7 @@ use App\Models\Orders\Order;
  * @property int         $pKdNr
  * @property string      $name
  * @property string      $strasse
- * @property int         $plz
+ * @property string|null $plz
  * @property string      $ort
  * @property string      $email
  * @property string|null $deleted_at
@@ -38,6 +38,10 @@ class Customer extends Model
     protected $primaryKey = self::COL_ID;
     
     public $timestamps = false;
+
+    protected $casts = [
+        self::COL_PLZ => 'string',
+    ];
 
     protected $hidden = [
         'deleted_at'

@@ -40,7 +40,7 @@ return new class extends Migration
             $table->increments('pKdNr');
             $table->string('name', 50)->nullable();
             $table->string('strasse', 50)->nullable();
-            $table->integer('plz')->nullable();
+            $table->char('plz', 5)->nullable();
             $table->string('ort', 50)->nullable();
             $table->string('email', 50)->nullable();
 
