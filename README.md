@@ -34,6 +34,7 @@ To protect the application against brute-force attempts and request floods, the 
 The limiters are defined in `app/app/Providers/AppServiceProvider.php`
 
 ### Optionale Funktionen
+- [x] Save order as PDF
 
 ### Nicht umgesetzt / bewusst ausgelassen
 - [x] No standalone warehouse group deletion
