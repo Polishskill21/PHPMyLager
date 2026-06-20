@@ -98,6 +98,19 @@
 .table-wrap::-webkit-scrollbar-track { background: transparent; }
 .table-wrap::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 3px; }
 
+.list-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3, 12px);
+    padding: var(--space-3, 12px);
+    border-top: 1px solid var(--color-border);
+}
+.list-more-status {
+    font-size: 0.85rem;
+    color: var(--color-text-muted, #6b7280);
+}
+
 .data-table {
     width: 100%;
     min-width: var(--table-min-width, 760px);
