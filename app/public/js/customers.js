@@ -41,34 +41,7 @@ async function api(method, path, body = null) {
 // toast(), flashToast() and esc() are provided globally by public/js/feedback.js
 // (loaded in layouts/app.blade.php before this script).
 
-// ── SEARCH FILTER ─────────────────────────────────────────────────────
-function filterCustomerRows() {
-    const input = document.getElementById('search');
-    const total = document.getElementById('customers-stat-total');
-    const emptyRow = document.getElementById('customers-empty-filter-row');
-    if (!input) return;
-
-    const query = input.value.trim().toLowerCase();
-    let visible = 0;
-
-    document.querySelectorAll('.customers-table tbody tr[data-sort-row]').forEach((row) => {
-        const haystack = [
-            row.dataset.sortId,
-            row.dataset.sortName,
-            row.dataset.sortEmail,
-            row.dataset.sortStreet,
-            row.dataset.sortCity,
-            row.dataset.sortPlz,
-        ].join(' ').toLowerCase();
-        const match = !query || haystack.includes(query);
-
-        row.hidden = !match;
-        if (match) visible += 1;
-    });
-
-    if (total) total.textContent = String(visible);
-    if (emptyRow) emptyRow.hidden = !query || visible > 0;
-}
+// Search and sorting are handled server-side by list-loadmore.js.
 
 // ── ADD / EDIT FORM ───────────────────────────────────────────────────
 function openAdd() {
@@ -194,19 +167,18 @@ function closeModal(id) {
 
 // ── INIT ──────────────────────────────────────────────────────────────
 function initCustomersPage() {
-    document.getElementById('search')?.addEventListener('input', filterCustomerRows);
     document.getElementById('btn-add')?.addEventListener('click', openAdd);
     document.getElementById('customer-form')?.addEventListener('submit', submitCustomerForm);
     document.getElementById('modal-form-cancel')?.addEventListener('click', () => closeModal('modal-form-overlay'));
     document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
     document.getElementById('modal-del-confirm')?.addEventListener('click', confirmDelete);
 
-    document.querySelectorAll('.customer-edit').forEach((btn) => {
-        btn.addEventListener('click', () => openEdit(btn.dataset.id));
-    });
+    document.getElementById('customers-table')?.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('.customer-edit');
+        if (editBtn) return openEdit(editBtn.dataset.id);
 
-    document.querySelectorAll('.customer-delete').forEach((btn) => {
-        btn.addEventListener('click', () => openDelete(btn.dataset.id, btn.dataset.name));
+        const deleteBtn = event.target.closest('.customer-delete');
+        if (deleteBtn) return openDelete(deleteBtn.dataset.id, deleteBtn.dataset.name);
     });
 
     document.querySelectorAll('.overlay').forEach((overlay) => {
@@ -221,8 +193,6 @@ function initCustomersPage() {
             closeModal('modal-del-overlay');
         }
     });
-
-    filterCustomerRows();
 }
 
 if (document.querySelector('.customers-page')) {

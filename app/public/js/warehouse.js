@@ -38,27 +38,7 @@ async function api(method, path, body = null) {
 // toast(), flashToast() and esc() are provided globally by public/js/feedback.js
 // (loaded in layouts/app.blade.php before this script).
 
-// ── SEARCH FILTER ─────────────────────────────────────────────────────
-function filterGroupRows() {
-    const input = document.getElementById('warehouse-search');
-    const total = document.getElementById('warehouse-stat-total');
-    const emptyRow = document.getElementById('warehouse-empty-filter-row');
-    if (!input) return;
-
-    const query = input.value.trim().toLowerCase();
-    let visible = 0;
-
-    document.querySelectorAll('.warehouse-table tbody tr[data-sort-row]').forEach((row) => {
-        const haystack = [row.dataset.sortId, row.dataset.sortName].join(' ').toLowerCase();
-        const match = !query || haystack.includes(query);
-
-        row.hidden = !match;
-        if (match) visible += 1;
-    });
-
-    if (total) total.textContent = String(visible);
-    if (emptyRow) emptyRow.hidden = !query || visible > 0;
-}
+// Search and sorting are handled server-side by list-loadmore.js.
 
 // ── PRODUCT GROUP DETAIL ──────────────────────────────────────────────
 function renderGroupProducts(products) {
@@ -177,21 +157,17 @@ function closeModal(id) {
 
 // ── INIT ──────────────────────────────────────────────────────────────
 function initWarehousePage() {
-    document.getElementById('warehouse-search')?.addEventListener('input', filterGroupRows);
     document.getElementById('btn-add-group')?.addEventListener('click', openAdd);
     document.getElementById('group-form')?.addEventListener('submit', submitGroupForm);
     document.getElementById('group-form-cancel')?.addEventListener('click', () => closeModal('modal-group-form-overlay'));
     document.getElementById('group-products-close')?.addEventListener('click', () => closeModal('modal-group-products-overlay'));
 
-    document.querySelectorAll('.warehouse-table tbody tr[data-sort-row]').forEach((row) => {
-        row.addEventListener('click', () => openGroupProducts(row.dataset.groupId, row.dataset.groupName));
-    });
+    document.getElementById('warehouse-table')?.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('.group-edit');
+        if (editBtn) return openEdit(editBtn.dataset.id, editBtn.dataset.name);
 
-    document.querySelectorAll('.group-edit').forEach((btn) => {
-        btn.addEventListener('click', (event) => {
-            event.stopPropagation();
-            openEdit(btn.dataset.id, btn.dataset.name);
-        });
+        const row = event.target.closest('tr[data-group-id]');
+        if (row) openGroupProducts(row.dataset.groupId, row.dataset.groupName);
     });
 
     document.querySelectorAll('.overlay').forEach((overlay) => {
@@ -206,8 +182,6 @@ function initWarehousePage() {
             closeModal('modal-group-products-overlay');
         }
     });
-
-    filterGroupRows();
 }
 
 if (document.querySelector('.warehouse-page')) {
