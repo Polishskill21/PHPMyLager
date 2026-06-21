@@ -555,6 +555,31 @@ class DatabaseSeeder extends Seeder
             ['pBestPosNr' => 155, 'fBestNr' => 80052, 'fArtikelNr' => 30022, 'bestMenge' => 20, 'gelieferteMenge' => 10, 'ekPreis' => 22.00],
             ['pBestPosNr' => 156, 'fBestNr' => 80053, 'fArtikelNr' => 30025, 'bestMenge' => 60, 'gelieferteMenge' => 60, 'ekPreis' => 7.20],
         ]);
+
+        // 7. Seed Lieferanten
+        DB::table('lieferanten')->insertOrIgnore([
+            ['pLiefNr' => 5001, 'name' => 'Remscheid Werkzeuge GmbH', 'strasse' => 'Industriepark Nord 4', 'plz' => 42853, 'ort' => 'Remscheid', 'email' => 'vertrieb@remscheid-tools.de'],
+            ['pLiefNr' => 5002, 'name' => 'Sheffield Steel Co.', 'strasse' => '22 Ironworks Lane', 'plz' => 54321, 'ort' => 'Sheffield', 'email' => 'orders@sheffieldsteel.co.uk'],
+            ['pLiefNr' => 5003, 'name' => 'Alpen Werkzeuge Import S.A.', 'strasse' => 'Rue du Commerce 77', 'plz' => 10050, 'ort' => 'Lausanne', 'email' => 'info@alpenimport.ch']
+        ]);
+
+        // 8. Seed Bestellkoepfe (Purchase Orders placed to Suppliers)
+        DB::table('bestellkoepfe')->insertOrIgnore([
+            ['pBestNr' => 80001, 'fLiefNr' => 5001, 'bestDat' => '2026-05-01 10:00:00', 'erwLieferDat' => '2026-05-08 14:00:00', 'status' => 'geliefert'],
+            ['pBestNr' => 80002, 'fLiefNr' => 5002, 'bestDat' => '2026-05-15 11:30:00', 'erwLieferDat' => '2026-05-22 12:00:00', 'status' => 'bestellt'],
+            ['pBestNr' => 80003, 'fLiefNr' => 5003, 'bestDat' => '2026-05-21 16:45:00', 'erwLieferDat' => '2026-05-28 16:00:00', 'status' => 'offen']
+        ]);
+
+
+        // 9. Seed Bestellpositionen (Purchase Order Items mapping quantities)
+        DB::table('bestellpositionen')->insertOrIgnore([
+            ['pBestPosNr' => 101, 'fBestNr' => 80001, 'fArtikelNr' => 10059, 'bestMenge' => 100, 'gelieferteMenge' => 100, 'ekPreis' => 11.00], 
+            ['pBestPosNr' => 102, 'fBestNr' => 80001, 'fArtikelNr' => 10068, 'bestMenge' => 50, 'gelieferteMenge' => 50, 'ekPreis' => 4.00],
+            ['pBestPosNr' => 103, 'fBestNr' => 80002, 'fArtikelNr' => 10044, 'bestMenge' => 200, 'gelieferteMenge' => 150, 'ekPreis' => 4.80],
+            ['pBestPosNr' => 104, 'fBestNr' => 80002, 'fArtikelNr' => 10049, 'bestMenge' => 500, 'gelieferteMenge' => 500, 'ekPreis' => 1.85],
+            ['pBestPosNr' => 105, 'fBestNr' => 80003, 'fArtikelNr' => 10086, 'bestMenge' => 30, 'gelieferteMenge' => 0, 'ekPreis' => 38.50],
+            ['pBestPosNr' => 106, 'fBestNr' => 80003, 'fArtikelNr' => 71001, 'bestMenge' => 15, 'gelieferteMenge' => 0, 'ekPreis' => 60.00]
+        ]);
     }
 
     /**
