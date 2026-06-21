@@ -52,16 +52,8 @@ async function api(method, path, body = null) {
     };
 }
 
-function toast(msg, type = 'info') {
-    const area = document.getElementById('toast-area');
-    if (!area) return;
-
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${msg}`;
-    area.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
+// toast(), flashToast() and esc() are provided globally by public/js/feedback.js
+// (loaded in layouts/app.blade.php before this script).
 
 // ── LOOKUPS ───────────────────────────────────────────────────────────
 function ensureLookups() {
@@ -132,8 +124,11 @@ function normalizeOrder(entry) {
     const info = entry?.order_info || {};
     const items = Array.isArray(entry?.items) ? entry.items : [];
 
+    // Prefer the name the backend already resolved (order_info.customer_name);
+    // fall back to the lookup map, which is only populated after the add/edit
+    // flow has loaded it.
     const customer = customerMap[Number(info.fKdNr)] || null;
-    const customerName = customer?.name || 'Unknown customer';
+    const customerName = info.customer_name || customer?.name || 'Unknown customer';
 
     const itemNames = items
         .map((item) => item?.bezeichnung || `#${item?.fArtikelNr ?? ''}`)
@@ -161,39 +156,7 @@ function normalizeOrder(entry) {
     };
 }
 
-// ── SEARCH FILTER (client-side row hide over server-rendered rows) ────
-function filterOrderRows() {
-    const search = document.getElementById('search');
-    const statTotal = document.getElementById('stat-total');
-    const statEur = document.getElementById('stat-total-eur');
-    const emptyRow = document.getElementById('orders-empty-filter-row');
-    if (!search) return;
-
-    const q = search.value.trim().toLowerCase();
-    const rows = document.querySelectorAll('.orders-table tbody tr[data-sort-row]');
-    let visible = 0;
-    let totalEur = 0;
-
-    rows.forEach((row) => {
-        const haystack = [
-            row.dataset.sortId,
-            row.dataset.sortCustomer,
-            row.dataset.sortCreated,
-            row.dataset.sortDelivery,
-        ].join(' ').toLowerCase();
-        const match = !q || haystack.includes(q);
-
-        row.hidden = !match;
-        if (match) {
-            visible += 1;
-            totalEur += Number(row.dataset.sortTotal || 0);
-        }
-    });
-
-    if (statTotal) statTotal.textContent = String(visible);
-    if (statEur) statEur.textContent = fmtMoney(totalEur);
-    if (emptyRow) emptyRow.hidden = visible > 0 || rows.length === 0;
-}
+// Search and sorting are handled server-side by list-loadmore.js
 
 // ── FORM / MODALS ─────────────────────────────────────────────────────
 async function openAdd() {
@@ -396,7 +359,7 @@ async function submitOrderForm(e) {
     }
 
     closeModal('modal-form-overlay');
-    toast(message || (id ? 'Order updated.' : 'Order created.'), 'success');
+    flashToast(message || (id ? 'Order updated.' : 'Order created.'), 'success');
     window.location.reload();
 }
 
@@ -472,7 +435,7 @@ async function confirmDelete() {
     closeModal('modal-del-overlay');
 
     if (ok) {
-        toast(message || 'Order deleted.', 'success');
+        flashToast(message || 'Order deleted.', 'success');
         window.location.reload();
     } else {
         toast(message || data?.error || 'Delete failed.', 'error');
@@ -538,16 +501,8 @@ function formatDateValue(date) {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function esc(s) {
-    return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
 // ── EVENTS / INIT ─────────────────────────────────────────────────────
 function initOrdersPage() {
-    document.getElementById('search')?.addEventListener('input', filterOrderRows);
     document.getElementById('btn-add')?.addEventListener('click', openAdd);
     document.getElementById('btn-add-item')?.addEventListener('click', () => addItemRow());
     document.getElementById('order-form')?.addEventListener('submit', submitOrderForm);
@@ -556,14 +511,15 @@ function initOrdersPage() {
     document.getElementById('modal-del-cancel')?.addEventListener('click', () => closeModal('modal-del-overlay'));
     document.getElementById('modal-del-confirm')?.addEventListener('click', confirmDelete);
 
-    document.querySelectorAll('.order-row').forEach((row) => {
-        row.addEventListener('click', () => openInspect(row.dataset.id));
-    });
-    document.querySelectorAll('.order-edit').forEach((btn) => {
-        btn.addEventListener('click', (e) => { e.stopPropagation(); openEdit(btn.dataset.id); });
-    });
-    document.querySelectorAll('.order-delete').forEach((btn) => {
-        btn.addEventListener('click', (e) => { e.stopPropagation(); openDelete(btn.dataset.id); });
+    document.getElementById('orders-table')?.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.order-edit');
+        if (editBtn) return openEdit(editBtn.dataset.id);
+
+        const deleteBtn = e.target.closest('.order-delete');
+        if (deleteBtn) return openDelete(deleteBtn.dataset.id);
+
+        const row = e.target.closest('.order-row');
+        if (row) openInspect(row.dataset.id);
     });
 
     document.querySelectorAll('.overlay').forEach((overlay) => {
@@ -584,11 +540,8 @@ function initOrdersPage() {
             closeModal('modal-del-overlay');
         }
     });
-
-    filterOrderRows();
 }
 
 if (document.querySelector('.orders-page')) {
-    // loadLookups();
     initOrdersPage();
 }

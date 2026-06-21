@@ -20,6 +20,10 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       SEEDER_PASSWORD: ${SEEDER_PASSWORD}
+      SEEDER_ADMIN_PASSWORD: ${SEEDER_ADMIN_PASSWORD:-}
+      SEEDER_WRITER_PASSWORD: ${SEEDER_WRITER_PASSWORD:-}
+      SEEDER_VIEWER_PASSWORD: ${SEEDER_VIEWER_PASSWORD:-}
+      CACHE_STORE: database
       WAIT_FOR_DB: "true"
     volumes:
       - prod_public:/var/www/html/public

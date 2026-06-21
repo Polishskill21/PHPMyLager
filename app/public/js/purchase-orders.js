@@ -7,6 +7,23 @@ let productMap = {};
 let pendingDeleteId = null;
 let lookupPromise = null;
 
+// Caches the most recently fetched purchase orders
+let lastPO = { id: null, data: null };
+
+async function fetchPurchaseOrder(id) {
+    if (lastPO.id === String(id) && lastPO.data) {
+        return { ok: true, data: lastPO.data, message: '' };
+    }
+
+    const res = await api('GET', `/purchase-orders/${id}`);
+    if (res.ok) lastPO = { id: String(id), data: res.data };
+    return res;
+}
+
+function invalidatePurchaseOrderCache() {
+    lastPO = { id: null, data: null };
+}
+
 async function api(method, path, body = null) {
     const opts = {
         method,
@@ -42,16 +59,8 @@ async function api(method, path, body = null) {
     };
 }
 
-function toast(msg, type = 'info') {
-    const area = document.getElementById('toast-area');
-    if (!area) return;
-
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${esc(msg)}`;
-    area.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
+// toast(), flashToast() and esc() are provided globally by public/js/feedback.js
+// (loaded in layouts/app.blade.php before this script).
 
 function ensureLookups() {
     if (!lookupPromise) lookupPromise = loadLookups();
@@ -142,7 +151,7 @@ async function openEdit(id) {
     await ensureLookups();
     clearFormErrors();
 
-    const { ok, data, message } = await api('GET', `/purchase-orders/${id}`);
+    const { ok, data, message } = await fetchPurchaseOrder(id);
     if (!ok) {
         toast(message || 'Failed to load purchase order.', 'error');
         return;
@@ -176,7 +185,7 @@ function normalizePurchaseOrder(data) {
         fLiefNr: info.fLiefNr,
         bestDat: info.bestDat || '',
         erwLieferDat: info.erwLieferDat || '',
-        status: info.status || 'open',
+        status: info.status || 'offen',
         items: Array.isArray(data?.items) ? data.items : [],
     };
 }
@@ -337,13 +346,14 @@ async function submitPurchaseOrderForm(event) {
         return;
     }
 
+    invalidatePurchaseOrderCache();
     closeModal('modal-purchase-order-form-overlay');
-    toast(message || (id ? 'Purchase order updated.' : 'Purchase order created.'), 'success');
+    flashToast(message || (id ? 'Purchase order updated.' : 'Purchase order created.'), 'success');
     window.location.reload();
 }
 
 async function openInspect(id) {
-    const { ok, data, message } = await api('GET', `/purchase-orders/${id}`);
+    const { ok, data, message } = await fetchPurchaseOrder(id);
     if (!ok) {
         toast(message || 'Failed to load purchase order.', 'error');
         return;
@@ -358,7 +368,7 @@ async function openInspect(id) {
     document.getElementById('po-view-expected').textContent = fmtDate(info.erwLieferDat);
 
     const statusEl = document.getElementById('po-view-status');
-    const status = info.status || 'open';
+    const status = info.status || 'offen';
     statusEl.textContent = status;
     statusEl.className = `status-badge status-${status}`;
     statusEl.hidden = false;
@@ -431,7 +441,7 @@ function fmtMoney(value) {
 async function openReceive(id) {
     clearFormErrors();
 
-    const { ok, data, message } = await api('GET', `/purchase-orders/${id}`);
+    const { ok, data, message } = await fetchPurchaseOrder(id);
     if (!ok) {
         toast(message || 'Failed to load purchase order.', 'error');
         return;
@@ -537,8 +547,9 @@ async function submitReceive(event) {
         return;
     }
 
+    invalidatePurchaseOrderCache();
     closeModal('modal-purchase-order-receive-overlay');
-    toast(message || 'Delivery registered.', 'success');
+    flashToast(message || 'Delivery registered.', 'success');
     window.location.reload();
 }
 
@@ -562,7 +573,8 @@ async function confirmDelete() {
     closeModal('modal-purchase-order-del-overlay');
 
     if (ok) {
-        toast(message || 'Purchase order cancelled.', 'success');
+        invalidatePurchaseOrderCache();
+        flashToast(message || 'Purchase order cancelled.', 'success');
         window.location.reload();
     } else {
         toast(message || data?.error || 'Cancellation failed.', 'error');
@@ -623,45 +635,9 @@ function moneyInput(value) {
     return Number(value).toFixed(2);
 }
 
-function esc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-function filterPurchaseOrderRows() {
-    const input = document.getElementById('purchase-orders-search');
-    const total = document.getElementById('purchase-orders-stat-total');
-    const emptyRow = document.getElementById('purchase-orders-empty-filter-row');
-    if (!input) return;
-
-    const query = input.value.trim().toLowerCase();
-    let visible = 0;
-
-    document.querySelectorAll('.purchase-orders-table tbody tr[data-sort-row]').forEach((row) => {
-        const haystack = [
-            row.dataset.sortId,
-            row.dataset.sortSupplier,
-            row.dataset.sortStatus,
-            row.dataset.sortOrdered,
-            row.dataset.sortExpected,
-        ].join(' ').toLowerCase();
-        const match = !query || haystack.includes(query);
-
-        row.hidden = !match;
-        if (match) visible += 1;
-    });
-
-    if (total) total.textContent = String(visible);
-    if (emptyRow) emptyRow.hidden = !query || visible > 0;
-}
+// Search and sorting are handled server-side by list-loadmore.js.
 
 function initPurchaseOrdersPage() {
-    // ensureLookups();
-
-    document.getElementById('purchase-orders-search')?.addEventListener('input', filterPurchaseOrderRows);
     document.getElementById('btn-add-purchase-order')?.addEventListener('click', openAdd);
     document.getElementById('purchase-order-form')?.addEventListener('submit', submitPurchaseOrderForm);
     document.getElementById('btn-add-purchase-order-item')?.addEventListener('click', () => addItemRow());
@@ -672,20 +648,19 @@ function initPurchaseOrdersPage() {
     document.getElementById('purchase-order-receive-form')?.addEventListener('submit', submitReceive);
     document.getElementById('purchase-order-receive-cancel')?.addEventListener('click', () => closeModal('modal-purchase-order-receive-overlay'));
 
-    document.querySelectorAll('.purchase-order-row').forEach((row) => {
-        row.addEventListener('click', () => openInspect(row.dataset.id));
-    });
+    // Delegated so rows added by load-more / search / sort keep working.
+    document.getElementById('purchase-orders-table')?.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('.purchase-order-edit');
+        if (editBtn) return openEdit(editBtn.dataset.id);
 
-    document.querySelectorAll('.purchase-order-edit').forEach((btn) => {
-        btn.addEventListener('click', (event) => { event.stopPropagation(); openEdit(btn.dataset.id); });
-    });
+        const receiveBtn = event.target.closest('.purchase-order-receive');
+        if (receiveBtn) return openReceive(receiveBtn.dataset.id);
 
-    document.querySelectorAll('.purchase-order-receive').forEach((btn) => {
-        btn.addEventListener('click', (event) => { event.stopPropagation(); openReceive(btn.dataset.id); });
-    });
+        const deleteBtn = event.target.closest('.purchase-order-delete');
+        if (deleteBtn) return openDelete(deleteBtn.dataset.id);
 
-    document.querySelectorAll('.purchase-order-delete').forEach((btn) => {
-        btn.addEventListener('click', (event) => { event.stopPropagation(); openDelete(btn.dataset.id); });
+        const row = event.target.closest('.purchase-order-row');
+        if (row) openInspect(row.dataset.id);
     });
 
     document.querySelectorAll('.overlay').forEach((overlay) => {
@@ -707,8 +682,6 @@ function initPurchaseOrdersPage() {
             closeModal('modal-purchase-order-receive-overlay');
         }
     });
-
-    filterPurchaseOrderRows();
 }
 
 if (document.querySelector('.purchase-orders-page')) {

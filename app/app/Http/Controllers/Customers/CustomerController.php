@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Customers;
 
 use App\Models\Customers\Customer;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
+use App\Support\DomainCache;
+use Illuminate\Contracts\View\View;
 
 class CustomerController extends Controller
 {
@@ -20,9 +23,52 @@ class CustomerController extends Controller
      */
     public function index(): JsonResponse
     {
-        $customers = Customer::all()->map(fn (Customer $c) => $this->formatCustomer($c));
+        $customers = DomainCache::remember(
+            DomainCache::CUSTOMERS,
+            'customers:index',
+            fn () => Customer::orderBy(Customer::COL_NAME)->get()->map(fn (Customer $c) => $this->formatCustomer($c))
+        );
 
         return $this->ok($customers);
+    }
+
+    /**
+     * GET /customers/page
+     * One load-more chunk of the customers list, with server-side search/sort.
+     */
+    public function page(Request $request): JsonResponse
+    {
+        return $this->renderListChunk(
+            DomainCache::CUSTOMERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (Customer $c) => $this->formatRow($c),
+            'partials.rows.customers-row',
+            $request,
+        );
+    }
+
+    /** Server-rendered /customers page (cached default-view first chunk). */
+    public function indexView(Request $request): View
+    {
+        $chunk = $this->firstChunk($request);
+
+        return view('customers', [
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
+        ]);
+    }
+
+    /** First chunk for the server-rendered /customers page. */
+    private function firstChunk(Request $request): array
+    {
+        return $this->listChunkData(
+            DomainCache::CUSTOMERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (Customer $c) => $this->formatRow($c),
+            $request,
+        );
     }
 
     /**
@@ -49,6 +95,7 @@ class CustomerController extends Controller
 
         try {
             $customer = DB::transaction(fn () => Customer::create($validated));
+            DomainCache::flush(DomainCache::CUSTOMERS, DomainCache::ORDERS);
 
             return $this->created($this->formatCustomer($customer->fresh()), 'Customer created successfully.');
         } catch (\Exception $e) {
@@ -76,6 +123,7 @@ class CustomerController extends Controller
                 $customer->update($validated);
                 return $customer->fresh();
             });
+            DomainCache::flush(DomainCache::CUSTOMERS, DomainCache::ORDERS);
 
             return $this->ok($this->formatCustomer($customer), 'Customer updated successfully.');
         } catch (\Exception $e) {
@@ -97,12 +145,59 @@ class CustomerController extends Controller
         try {
             $id = $customer->{Customer::COL_ID};
             DB::transaction(fn () => $customer->delete());
+            DomainCache::flush(DomainCache::CUSTOMERS, DomainCache::ORDERS);
 
             return $this->noContent();
         } catch (\Exception $e) {
             report($e);
             return $this->serverError();
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Browse / list helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private const SORTABLE = [
+        'id'     => Customer::COL_ID,
+        'name'   => Customer::COL_NAME,
+        'email'  => Customer::COL_EMAIL,
+        'street' => Customer::COL_STRASSE,
+        'city'   => Customer::COL_ORT,
+        'plz'    => Customer::COL_PLZ,
+    ];
+
+    private function browseQuery(Request $request): Builder
+    {
+        $query = Customer::query();
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $like = "%{$search}%";
+            $query->where(fn (Builder $q) => $q
+                ->where(Customer::COL_ID, $search)
+                ->orWhere(Customer::COL_NAME, 'like', $like)
+                ->orWhere(Customer::COL_EMAIL, 'like', $like)
+                ->orWhere(Customer::COL_STRASSE, 'like', $like)
+                ->orWhere(Customer::COL_ORT, 'like', $like)
+                ->orWhere(Customer::COL_PLZ, 'like', $like));
+        }
+
+        $sort = (string) $request->query('sort');
+        $query->orderBy(self::SORTABLE[$sort] ?? Customer::COL_ID, $this->sortDirection($request));
+
+        return $query;
+    }
+
+    private function formatRow(Customer $customer): array
+    {
+        return [
+            'id'     => $customer->{Customer::COL_ID},
+            'name'   => $customer->{Customer::COL_NAME},
+            'email'  => $customer->{Customer::COL_EMAIL},
+            'street' => $customer->{Customer::COL_STRASSE},
+            'city'   => $customer->{Customer::COL_ORT},
+            'plz'    => $customer->{Customer::COL_PLZ},
+        ];
     }
 
     // ─────────────────────────────────────────────────────────────────────────

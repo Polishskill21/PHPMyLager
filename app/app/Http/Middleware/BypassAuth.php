@@ -12,11 +12,13 @@ class BypassAuth
     public function handle(Request $request, Closure $next): mixed
     {
         if (app()->environment('local')) {
-            $role = $request->header('X-Debug-Role', 'admin');
-            $user = User::where('role', $role)->first();
+            if ($request->hasHeader('X-Debug-Role')) {
+                $role = $request->header('X-Debug-Role');
+                $user = User::where('role', $role)->first();
 
-            if ($user) {
-                Auth::setUser($user);
+                if ($user) {
+                    Auth::setUser($user);
+                }
             }
         }
 

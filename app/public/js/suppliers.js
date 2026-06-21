@@ -37,16 +37,8 @@ async function api(method, path, body = null) {
     };
 }
 
-function toast(msg, type = 'info') {
-    const area = document.getElementById('toast-area');
-    if (!area) return;
-
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${esc(msg)}`;
-    area.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
+// toast(), flashToast() and esc() are provided globally by public/js/feedback.js
+// (loaded in layouts/app.blade.php before this script).
 
 function openAdd() {
     clearFormErrors();
@@ -122,7 +114,7 @@ async function submitSupplierForm(event) {
     }
 
     closeModal('modal-supplier-form-overlay');
-    toast(message || (id ? 'Supplier updated.' : 'Supplier created.'), 'success');
+    flashToast(message || (id ? 'Supplier updated.' : 'Supplier created.'), 'success');
     window.location.reload();
 }
 
@@ -147,7 +139,7 @@ async function confirmDelete() {
     closeModal('modal-supplier-del-overlay');
 
     if (ok) {
-        toast(message || 'Supplier deleted.', 'success');
+        flashToast(message || 'Supplier deleted.', 'success');
         window.location.reload();
     } else {
         toast(message || data?.error || 'Delete failed.', 'error');
@@ -176,56 +168,21 @@ function closeModal(id) {
     document.getElementById(id)?.classList.remove('open');
 }
 
-function esc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-function filterSupplierRows() {
-    const input = document.getElementById('suppliers-search');
-    const total = document.getElementById('suppliers-stat-total');
-    const emptyRow = document.getElementById('suppliers-empty-filter-row');
-    if (!input) return;
-
-    const query = input.value.trim().toLowerCase();
-    let visible = 0;
-
-    document.querySelectorAll('.suppliers-table tbody tr[data-sort-row]').forEach((row) => {
-        const haystack = [
-            row.dataset.sortId,
-            row.dataset.sortName,
-            row.dataset.sortEmail,
-            row.dataset.sortStreet,
-            row.dataset.sortCity,
-            row.dataset.sortPlz,
-        ].join(' ').toLowerCase();
-        const match = !query || haystack.includes(query);
-
-        row.hidden = !match;
-        if (match) visible += 1;
-    });
-
-    if (total) total.textContent = String(visible);
-    if (emptyRow) emptyRow.hidden = !query || visible > 0;
-}
+// Search and sorting are handled server-side by list-loadmore.js.
 
 function initSuppliersPage() {
-    document.getElementById('suppliers-search')?.addEventListener('input', filterSupplierRows);
     document.getElementById('btn-add-supplier')?.addEventListener('click', openAdd);
     document.getElementById('supplier-form')?.addEventListener('submit', submitSupplierForm);
     document.getElementById('supplier-form-cancel')?.addEventListener('click', () => closeModal('modal-supplier-form-overlay'));
     document.getElementById('supplier-del-cancel')?.addEventListener('click', () => closeModal('modal-supplier-del-overlay'));
     document.getElementById('supplier-del-confirm')?.addEventListener('click', confirmDelete);
 
-    document.querySelectorAll('.supplier-edit').forEach((btn) => {
-        btn.addEventListener('click', () => openEdit(btn.dataset.id));
-    });
+    document.getElementById('suppliers-table')?.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('.supplier-edit');
+        if (editBtn) return openEdit(editBtn.dataset.id);
 
-    document.querySelectorAll('.supplier-delete').forEach((btn) => {
-        btn.addEventListener('click', () => openDelete(btn.dataset.id, btn.dataset.name));
+        const deleteBtn = event.target.closest('.supplier-delete');
+        if (deleteBtn) return openDelete(deleteBtn.dataset.id, deleteBtn.dataset.name);
     });
 
     document.querySelectorAll('.overlay').forEach((overlay) => {
@@ -240,8 +197,6 @@ function initSuppliersPage() {
             closeModal('modal-supplier-del-overlay');
         }
     });
-
-    filterSupplierRows();
 }
 
 if (document.querySelector('.suppliers-page')) {

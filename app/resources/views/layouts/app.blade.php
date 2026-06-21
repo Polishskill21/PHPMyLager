@@ -25,6 +25,7 @@
         @yield('content')
     @endauth
 
+    <script src="{{ asset('js/feedback.js') }}?v={{ filemtime(public_path('js/feedback.js')) }}"></script>
     @stack('scripts')
 </body>
 </html>

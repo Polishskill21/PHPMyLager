@@ -33,24 +33,8 @@ async function api(method, path, body = null) {
     };
 }
 
-function toast(msg, type = 'info') {
-    const area = document.getElementById('toast-area');
-    if (!area) return;
-
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${esc(msg)}`;
-    area.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-}
-
-function esc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
+// toast(), flashToast() and esc() are provided globally by public/js/feedback.js
+// (loaded in layouts/app.blade.php before this script).
 
 // ── STORAGE LOCATION (lagerplatz) ─────────────────────────────────────
 // Segmented input: Zone [A-Z] · Regal [00-99] · Fach [00-99] · Ebene [A-E]
@@ -107,33 +91,7 @@ function writeLagerplatz(value) {
     }
 }
 
-// ── SEARCH + FILTERS (client-side row hide) ───────────────────────────
-function filterProductRows() {
-    const search = document.getElementById('search');
-    const stockSel = document.getElementById('filter-stock');
-    const wgSel = document.getElementById('filter-wg');
-    const emptyRow = document.getElementById('products-empty-filter-row');
-    if (!search) return;
-
-    const q = search.value.trim().toLowerCase();
-    const stockVal = stockSel ? stockSel.value : 'all';
-    const wgVal = wgSel ? wgSel.value : 'all';
-
-    const rows = document.querySelectorAll('.products-table tbody tr[data-sort-row]');
-    let visible = 0;
-
-    rows.forEach((row) => {
-        const haystack = [row.dataset.sortId, row.dataset.sortName].join(' ').toLowerCase();
-        let match = !q || haystack.includes(q);
-        if (match && stockVal !== 'all' && row.dataset.filterStock !== stockVal) match = false;
-        if (match && wgVal !== 'all' && row.dataset.filterWg !== wgVal) match = false;
-
-        row.hidden = !match;
-        if (match) visible += 1;
-    });
-
-    if (emptyRow) emptyRow.hidden = visible > 0 || rows.length === 0;
-}
+// Search, filtering and sorting are handled server-side by list-loadmore.js
 
 // ── ADD / EDIT FORM ───────────────────────────────────────────────────
 function openAdd() {
@@ -222,7 +180,7 @@ async function submitProductForm(event) {
     }
 
     closeModal('modal-form-overlay');
-    toast(message || (id ? 'Product updated.' : 'Product created.'), 'success');
+    flashToast(message || (id ? 'Product updated.' : 'Product created.'), 'success');
     window.location.reload();
 }
 
@@ -248,7 +206,7 @@ async function confirmDelete() {
     closeModal('modal-del-overlay');
 
     if (ok) {
-        toast(message || 'Product discontinued.', 'success');
+        flashToast(message || 'Product discontinued.', 'success');
         window.location.reload();
     } else {
         toast(message || data?.error || 'Delete failed.', 'error');
@@ -320,7 +278,7 @@ async function submitAdjust(event) {
     }
 
     closeModal('modal-adjust-overlay');
-    toast(message || 'Stock adjusted.', 'success');
+    flashToast(message || 'Stock adjusted.', 'success');
     window.location.reload();
 }
 
@@ -408,9 +366,6 @@ function closeModal(id) {
 
 // ── INIT ──────────────────────────────────────────────────────────────
 function initProductsPage() {
-    document.getElementById('search')?.addEventListener('input', filterProductRows);
-    document.getElementById('filter-stock')?.addEventListener('change', filterProductRows);
-    document.getElementById('filter-wg')?.addEventListener('change', filterProductRows);
     document.getElementById('btn-add')?.addEventListener('click', openAdd);
     document.getElementById('product-form')?.addEventListener('submit', submitProductForm);
     document.getElementById('modal-form-cancel')?.addEventListener('click', () => closeModal('modal-form-overlay'));
@@ -429,20 +384,18 @@ function initProductsPage() {
     document.getElementById('modal-adjust-cancel')?.addEventListener('click', () => closeModal('modal-adjust-overlay'));
     document.getElementById('modal-history-close')?.addEventListener('click', () => closeModal('modal-history-overlay'));
 
-    document.querySelectorAll('.product-edit').forEach((btn) => {
-        btn.addEventListener('click', () => openEdit(btn.dataset.id));
-    });
+    document.getElementById('products-table')?.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('.product-edit');
+        if (editBtn) return openEdit(editBtn.dataset.id);
 
-    document.querySelectorAll('.product-adjust').forEach((btn) => {
-        btn.addEventListener('click', () => openAdjust(btn.dataset.id, btn.dataset.name, btn.dataset.stock));
-    });
+        const adjustBtn = event.target.closest('.product-adjust');
+        if (adjustBtn) return openAdjust(adjustBtn.dataset.id, adjustBtn.dataset.name, adjustBtn.dataset.stock);
 
-    document.querySelectorAll('.product-history').forEach((btn) => {
-        btn.addEventListener('click', () => openHistory(btn.dataset.id));
-    });
+        const historyBtn = event.target.closest('.product-history');
+        if (historyBtn) return openHistory(historyBtn.dataset.id);
 
-    document.querySelectorAll('.product-delete').forEach((btn) => {
-        btn.addEventListener('click', () => openDelete(btn.dataset.id, btn.dataset.name));
+        const deleteBtn = event.target.closest('.product-delete');
+        if (deleteBtn) return openDelete(deleteBtn.dataset.id, deleteBtn.dataset.name);
     });
 
     document.querySelectorAll('.overlay').forEach((overlay) => {
@@ -459,8 +412,6 @@ function initProductsPage() {
             closeModal('modal-history-overlay');
         }
     });
-
-    filterProductRows();
 }
 
 if (document.querySelector('.products-page')) {
