@@ -182,7 +182,7 @@ Verifying Core API Endpoints and those API Endpoint test also include RBAC valid
 | **PUT** | `/api/orders/{id}` | Update an order (requires full item list) | `admin, writer` | ✅ |
 | **DELETE** | `/api/orders/{id}` | Delete an order (restores stock) | `admin` | ✅ |
 
-### Customer Endpoints
+#### Customer Endpoints
 | Method | Path | Action | Min. Role | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **GET** | `/api/customers` | List all active customers | `all roles` | ✅ |
@@ -191,7 +191,7 @@ Verifying Core API Endpoints and those API Endpoint test also include RBAC valid
 | **PUT** | `/api/customers/{id}` | Update an existing customer | `admin, writer` | ✅ |
 | **DELETE** | `/api/customers/{id}` | Soft-delete a customer | `admin` | ✅ |
 
-### Purchase Orders Endpoints
+#### Purchase Orders Endpoints
 | Method | Path | Action | Min. Role | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **GET** | `/api/purchase-orders` | List all Purchase Orders | `all roles` | ✅ |
@@ -201,7 +201,7 @@ Verifying Core API Endpoints and those API Endpoint test also include RBAC valid
 | **PATCH** | `/api/purchase-orders/{id}/receive` | Receive a delivery — increments product stock, supports partial delivery | `admin, writer` | ✅ |
 | **DELETE** | `/api/purchase-orders/{id}` | Cancel the order | `admin` | ✅ |
 
-### Supplier Endpoints
+#### Supplier Endpoints
 | Method | Path | Action | Min. Role | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **GET** | `/api/suppliers` | List all suppliers | `all roles` | ✅ |
