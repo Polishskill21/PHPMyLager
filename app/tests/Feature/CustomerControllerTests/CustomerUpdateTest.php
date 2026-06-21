@@ -96,7 +96,7 @@ class CustomerUpdateTest extends TestCase
                 Customer::COL_ID   => $customer->pKdNr,
                 Customer::COL_NAME    => $payload[Customer::COL_NAME],
                 Customer::COL_STRASSE => $payload[Customer::COL_STRASSE],
-                Customer::COL_PLZ     => (int) $payload[Customer::COL_PLZ],
+                Customer::COL_PLZ     => $payload[Customer::COL_PLZ],
                 Customer::COL_ORT     => $payload[Customer::COL_ORT],
                 Customer::COL_EMAIL   => $payload[Customer::COL_EMAIL],
             ]);

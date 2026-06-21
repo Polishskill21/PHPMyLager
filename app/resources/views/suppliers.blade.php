@@ -31,9 +31,9 @@
     <div class="page-toolbar suppliers-toolbar">
         <div class="page-search suppliers-search">
             <img class="page-search-icon" src="{{ asset('icons/lucide/search.png') }}" alt="">
-            <input class="form-input page-search-input" id="suppliers-search" type="text" placeholder="Search by ID, name, email, street, city or PLZ...">
+            <input class="form-input page-search-input" id="suppliers-search" type="text" placeholder="Search by ID, name, email, street, city or PLZ..." data-list-search>
         </div>
-        <div class="stat-pill">Suppliers: <span id="suppliers-stat-total">{{ $suppliers->count() }}</span></div>
+        <div class="stat-pill">Suppliers: <span id="list-total">{{ $meta['total'] }}</span></div>
         <div class="page-toolbar-spacer"></div>
         @if($canWrite)
             <button class="btn btn-primary" id="btn-add-supplier">
@@ -45,7 +45,13 @@
 
     <div class="table-shell">
         <div class="table-wrap">
-            <table class="data-table suppliers-table" data-static-sort>
+            <table class="data-table suppliers-table" id="suppliers-table"
+                   data-list-endpoint="/suppliers/page"
+                   data-list-per-page="{{ $meta['perPage'] }}"
+                   data-list-page="{{ $meta['page'] }}"
+                   data-list-has-more="{{ $meta['hasMore'] ? '1' : '0' }}"
+                   data-list-total="{{ $meta['total'] }}"
+                   data-list-empty="No suppliers match your search.">
                 <colgroup>
                     <col class="col-id">
                     <col class="col-name">
@@ -71,37 +77,8 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($suppliers as $supplier)
-                    <tr data-sort-row
-                        data-sort-id="{{ $supplier->pLiefNr }}"
-                        data-sort-name="{{ $supplier->name ?: '' }}"
-                        data-sort-email="{{ $supplier->email ?: '' }}"
-                        data-sort-street="{{ $supplier->strasse ?: '' }}"
-                        data-sort-city="{{ $supplier->ort ?: '' }}"
-                        data-sort-plz="{{ $supplier->plz ?: '' }}">
-                        <td class="cell-id">#{{ $supplier->pLiefNr }}</td>
-                        <td class="cell-name" title="{{ $supplier->name }}">{{ $supplier->name ?: '—' }}</td>
-                        <td class="cell-muted" title="{{ $supplier->email }}">{{ $supplier->email ?: '—' }}</td>
-                        <td class="cell-muted" title="{{ $supplier->strasse }}">{{ $supplier->strasse ?: '—' }}</td>
-                        <td class="cell-muted" title="{{ $supplier->ort }}">{{ $supplier->ort ?: '—' }}</td>
-                        <td class="cell-mono" title="{{ $supplier->plz }}">{{ $supplier->plz ?: '—' }}</td>
-                        @if($showActions)
-                            <td class="cell-actions">
-                                <div class="table-actions">
-                                    @if($canWrite)
-                                        <button class="btn-icon supplier-edit" title="Edit" data-id="{{ $supplier->pLiefNr }}">
-                                            <img class="action-icon" src="{{ asset('icons/lucide/pencil.png') }}" alt="Edit">
-                                        </button>
-                                    @endif
-                                    @if($canDelete)
-                                        <button class="btn-icon del supplier-delete" title="Delete" data-id="{{ $supplier->pLiefNr }}" data-name="{{ $supplier->name }}">
-                                            <img class="action-icon" src="{{ asset('icons/lucide/trash-2.png') }}" alt="Delete">
-                                        </button>
-                                    @endif
-                                </div>
-                            </td>
-                        @endif
-                    </tr>
+                @forelse($firstRows as $row)
+                    @include('partials.rows.suppliers-row', ['row' => $row])
                 @empty
                     <tr class="table-state-row">
                         <td class="table-state-cell" colspan="{{ $showActions ? 7 : 6 }}">
@@ -109,13 +86,12 @@
                         </td>
                     </tr>
                 @endforelse
-                <tr class="table-state-row" id="suppliers-empty-filter-row" hidden>
-                    <td class="table-state-cell" colspan="{{ $showActions ? 7 : 6 }}">
-                        <div class="empty-state">No suppliers match your search.</div>
-                    </td>
-                </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="list-more">
+            <button class="btn btn-secondary" id="btn-load-more" data-list-more @if(!$meta['hasMore']) hidden @endif>Load more</button>
+            <span class="list-more-status">Showing <span id="list-shown">{{ count($firstRows) }}</span> of <span id="list-total-status">{{ $meta['total'] }}</span></span>
         </div>
     </div>
 </section>
@@ -187,6 +163,6 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/list-sort.js') }}?v={{ filemtime(public_path('js/list-sort.js')) }}"></script>
+    <script src="{{ asset('js/list-loadmore.js') }}?v={{ filemtime(public_path('js/list-loadmore.js')) }}"></script>
     <script src="{{ asset('js/suppliers.js') }}?v={{ filemtime(public_path('js/suppliers.js')) }}"></script>
 @endpush

@@ -6,6 +6,7 @@ use App\Models\PurchaseOrders\PurchaseOrder;
 use App\Models\PurchaseOrders\PurchaseOrderItem;
 use App\Models\Products\Product;
 use App\Models\Suppliers\Supplier;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,8 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use App\Enums\PurchaseOrderStatus;
+use App\Support\DomainCache;
+use Illuminate\Contracts\View\View;
 
 
 class PurchaseOrderController extends Controller
@@ -24,10 +27,53 @@ class PurchaseOrderController extends Controller
     /** GET /purchase-orders */
     public function index(): JsonResponse
     {
-        $orders = PurchaseOrder::with('items.product', 'supplier')->get();
- 
-        return $this->ok(
-            $orders->map(fn (PurchaseOrder $o) => $this->formatOrder($o))
+        $orders = DomainCache::remember(
+            DomainCache::PURCHASE_ORDERS,
+            'purchase-orders:index',
+            fn () => PurchaseOrder::with('items.product', 'supplier')->get()
+                                  ->map(fn (PurchaseOrder $o) => $this->formatOrder($o))
+        );
+
+        return $this->ok($orders);
+    }
+
+    /**
+     * GET /purchase-orders/page
+     * One load-more chunk of the purchase-order list, with server-side
+     * search/sort.
+     */
+    public function page(Request $request): JsonResponse
+    {
+        return $this->renderListChunk(
+            DomainCache::PURCHASE_ORDERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (PurchaseOrder $o) => $this->formatRow($o),
+            'partials.rows.purchase-orders-row',
+            $request,
+        );
+    }
+
+    /** Server-rendered /purchase-orders page (cached default-view first chunk). */
+    public function indexView(Request $request): View
+    {
+        $chunk = $this->firstChunk($request);
+
+        return view('purchase-orders', [
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
+        ]);
+    }
+
+    /** First chunk for the server-rendered /purchase-orders page. */
+    private function firstChunk(Request $request): array
+    {
+        return $this->listChunkData(
+            DomainCache::PURCHASE_ORDERS,
+            $this->browseQuery($request),
+            $this->isDefaultListView($request),
+            fn (PurchaseOrder $o) => $this->formatRow($o),
+            $request,
         );
     }
 
@@ -49,7 +95,7 @@ class PurchaseOrderController extends Controller
      * Creates a new purchase order with status "offen".
      * Stock is NOT touched yet — that happens on receive.
      */
-        public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
         $validated = $request->validate($this->storeRules(), $this->customMessages());
  
@@ -72,7 +118,8 @@ class PurchaseOrderController extends Controller
  
             return $order->load('items.product', 'supplier');
         });
- 
+        DomainCache::flush(DomainCache::PURCHASE_ORDERS);
+
         return $this->created($this->formatOrder($order), 'Purchase order created successfully.');
     }
 
@@ -148,7 +195,8 @@ class PurchaseOrderController extends Controller
  
             return $purchaseOrder->fresh(['items.product', 'supplier']);
         });
- 
+        DomainCache::flush(DomainCache::PURCHASE_ORDERS);
+
         return $this->ok($this->formatOrder($purchaseOrder), 'Purchase order updated successfully.');
     }
 
@@ -224,7 +272,8 @@ class PurchaseOrderController extends Controller
  
             return $purchaseOrder->fresh(['items.product', 'supplier']);
         });
- 
+        DomainCache::flush(DomainCache::PURCHASE_ORDERS, DomainCache::PRODUCTS);
+
         return $this->ok($this->formatOrder($purchaseOrder), 'Delivery received successfully.');
     }
     
@@ -280,7 +329,8 @@ class PurchaseOrderController extends Controller
  
                 $purchaseOrder->update([PurchaseOrder::COL_STATUS => PurchaseOrderStatus::Cancelled]);
             });
- 
+            DomainCache::flush(DomainCache::PURCHASE_ORDERS, DomainCache::PRODUCTS);
+
             return $this->noContent();
 
         } catch (ValidationException $e) {
@@ -291,6 +341,85 @@ class PurchaseOrderController extends Controller
         }
     }
 
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Browse / list helpers
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Base browse query with eager loads, server-side search and sort.
+     * Supplier name / item count / total value sort via correlated subqueries.
+     */
+    private function browseQuery(Request $request): Builder
+    {
+        $query = PurchaseOrder::query()->with(['supplier', 'items']);
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $like = "%{$search}%";
+            $query->where(function (Builder $q) use ($search, $like) {
+                $q->where(PurchaseOrder::COL_ID, $search)
+                  ->orWhere(PurchaseOrder::COL_STATUS, 'like', $like)
+                  ->orWhereHas('supplier', fn (Builder $s) => $s->where(Supplier::COL_NAME, 'like', $like));
+            });
+        }
+
+        $dir = $this->sortDirection($request);
+        switch ($request->query('sort')) {
+            case 'id':       $query->orderBy(PurchaseOrder::COL_ID, $dir); break;
+            case 'status':   $query->orderBy(PurchaseOrder::COL_STATUS, $dir); break;
+            case 'ordered':  $query->orderBy(PurchaseOrder::COL_BEST_DAT, $dir); break;
+            case 'expected': $query->orderBy(PurchaseOrder::COL_ERW_LIEF_DAT, $dir); break;
+            case 'supplier':
+                $query->orderBy(
+                    Supplier::query()->select(Supplier::COL_NAME)
+                        ->whereColumn(Supplier::COL_ID, PurchaseOrder::TABLE . '.' . PurchaseOrder::COL_F_LIEF_NR),
+                    $dir
+                );
+                break;
+            case 'items':
+                $query->orderBy(
+                    PurchaseOrderItem::query()->selectRaw('COUNT(*)')
+                        ->whereColumn(PurchaseOrderItem::COL_F_BEST_NR, PurchaseOrder::TABLE . '.' . PurchaseOrder::COL_ID),
+                    $dir
+                );
+                break;
+            case 'value':
+                $query->orderBy(
+                    PurchaseOrderItem::query()->selectRaw('COALESCE(SUM(' . PurchaseOrderItem::COL_EK_PREIS . ' * ' . PurchaseOrderItem::COL_BEST_MENGE . '), 0)')
+                        ->whereColumn(PurchaseOrderItem::COL_F_BEST_NR, PurchaseOrder::TABLE . '.' . PurchaseOrder::COL_ID),
+                    $dir
+                );
+                break;
+            default:
+                $query->orderByDesc(PurchaseOrder::COL_BEST_DAT);
+        }
+
+        return $query;
+    }
+
+    /** Map a purchase order to the array consumed by partials/rows/purchase-orders-row. */
+    private function formatRow(PurchaseOrder $order): array
+    {
+        $items      = $order->items;
+        $totalValue = $items->sum(fn ($i) => (float) ($i->{PurchaseOrderItem::COL_EK_PREIS} ?? 0) * (int) $i->{PurchaseOrderItem::COL_BEST_MENGE});
+
+        $rawStatus  = $order->{PurchaseOrder::COL_STATUS};
+        $statusEnum = $rawStatus instanceof PurchaseOrderStatus ? $rawStatus : PurchaseOrderStatus::tryFrom((string) $rawStatus);
+        $status     = $statusEnum?->value ?? (string) $rawStatus;
+        $editable   = in_array($statusEnum, [PurchaseOrderStatus::Open, PurchaseOrderStatus::Ordered], true);
+
+        return [
+            'id'            => $order->{PurchaseOrder::COL_ID},
+            'supplier'      => $order->supplier?->{Supplier::COL_NAME},
+            'status'        => $status,
+            'ordered'       => $order->{PurchaseOrder::COL_BEST_DAT} ? substr((string) $order->{PurchaseOrder::COL_BEST_DAT}, 0, 10) : '',
+            'expected'      => $order->{PurchaseOrder::COL_ERW_LIEF_DAT} ? substr((string) $order->{PurchaseOrder::COL_ERW_LIEF_DAT}, 0, 10) : '',
+            'item_count'    => $items->count(),
+            'total_value'   => round($totalValue, 2),
+            'is_editable'   => $editable,
+            'is_receivable' => $editable,
+        ];
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // HELPER
@@ -365,7 +494,7 @@ class PurchaseOrderController extends Controller
                 'is_supplier_deleted'           => $order->supplier?->trashed() ?? false,
                 PurchaseOrder::COL_BEST_DAT     => $order->{PurchaseOrder::COL_BEST_DAT},
                 PurchaseOrder::COL_ERW_LIEF_DAT => $order->{PurchaseOrder::COL_ERW_LIEF_DAT},
-                PurchaseOrder::COL_STATUS       => $statusEnum ? $statusEnum->toEnglish() : 'unknown',
+                PurchaseOrder::COL_STATUS       => $statusEnum?->value ?? (string) $rawStatus,
             ],
             'items' => $items->map(fn ($item) => [
                 PurchaseOrderItem::COL_ID                 => $item->{PurchaseOrderItem::COL_ID},

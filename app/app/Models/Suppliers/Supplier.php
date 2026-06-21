@@ -13,7 +13,7 @@ use App\Models\PurchaseOrders\PurchaseOrder;
  * @property int                    $pLiefNr     PK — Auto-incrementing unique supplier entity number
  * @property string                 $name        Company or wholesale vendor title name
  * @property string|null            $strasse     Street name and facility building address details
- * @property int|null               $plz         Postal code identifier (Postleitzahl)
+ * @property string|null            $plz         Postal code identifier (Postleitzahl)
  * @property string|null            $ort         City or region location designation
  * @property string|null            $email       Primary B2B contact email address
  * @property \Carbon\Carbon         $created_at  Timestamp when the supplier was registered in the database
@@ -36,6 +36,10 @@ class Supplier extends Model
     protected $primaryKey = self::COL_ID;
 
     public $timestamps = false;
+
+    protected $casts = [
+        self::COL_PLZ => 'string',
+    ];
 
     protected $hidden = [
         'deleted_at'
