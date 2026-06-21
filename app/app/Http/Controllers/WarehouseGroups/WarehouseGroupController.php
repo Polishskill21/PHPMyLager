@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Support\DomainCache;
+use Illuminate\Contracts\View\View;
 
 class WarehouseGroupController extends Controller
 {
@@ -48,8 +49,19 @@ class WarehouseGroupController extends Controller
         );
     }
 
+    /** Server-rendered /warehouse page (cached default-view first chunk). */
+    public function indexView(Request $request): View
+    {
+        $chunk = $this->firstChunk($request);
+
+        return view('warehouse', [
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
+        ]);
+    }
+
     /** First chunk for the server-rendered /warehouse page. */
-    public function firstChunk(Request $request): array
+    private function firstChunk(Request $request): array
     {
         return $this->listChunkData(
             DomainCache::WAREHOUSE_GROUPS,

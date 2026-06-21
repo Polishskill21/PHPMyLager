@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use App\Support\DomainCache;
+use Illuminate\Contracts\View\View;
 
 class CustomerController extends Controller
 {
@@ -25,7 +26,7 @@ class CustomerController extends Controller
         $customers = DomainCache::remember(
             DomainCache::CUSTOMERS,
             'customers:index',
-            fn () => Customer::all()->map(fn (Customer $c) => $this->formatCustomer($c))
+            fn () => Customer::orderBy(Customer::COL_NAME)->get()->map(fn (Customer $c) => $this->formatCustomer($c))
         );
 
         return $this->ok($customers);
@@ -47,8 +48,19 @@ class CustomerController extends Controller
         );
     }
 
+    /** Server-rendered /customers page (cached default-view first chunk). */
+    public function indexView(Request $request): View
+    {
+        $chunk = $this->firstChunk($request);
+
+        return view('customers', [
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
+        ]);
+    }
+
     /** First chunk for the server-rendered /customers page. */
-    public function firstChunk(Request $request): array
+    private function firstChunk(Request $request): array
     {
         return $this->listChunkData(
             DomainCache::CUSTOMERS,
@@ -83,7 +95,7 @@ class CustomerController extends Controller
 
         try {
             $customer = DB::transaction(fn () => Customer::create($validated));
-            DomainCache::flush(DomainCache::CUSTOMERS);
+            DomainCache::flush(DomainCache::CUSTOMERS, DomainCache::ORDERS);
 
             return $this->created($this->formatCustomer($customer->fresh()), 'Customer created successfully.');
         } catch (\Exception $e) {
@@ -111,7 +123,7 @@ class CustomerController extends Controller
                 $customer->update($validated);
                 return $customer->fresh();
             });
-            DomainCache::flush(DomainCache::CUSTOMERS);
+            DomainCache::flush(DomainCache::CUSTOMERS, DomainCache::ORDERS);
 
             return $this->ok($this->formatCustomer($customer), 'Customer updated successfully.');
         } catch (\Exception $e) {
@@ -133,7 +145,7 @@ class CustomerController extends Controller
         try {
             $id = $customer->{Customer::COL_ID};
             DB::transaction(fn () => $customer->delete());
-            DomainCache::flush(DomainCache::CUSTOMERS);
+            DomainCache::flush(DomainCache::CUSTOMERS, DomainCache::ORDERS);
 
             return $this->noContent();
         } catch (\Exception $e) {

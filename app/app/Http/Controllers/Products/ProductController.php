@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\PurchaseOrders\PurchaseOrderItem;
 use App\Http\Controllers\Controller;
 use App\Support\DomainCache;
+use Illuminate\Contracts\View\View;
 
 class ProductController extends Controller
 {
@@ -47,7 +48,7 @@ class ProductController extends Controller
         $products = DomainCache::remember(
             DomainCache::PRODUCTS,
             'products:index',
-            fn () => Product::with('warengruppe')->withExists('inventoryLogs')->get()
+            fn () => Product::with('warengruppe')->withExists('inventoryLogs')->orderBy(Product::COL_NAME)->get()
         );
 
         return $this->ok($products, 'Products retrieved successfully.');
@@ -71,11 +72,37 @@ class ProductController extends Controller
     }
 
     /**
+     * Server-rendered /products page: the cached default-view first chunk plus the
+     * warehouse-group dropdown and the low-stock count (both cached).
+     */
+    public function indexView(Request $request): View
+    {
+        $chunk = $this->firstChunk($request);
+
+        return view('products', [
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
+            'groups'    => DomainCache::remember(
+                DomainCache::WAREHOUSE_GROUPS,
+                'warehouse-groups:dropdown',
+                fn () => WarehouseGroup::orderBy(WarehouseGroup::COL_NAME)->get()
+            ),
+            'lowCount'  => DomainCache::remember(
+                DomainCache::PRODUCTS,
+                'products:low-count',
+                fn () => Product::where(Product::COL_BESTAND, '>', 0)
+                    ->whereColumn(Product::COL_BESTAND, '<=', Product::COL_MELDE_BEST)
+                    ->count()
+            ),
+        ]);
+    }
+
+    /**
      * First chunk for the server-rendered /products page (cached default view).
      *
      * @return array{rows: array<int, array>, meta: array}
      */
-    public function firstChunk(Request $request): array
+    private function firstChunk(Request $request): array
     {
         return $this->listChunkData(
             DomainCache::PRODUCTS,

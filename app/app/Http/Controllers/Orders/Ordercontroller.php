@@ -14,6 +14,7 @@ use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Models\Customers\Customer;
 use App\Support\DomainCache;
+use Illuminate\Contracts\View\View;
 
 
 class OrderController extends Controller
@@ -53,8 +54,29 @@ class OrderController extends Controller
         );
     }
 
+    /**
+     * Server-rendered /orders page: the cached default-view first chunk plus the
+     * cached grand total (sum of all order line values).
+     */
+    public function indexView(Request $request): View
+    {
+        $chunk = $this->firstChunk($request);
+
+        return view('orders', [
+            'firstRows'      => $chunk['rows'],
+            'meta'           => $chunk['meta'],
+            'ordersTotalEur' => DomainCache::remember(
+                DomainCache::ORDERS,
+                'orders:total-eur',
+                fn () => (float) OrderItem::query()
+                    ->selectRaw('COALESCE(SUM(' . OrderItem::COL_AUF_MENGE . ' * ' . OrderItem::COL_KAUF_PREIS . '), 0) as total')
+                    ->value('total')
+            ),
+        ]);
+    }
+
     /** First chunk for the server-rendered /orders page. */
-    public function firstChunk(Request $request): array
+    private function firstChunk(Request $request): array
     {
         return $this->listChunkData(
             DomainCache::ORDERS,

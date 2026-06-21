@@ -47,7 +47,7 @@
             <select id="filter-wg" class="form-select" data-list-filter="wg">
                 <option value="all">All groups</option>
                 @foreach($groups as $group)
-                    <option value="{{ $group->pWgNr }}">{{ $group->warengruppe ?: ('Group '.$group->pWgNr) }}</option>
+                    <option value="{{ $group['pWgNr'] }}">{{ $group['warengruppe'] ?: ('Group '.$group['pWgNr']) }}</option>
                 @endforeach
             </select>
             <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>
@@ -141,8 +141,9 @@
                     <label class="form-label" for="f-fWgNr">Warehouse Group <em class="required-marker">*</em></label>
                     <div class="select-wrap">
                         <select class="form-select" id="f-fWgNr">
+                            <option value="">Select group…</option>
                             @foreach($groups as $group)
-                                <option value="{{ $group->pWgNr }}">{{ $group->warengruppe ?: ('Group '.$group->pWgNr) }}</option>
+                                <option value="{{ $group['pWgNr'] }}">{{ $group['warengruppe'] ?: ('Group '.$group['pWgNr']) }}</option>
                             @endforeach
                         </select>
                         <span class="modal-control-icon icon-chevron-down" aria-hidden="true"></span>

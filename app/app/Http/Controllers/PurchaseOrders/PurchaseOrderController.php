@@ -15,6 +15,7 @@ use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use App\Enums\PurchaseOrderStatus;
 use App\Support\DomainCache;
+use Illuminate\Contracts\View\View;
 
 
 class PurchaseOrderController extends Controller
@@ -53,8 +54,19 @@ class PurchaseOrderController extends Controller
         );
     }
 
+    /** Server-rendered /purchase-orders page (cached default-view first chunk). */
+    public function indexView(Request $request): View
+    {
+        $chunk = $this->firstChunk($request);
+
+        return view('purchase-orders', [
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
+        ]);
+    }
+
     /** First chunk for the server-rendered /purchase-orders page. */
-    public function firstChunk(Request $request): array
+    private function firstChunk(Request $request): array
     {
         return $this->listChunkData(
             DomainCache::PURCHASE_ORDERS,

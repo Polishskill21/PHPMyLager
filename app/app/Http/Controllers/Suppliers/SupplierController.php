@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use App\Support\DomainCache;
+use Illuminate\Contracts\View\View;
 
 class SupplierController extends Controller
 {
@@ -25,7 +26,7 @@ class SupplierController extends Controller
         $suppliers = DomainCache::remember(
             DomainCache::SUPPLIERS,
             'suppliers:index',
-            fn () => Supplier::all()->map(fn (Supplier $s) => $this->formatSupplier($s))
+            fn () => Supplier::orderBy(Supplier::COL_NAME)->get()->map(fn (Supplier $s) => $this->formatSupplier($s))
         );
         return $this->ok($suppliers);
     }
@@ -54,8 +55,19 @@ class SupplierController extends Controller
         );
     }
 
+    /** Server-rendered /suppliers page (cached default-view first chunk). */
+    public function indexView(Request $request): View
+    {
+        $chunk = $this->firstChunk($request);
+
+        return view('suppliers', [
+            'firstRows' => $chunk['rows'],
+            'meta'      => $chunk['meta'],
+        ]);
+    }
+
     /** First chunk for the server-rendered /suppliers page. */
-    public function firstChunk(Request $request): array
+    private function firstChunk(Request $request): array
     {
         return $this->listChunkData(
             DomainCache::SUPPLIERS,
@@ -82,7 +94,7 @@ class SupplierController extends Controller
 
         try {
             $supplier = DB::transaction(fn () => Supplier::create($validated));
-            DomainCache::flush(DomainCache::SUPPLIERS);
+            DomainCache::flush(DomainCache::SUPPLIERS, DomainCache::PURCHASE_ORDERS);
 
             return $this->created($this->formatSupplier($supplier->fresh()), 'Supplier created successfully.');
         } catch (\Exception $e) {
@@ -110,7 +122,7 @@ class SupplierController extends Controller
                 $supplier->update($validated);
                 return $supplier->fresh();
             });
-            DomainCache::flush(DomainCache::SUPPLIERS);
+            DomainCache::flush(DomainCache::SUPPLIERS, DomainCache::PURCHASE_ORDERS);
 
             return $this->ok($this->formatSupplier($supplier), 'Supplier updated successfully.');
         } catch (\Exception $e) {
@@ -130,7 +142,7 @@ class SupplierController extends Controller
     {
         try {
             DB::transaction(fn () => $supplier->delete());
-            DomainCache::flush(DomainCache::SUPPLIERS);
+            DomainCache::flush(DomainCache::SUPPLIERS, DomainCache::PURCHASE_ORDERS);
 
             return $this->noContent();
         } catch (\Exception $e) {
