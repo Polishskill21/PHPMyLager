@@ -31,7 +31,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - phpmylager_net
+      - net
 
   web:
     image: nginx:1.27-alpine
@@ -45,7 +45,7 @@ services:
     depends_on:
       - app
     networks:
-      - phpmylager_net
+      - net
 
   db:
     image: mariadb:lts
@@ -65,10 +65,10 @@ services:
     volumes:
       - db_data_prod:/var/lib/mysql
     networks:
-      - phpmylager_net
+      - net
 
 networks:
-  phpmylager_net:
+  net:
     driver: bridge
 
 volumes:
